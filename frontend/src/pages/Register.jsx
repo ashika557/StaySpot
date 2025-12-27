@@ -98,8 +98,10 @@ function Register({ onLogin }) {
       const data = await response.json();
 
       if (response.ok) {
-        onLogin(data.user);
-        navigate(formData.role === 'Owner' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD);
+       if (response.ok) {
+        navigate(ROUTES.LOGIN);
+}
+
       } else {
         setErrorMessage(data.error || 'Registration failed. Please try again.');
       }

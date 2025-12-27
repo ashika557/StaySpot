@@ -1,87 +1,110 @@
 import React from 'react';
+import { Home, LayoutDashboard, Calendar, MessageSquare, Settings, Bell } from 'lucide-react';
 
-function OwnerDashboard({ user }) {
+export default function OwnerDashboard({ user }) {
+  const visits = [
+    { name: 'Anshu Khadka', location: 'Itahari, Tarahara', date: 'Dec 15, 2025', time: '3:00 PM' },
+    { name: 'Hari Sharma', location: 'Riverside Studio', date: 'Dec 16, 2025', time: '10:30 AM' },
+    { name: 'Mamata Wagle', location: 'Garden View', date: 'Dec 18, 2025', time: '2:00 PM' }
+  ];
+
+  const chats = [
+    { name: 'Preety Singh', message: 'Hi! The heating system seems noisy...', time: '2m ago', unread: true },
+    { name: 'David Basnet', message: 'Thanks for fixing the water issue!', time: '1h ago' },
+    { name: 'Anna Sharma', message: 'Can I get a parking spot closer?', time: '3h ago' }
+  ];
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome, {user.full_name}!
-          </h1>
-          <p className="text-gray-600 mb-8">Owner Dashboard</p>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className="w-64 bg-white border-r">
+        <div className="p-6 border-b flex items-center gap-2">
+          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+            <Home className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <div className="font-bold">StaySpot</div>
+            <div className="text-xs text-gray-500">Tenant Portal</div>
+          </div>
+        </div>
+        <nav className="p-4">
+          <a href="#" className="flex items-center gap-3 px-4 py-3 text-blue-600 bg-blue-50 rounded-lg mb-2">
+            <LayoutDashboard className="w-5 h-5" /> Dashboard
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-600 mb-2">
+            <Calendar className="w-5 h-5" /> Upcoming Visits
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-600 mb-2">
+            <MessageSquare className="w-5 h-5" /> Messages
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-600 mb-2">
+            <Settings className="w-5 h-5" /> Settings
+          </a>
+        </nav>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-              <h2 className="text-xl font-semibold text-blue-900 mb-2">Manage Properties</h2>
-              <p className="text-gray-700 mb-4">Add, edit, and manage your property listings</p>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                View Properties
-              </button>
-            </div>
-
-            <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-              <h2 className="text-xl font-semibold text-green-900 mb-2">Bookings</h2>
-              <p className="text-gray-700 mb-4">View and manage booking requests from tenants</p>
-              <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
-                View Bookings
-              </button>
-            </div>
-
-            <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-              <h2 className="text-xl font-semibold text-purple-900 mb-2">Analytics</h2>
-              <p className="text-gray-700 mb-4">Track your property performance and revenue</p>
-              <button className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">
-                View Analytics
-              </button>
-            </div>
-
-            <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
-              <h2 className="text-xl font-semibold text-yellow-900 mb-2">Add New Property</h2>
-              <p className="text-gray-700 mb-4">List a new property for tenants to book</p>
-              <button className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition">
-                Add Property
-              </button>
-            </div>
-
-            <div className="bg-red-50 p-6 rounded-lg border border-red-200">
-              <h2 className="text-xl font-semibold text-red-900 mb-2">Messages</h2>
-              <p className="text-gray-700 mb-4">Communicate with tenants and respond to inquiries</p>
-              <button className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">
-                View Messages
-              </button>
-            </div>
-
-            <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-200">
-              <h2 className="text-xl font-semibold text-indigo-900 mb-2">Settings</h2>
-              <p className="text-gray-700 mb-4">Manage your account settings and preferences</p>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
-                Settings
-              </button>
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="bg-white border-b px-8 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+            <p className="text-gray-500 text-sm">Welcome back, {user.full_name}!</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Bell className="w-6 h-6 text-gray-400" />
+            <div className="flex items-center gap-3">
+              <img src="https://i.pravatar.cc/150?img=10" className="w-10 h-10 rounded-full" />
+              <div>
+                <div className="font-semibold text-sm">{user.full_name}</div>
+                <div className="text-xs text-gray-500">{user.role}</div>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="mt-8 bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Full Name</p>
-                <p className="text-lg font-medium text-gray-900">{user.full_name}</p>
+        {/* Visits */}
+        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-lg border">
+            <h2 className="text-lg font-bold mb-6">Recent Visit Requests</h2>
+            {visits.map((visit, i) => (
+              <div key={i} className="flex items-center justify-between pb-4 mb-4 border-b">
+                <div className="flex items-center gap-3">
+                  <img src={`https://i.pravatar.cc/150?img=${i + 20}`} className="w-10 h-10 rounded-full" />
+                  <div>
+                    <div className="font-semibold text-sm">{visit.name}</div>
+                    <div className="text-gray-500 text-xs">{visit.location}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium">{visit.date}</div>
+                  <div className="text-gray-500 text-xs">{visit.time}</div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="text-lg font-medium text-gray-900">{user.email}</p>
+            ))}
+          </div>
+
+          {/* Chats */}
+          <div className="bg-white p-6 rounded-lg border">
+            <h2 className="text-lg font-bold mb-6">Recent Messages</h2>
+            {chats.map((chat, i) => (
+              <div key={i} className="pb-4 mb-4 border-b">
+                <div className="flex items-start gap-3">
+                  <img src={`https://i.pravatar.cc/150?img=${i + 30}`} className="w-10 h-10 rounded-full" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="font-semibold text-sm">{chat.name}</div>
+                      <div className="text-gray-400 text-xs">{chat.time}</div>
+                    </div>
+                    <div className="text-gray-600 text-sm">{chat.message}</div>
+                    {chat.unread && <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>}
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Role</p>
-                <p className="text-lg font-medium text-gray-900">{user.role}</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default OwnerDashboard;
-
