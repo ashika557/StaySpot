@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import OwnerDashboard from './pages/OwnerDashboard';
+import OwnerRooms from './pages/OwnerRoom';  
 import TenantDashboard from './pages/TenantDashboard';
 import StaySpotLanding from './pages/LandingPage';
 import { ROUTES } from './constants/api';
@@ -90,11 +91,17 @@ function App() {
         <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
         <Route path={`${ROUTES.RESET_PASSWORD}/:token`} element={<ResetPassword />} />
 
-        {/* Dashboards */}
+        {/* Owner Routes */}
         <Route
           path={ROUTES.OWNER_DASHBOARD}
           element={user && user.role === 'Owner' ? <OwnerDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
         />
+        <Route
+          path={ROUTES.OWNER_ROOMS}
+          element={user && user.role === 'Owner' ? <OwnerRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+        
+        {/* Tenant Routes */}
         <Route
           path={ROUTES.TENANT_DASHBOARD}
           element={user && user.role === 'Tenant' ? <TenantDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}

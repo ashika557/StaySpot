@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
   CSRF: '/csrf/',
   FORGOT_PASSWORD: '/forgot-password/',
   RESET_PASSWORD: '/reset-password/',
+  ROOMS: '/rooms/', // Add this for room management
 };
 
 export const ROUTES = {
@@ -20,7 +21,7 @@ export const ROUTES = {
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
-  OWNER_DASHBOARD: '/owner-dashboard',
-  TENANT_DASHBOARD: '/tenant-dashboard',
+  OWNER_DASHBOARD: '/owner/dashboard',    
+  OWNER_ROOMS: '/owner/rooms',
+  TENANT_DASHBOARD: '/tenant/dashboard',   
 };
-

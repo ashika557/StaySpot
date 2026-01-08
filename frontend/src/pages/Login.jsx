@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getCsrfToken, apiRequest } from '../utils/api';
+import { getCsrfToken, apiRequest, setUser } from '../utils/api';
 import { API_ENDPOINTS, ROUTES } from '../constants/api';
 
 function Login({ onLogin }) {
@@ -64,6 +64,8 @@ function Login({ onLogin }) {
     setLoading(true);
 
     try {
+      console.log('Attempting login...');
+      
       const response = await apiRequest(
         API_ENDPOINTS.LOGIN,
         {
@@ -78,14 +80,23 @@ function Login({ onLogin }) {
       );
 
       const data = await response.json();
+      console.log('Login response:', data);
 
       if (response.ok) {
+        // Save user data to localStorage
+        setUser(data.user);
+        console.log('User data saved to localStorage:', data.user);
+        
+        // Call the onLogin callback
         onLogin(data.user);
+        
+        // Navigate to appropriate dashboard
         navigate(formData.role === 'Owner' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD);
       } else {
         setErrorMessage(data.error || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setErrorMessage('Network error. Please check if the backend is running.');
     } finally {
       setLoading(false);
@@ -198,4 +209,3 @@ function Login({ onLogin }) {
 }
 
 export default Login;
-
