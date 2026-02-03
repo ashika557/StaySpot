@@ -40,15 +40,49 @@ export const isAuthenticated = () => {
  * Fetch CSRF token from backend
  * @returns {Promise<string>} CSRF token
  */
+/**
+ * Fetch CSRF token from backend
+ * @returns {Promise<string>} CSRF token
+ */
 export const getCsrfToken = async () => {
   try {
+    // 1. Try to get it from the JSON endpoint
+    console.log(`[CSRF] Fetching from endpoint: ${API_BASE_URL}${API_ENDPOINTS.CSRF}`);
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CSRF}`, {
       credentials: 'include',
     });
-    const data = await response.json();
-    return data.csrfToken || '';
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.csrfToken) {
+        console.log('[CSRF] Got token from JSON endpoint');
+        return data.csrfToken;
+      }
+    }
+
+    // 2. Fallback: Try to read from document.cookie (if HTTP-only is false)
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+
+    if (cookieValue) {
+      console.log('[CSRF] Got token from document.cookie fallback');
+      return cookieValue;
+    }
+
+    console.error('[CSRF] FAILED to get token from both endpoint and cookies');
+    return '';
   } catch (error) {
-    console.error('Error fetching CSRF token:', error);
+    console.error('[CSRF] Error during token acquisition:', error);
     return '';
   }
 };
@@ -57,144 +91,62 @@ export const getCsrfToken = async () => {
  * Make an authenticated API request with Django session authentication
  * @param {string} endpoint - API endpoint
  * @param {Object} options - Fetch options
- * @param {string} csrfToken - CSRF token (optional)
  * @returns {Promise<Response>} Fetch response
  */
-export const apiRequest = async (endpoint, options = {}, csrfToken = '') => {
+export const apiRequest = async (endpoint, options = {}) => {
+  const method = (options.method || 'GET').toUpperCase();
+  let token = '';
+
+  // Automatically fetch CSRF token for state-changing methods
+  if (method !== 'GET') {
+    console.log(`[API] ${method} request detected. Fetching CSRF token...`);
+    token = await getCsrfToken();
+    if (!token) {
+      console.warn('[API] Warning: CSRF token is empty or missing!');
+    }
+  }
+
   const defaultOptions = {
+    ...options,
     headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(token && { 'X-CSRFToken': token }),
       ...(options.headers || {}),
     },
-    credentials: 'include', // Important: This sends cookies with every request
-    ...options,
+    credentials: 'include', // Important: This sends cookies (sessionid, csrftoken) with every request
   };
 
-  return fetch(`${API_BASE_URL}${endpoint}`, defaultOptions);
-};
+  console.log(`[API] Sending ${method} to ${endpoint}`);
+  if (token) {
+    console.log(`[API] Header X-CSRFToken: ${token.substring(0, 10)}... (Length: ${token.length})`);
+  } else if (method !== 'GET') {
+    console.warn('[API] Header X-CSRFToken: MISSING');
+  }
 
-/**
- * Room Service - All room-related API calls
- */
-export const roomService = {
-  /**
-   * Get all rooms for the authenticated owner
-   * @returns {Promise<Array>} Array of room objects
-   */
-  getAllRooms: async () => {
-    try {
-      const response = await apiRequest(API_ENDPOINTS.ROOMS);
-      if (!response.ok) throw new Error('Failed to fetch rooms');
-      return await response.json();
-    } catch (error) {
-      console.error('Error in getAllRooms:', error);
-      throw error;
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, defaultOptions);
+
+    if (!response.ok) {
+      console.error(`[API] Error ${response.status}: ${response.statusText}`);
+      console.log(`[API] Requested Endpoint: ${endpoint}`);
+
+      // Clone the response so we can read it for logging without exhausting the main stream
+      const responseClone = response.clone();
+      const errorText = await responseClone.text();
+      console.error('[API] Server Response:', errorText);
+
+      // Try to parse as JSON for cleaner logging
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error('[API] Parsed Error JSON:', errorJson);
+      } catch (e) {
+        // Not JSON, already logged as text
+      }
     }
-  },
 
-  /**
-   * Create a new room
-   * @param {Object} roomData - Room data including images
-   * @returns {Promise<Object>} Created room object
-   */
-  createRoom: async (roomData) => {
-    try {
-      const csrfToken = await getCsrfToken();
-      const formData = new FormData();
-      
-      // Add room data to FormData
-      Object.keys(roomData).forEach(key => {
-        if (key === 'images' && roomData[key]) {
-          // Add multiple images
-          roomData[key].forEach((file) => {
-            formData.append('images', file);
-          });
-        } else {
-          formData.append(key, roomData[key]);
-        }
-      });
-
-      const response = await apiRequest(
-        API_ENDPOINTS.ROOMS,
-        {
-          method: 'POST',
-          body: formData,
-          headers: {}, // Let browser set Content-Type for FormData (includes boundary)
-        },
-        csrfToken
-      );
-
-      if (!response.ok) throw new Error('Failed to create room');
-      return await response.json();
-    } catch (error) {
-      console.error('Error in createRoom:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Update an existing room
-   * @param {number} roomId - Room ID
-   * @param {Object} roomData - Updated room data
-   * @returns {Promise<Object>} Updated room object
-   */
-  updateRoom: async (roomId, roomData) => {
-    try {
-      const csrfToken = await getCsrfToken();
-      const formData = new FormData();
-      
-      // Add room data to FormData
-      Object.keys(roomData).forEach(key => {
-        if (key === 'images' && roomData[key]) {
-          // Add multiple images
-          roomData[key].forEach((file) => {
-            formData.append('images', file);
-          });
-        } else {
-          formData.append(key, roomData[key]);
-        }
-      });
-
-      const response = await apiRequest(
-        `${API_ENDPOINTS.ROOMS}${roomId}/`,
-        {
-          method: 'PUT',
-          body: formData,
-          headers: {}, // Let browser set Content-Type for FormData
-        },
-        csrfToken
-      );
-
-      if (!response.ok) throw new Error('Failed to update room');
-      return await response.json();
-    } catch (error) {
-      console.error('Error in updateRoom:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Delete a room
-   * @param {number} roomId - Room ID
-   * @returns {Promise<boolean>} Success status
-   */
-  deleteRoom: async (roomId) => {
-    try {
-      const csrfToken = await getCsrfToken();
-      const response = await apiRequest(
-        `${API_ENDPOINTS.ROOMS}${roomId}/`,
-        {
-          method: 'DELETE',
-        },
-        csrfToken
-      );
-
-      if (!response.ok) throw new Error('Failed to delete room');
-      return true;
-    } catch (error) {
-      console.error('Error in deleteRoom:', error);
-      throw error;
-    }
-  },
+    return response;
+  } catch (error) {
+    console.error(`[API] FETCH ERROR: ${error.message}`);
+    throw error;
+  }
 };
