@@ -1,10 +1,18 @@
 from rest_framework import serializers
-from .models import Room, RoomImage
+from .models import Room, RoomImage, Booking, Visit, Payment, Chat
+from accounts.models import User
 
 class RoomImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomImage
         fields = ['id', 'image', 'uploaded_at']
+
+
+# User serializer for nested data
+class UserBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'email', 'phone', 'role']
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -14,14 +22,17 @@ class RoomSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    owner = UserBasicSerializer(read_only=True)
     
     class Meta:
         model = Room
         fields = [
-            'id', 'title', 'location', 'room_number', 'room_type',
+            'id', 'owner', 'title', 'location', 'room_number', 'room_type',
             'floor', 'size', 'price', 'status', 'wifi', 'ac', 'tv',
-            'gender_preference', 'latitude', 'longitude',  # NEW FIELDS
-            'views', 'images', 'uploaded_images', 'created_at', 'updated_at'
+            'parking', 'water_supply', 'attached_bathroom', 'cctv', 
+            'kitchen', 'furniture', 'gender_preference', 'latitude', 
+            'longitude', 'views', 'images', 'uploaded_images', 
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'views', 'created_at', 'updated_at']
     
@@ -45,3 +56,104 @@ class RoomSerializer(serializers.ModelSerializer):
             RoomImage.objects.create(room=instance, image=image)
         
         return instance
+
+
+# User serializer for nested data
+# Booking serializers
+class BookingSerializer(serializers.ModelSerializer):
+    tenant = UserBasicSerializer(read_only=True)
+    room = RoomSerializer(read_only=True)
+    room_id = serializers.PrimaryKeyRelatedField(
+        queryset=Room.objects.all(), 
+        source='room', 
+        write_only=True
+    )
+    
+    class Meta:
+        model = Booking
+        fields = [
+            'id', 'tenant', 'room', 'room_id', 'start_date', 'end_date',
+            'monthly_rent', 'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+# Visit serializers
+class VisitSerializer(serializers.ModelSerializer):
+    tenant = UserBasicSerializer(read_only=True)
+    owner = UserBasicSerializer(read_only=True)
+    room = RoomSerializer(read_only=True)
+    room_id = serializers.PrimaryKeyRelatedField(
+        queryset=Room.objects.all(), 
+        source='room', 
+        write_only=True
+    )
+    owner_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), 
+        source='owner', 
+        write_only=True
+    )
+    
+    class Meta:
+        model = Visit
+        fields = [
+            'id', 'tenant', 'owner', 'owner_id', 'room', 'room_id',
+            'visit_date', 'visit_time', 'purpose', 'notes', 'status', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+# Payment serializers
+class PaymentSerializer(serializers.ModelSerializer):
+    booking = BookingSerializer(read_only=True)
+    booking_id = serializers.PrimaryKeyRelatedField(
+        queryset=Booking.objects.all(), 
+        source='booking', 
+        write_only=True
+    )
+    tenant_name = serializers.CharField(source='booking.tenant.full_name', read_only=True)
+    room_number = serializers.CharField(source='booking.room.room_number', read_only=True)
+    
+    class Meta:
+        model = Payment
+        fields = [
+            'id', 'booking', 'booking_id', 'tenant_name', 'room_number',
+            'amount', 'due_date', 'paid_date', 'status', 'payment_type', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+# Chat serializers
+class ChatSerializer(serializers.ModelSerializer):
+    sender = UserBasicSerializer(read_only=True)
+    receiver = UserBasicSerializer(read_only=True)
+    room = RoomSerializer(read_only=True)
+    receiver_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), 
+        source='receiver', 
+        write_only=True
+    )
+    room_id = serializers.PrimaryKeyRelatedField(
+        queryset=Room.objects.all(), 
+        source='room', 
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+    
+    class Meta:
+        model = Chat
+        fields = [
+            'id', 'sender', 'receiver', 'receiver_id', 'room', 'room_id',
+            'message', 'timestamp', 'is_read'
+        ]
+        read_only_fields = ['id', 'timestamp']
+
+
+# Dashboard aggregated serializer
+class TenantDashboardSerializer(serializers.Serializer):
+    upcoming_visit = VisitSerializer(allow_null=True)
+    current_booking = BookingSerializer(allow_null=True)
+    payment_reminders = PaymentSerializer(many=True)
+    recent_chats = ChatSerializer(many=True)
+    suggested_rooms = RoomSerializer(many=True)

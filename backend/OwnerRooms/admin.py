@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Room, RoomImage
+from .models import Room, RoomImage, Booking, Visit, Payment, Chat
 
 class RoomImageInline(admin.TabularInline):
     model = RoomImage
@@ -36,3 +36,39 @@ class RoomAdmin(admin.ModelAdmin):
 @admin.register(RoomImage)
 class RoomImageAdmin(admin.ModelAdmin):
     list_display = ['room', 'uploaded_at']
+
+
+@admin.register(Booking)
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ['tenant', 'room', 'start_date', 'end_date', 'monthly_rent', 'status', 'created_at']
+    list_filter = ['status', 'start_date']
+    search_fields = ['tenant__full_name', 'room__title']
+    date_hierarchy = 'start_date'
+
+
+@admin.register(Visit)
+class VisitAdmin(admin.ModelAdmin):
+    list_display = ['tenant', 'room', 'owner', 'visit_date', 'visit_time', 'status']
+    list_filter = ['status', 'visit_date']
+    search_fields = ['tenant__full_name', 'room__title', 'owner__full_name']
+    date_hierarchy = 'visit_date'
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ['booking', 'amount', 'payment_type', 'due_date', 'paid_date', 'status']
+    list_filter = ['status', 'payment_type', 'due_date']
+    search_fields = ['booking__tenant__full_name', 'booking__room__title']
+    date_hierarchy = 'due_date'
+
+
+@admin.register(Chat)
+class ChatAdmin(admin.ModelAdmin):
+    list_display = ['sender', 'receiver', 'room', 'message_preview', 'timestamp', 'is_read']
+    list_filter = ['is_read', 'timestamp']
+    search_fields = ['sender__full_name', 'receiver__full_name', 'message']
+    date_hierarchy = 'timestamp'
+    
+    def message_preview(self, obj):
+        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
+    message_preview.short_description = 'Message'
