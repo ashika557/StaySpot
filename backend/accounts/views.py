@@ -8,8 +8,11 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from datetime import timedelta
-from .models import User, PasswordResetToken
+from .models import User, PasswordResetToken, EmailVerificationToken, PhoneOTP
+from django.core.mail import send_mail
+from django.conf import settings
 import re
+import random
 
 
 @api_view(['POST'])
@@ -63,17 +66,47 @@ def register(request):
             password=data['password'],
             full_name=data['full_name'],
             phone=data['phone'],
-            role=data['role']
+            role=data['role'],
+            is_active=False  # Deactivate until email is verified
         )
         
+        # Create verification token
+        verification_token = EmailVerificationToken.objects.create(user=user)
+        
+        # Create Phone OTP
+        otp_code = PhoneOTP.generate_otp()
+        PhoneOTP.objects.create(user=user, otp_code=otp_code)
+        
+        # Send verification email
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        verification_link = f"{frontend_url}/verify-email/{verification_token.token}"
+        
+        subject = 'Verify your StaySpot account'
+        message = f'Hi {user.full_name},\n\nPlease click the link below to verify your email address and activate your account:\n\n{verification_link}\n\nThis link will expire in 24 hours.'
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [user.email]
+        
+        try:
+            send_mail(subject, message, from_email, recipient_list)
+        except Exception as mail_error:
+            # For development, we might not have SMTP configured correctly
+            print(f"Failed to send email: {mail_error}")
+            print(f"Verification link: {verification_link}")
+        
+        # Log OTP for development
+        print(f"PHONE OTP for {user.phone}: {otp_code}")
+        
         return Response({
-            'message': 'User registered successfully.',
+            'message': 'Registration successful. Please enter the OTP sent to your phone.',
             'user': {
                 'id': user.id,
                 'full_name': user.full_name,
                 'email': user.email,
-                'role': user.role
-            }
+                'role': user.role,
+                'phone': user.phone
+            },
+            'otp_dev': otp_code, # For development convenience
+            'verification_link_dev': verification_link
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(
@@ -320,3 +353,127 @@ def reset_password(request, token):
     return Response({
         'message': 'Password has been reset successfully. You can now login with your new password.'
     }, status=status.HTTP_200_OK)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_email(request, token):
+    """Verify email using token."""
+    try:
+        verification_token = EmailVerificationToken.objects.get(token=token)
+    except EmailVerificationToken.DoesNotExist:
+        return Response(
+            {'error': 'Invalid or expired verification token.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if not verification_token.is_valid():
+        return Response(
+            {'error': 'Invalid or expired verification token.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Activate user
+    user = verification_token.user
+    user.is_active = True
+    user.save()
+    
+    # Mark token as used
+    verification_token.used = True
+    verification_token.save()
+    
+    return Response({
+        'message': 'Email verified successfully. You can now login.'
+    }, status=status.HTTP_200_OK)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_otp(request):
+    """Verify phone OTP."""
+    data = request.data
+    email = data.get('email')
+    otp_code = data.get('otp_code')
+    
+    if not email or not otp_code:
+        return Response(
+            {'error': 'Email and OTP code are required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        user = User.objects.get(email=email)
+        otp = PhoneOTP.objects.filter(user=user, otp_code=otp_code).first()
+        
+        if not otp:
+            return Response(
+                {'error': 'Invalid OTP code.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not otp.is_valid():
+            return Response(
+                {'error': 'OTP has expired. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Verify OTP
+        otp.is_verified = True
+        otp.save()
+        
+        # Activate user
+        user.is_active = True
+        user.save()
+        
+        return Response({
+            'message': 'Phone verified successfully. Your account is now active.'
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'User not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def resend_otp(request):
+    """Resend phone OTP."""
+    data = request.data
+    email = data.get('email')
+    
+    if not email:
+        return Response(
+            {'error': 'Email is required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        user = User.objects.get(email=email)
+        
+        # Invalidate existing OTPs for this user
+        PhoneOTP.objects.filter(user=user, is_verified=False).delete()
+        
+        # Create new OTP
+        otp_code = PhoneOTP.generate_otp()
+        PhoneOTP.objects.create(user=user, otp_code=otp_code)
+        
+        # Log for development
+        print(f"NEW PHONE OTP for {user.phone}: {otp_code}")
+        
+        return Response({
+            'message': 'A new OTP has been sent to your phone.',
+            'otp_dev': otp_code # For development
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'User not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
