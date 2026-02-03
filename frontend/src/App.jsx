@@ -6,17 +6,19 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import OwnerDashboard from './pages/OwnerDashboard';
-import OwnerRooms from './pages/OwnerRoom';  
+import OwnerRooms from './pages/OwnerRoom';
 import TenantDashboard from './pages/TenantDashboard';
+import SearchRooms from './pages/SearchRooms';
+import VerifyEmail from './pages/VerifyEmail';
 import StaySpotLanding from './pages/LandingPage';
 import { ROUTES } from './constants/api';
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [showLanding, setShowLanding] = useState(true);
+  const [user, setUser] = React.useState(null);
+  const [showLanding, setShowLanding] = React.useState(true);
 
   // Load user from localStorage
-  useEffect(() => {
+  React.useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
@@ -90,6 +92,7 @@ function App() {
 
         <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
         <Route path={`${ROUTES.RESET_PASSWORD}/:token`} element={<ResetPassword />} />
+        <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail />} />
 
         {/* Owner Routes */}
         <Route
@@ -100,11 +103,14 @@ function App() {
           path={ROUTES.OWNER_ROOMS}
           element={user && user.role === 'Owner' ? <OwnerRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
         />
-        
-        {/* Tenant Routes */}
+
         <Route
           path={ROUTES.TENANT_DASHBOARD}
           element={user && user.role === 'Tenant' ? <TenantDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+        <Route
+          path={ROUTES.TENANT_SEARCH}
+          element={user && user.role === 'Tenant' ? <SearchRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
         />
 
         {/* Catch-all */}

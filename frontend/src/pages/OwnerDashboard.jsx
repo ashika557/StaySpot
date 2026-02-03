@@ -1,25 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './sidebar';
-import { Home, Calendar, DollarSign, Bell } from 'lucide-react';
+import { Home, Calendar, DollarSign, Bell, MessageSquare } from 'lucide-react';
 import { apiRequest } from '../utils/api';
+import { chatService } from '../services/chatService';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../constants/api';
 
 export default function OwnerDashboard({ user }) {
   const [totalRooms, setTotalRooms] = useState(0);
   const [availableRooms, setAvailableRooms] = useState(0);
   const [occupiedRooms, setOccupiedRooms] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
+  const [recentChats, setRecentChats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Fetch room data when component loads
   useEffect(() => {
     getRoomData();
+    getRecentChats();
   }, []);
+
+  async function getRecentChats() {
+    try {
+      const chats = await chatService.getConversations();
+      setRecentChats(chats.slice(0, 3)); // Show only top 3
+    } catch (error) {
+      console.error("Failed to load recent chats", error);
+    }
+  }
 
   // Function to get room statistics from backend
   async function getRoomData() {
     try {
       console.log('Fetching rooms from: /rooms/');
-      
+
       const response = await apiRequest('/rooms/');
 
       console.log('Response status:', response.status);
@@ -27,21 +42,21 @@ export default function OwnerDashboard({ user }) {
       if (response.ok) {
         const rooms = await response.json();
         console.log('Rooms data:', rooms);
-        
+
         // Count total rooms
         setTotalRooms(rooms.length);
         console.log('Total rooms:', rooms.length);
-        
+
         // Count available rooms
         const available = rooms.filter(room => room.status === 'Available').length;
         setAvailableRooms(available);
         console.log('Available rooms:', available);
-        
+
         // Count occupied rooms
         const occupied = rooms.filter(room => room.status === 'Occupied').length;
         setOccupiedRooms(occupied);
         console.log('Occupied rooms:', occupied);
-        
+
         // TODO: Calculate income later
         setTotalIncome(0);
       } else {
@@ -59,7 +74,7 @@ export default function OwnerDashboard({ user }) {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
-      
+
       <div className="flex-1 overflow-auto">
         {/* Top Header */}
         <div className="bg-white border-b px-8 py-4">
@@ -214,58 +229,40 @@ export default function OwnerDashboard({ user }) {
 
             {/* Right Column: Tenant Chats */}
             <div className="bg-white rounded-xl border shadow-sm">
-              <div className="p-6 border-b">
+              <div className="p-6 border-b flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Recent Tenant Chats</h3>
+                <MessageSquare className="w-5 h-5 text-gray-400" />
               </div>
               <div className="p-6">
-                <div className="py-3 border-b">
-                  <div className="flex items-start gap-3">
-                    <img src="https://i.pravatar.cc/150?img=30" className="w-10 h-10 rounded-full" alt="" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-semibold">Preety Singh</p>
-                        <span className="text-xs text-gray-500">2m ago</span>
+                {recentChats.length > 0 ? (
+                  recentChats.map((chat) => (
+                    <div key={chat.id} className="py-3 border-b last:border-0 cursor-pointer hover:bg-gray-50 transition" onClick={() => navigate(ROUTES.CHAT)}>
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                          {chat.other_user.full_name[0]}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="font-semibold">{chat.other_user.full_name}</p>
+                            <span className="text-xs text-gray-500">
+                              {new Date(chat.updated_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 truncate">
+                            {chat.last_message ? chat.last_message.text : 'Start a conversation...'}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600">
-                        Hi! The heating system seems to be making some noise. Could you...
-                      </p>
-                      <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                     </div>
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-4">No recent messages.</p>
+                )}
 
-                <div className="py-3 border-b">
-                  <div className="flex items-start gap-3">
-                    <img src="https://i.pravatar.cc/150?img=31" className="w-10 h-10 rounded-full" alt="" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-semibold">David Basnet</p>
-                        <span className="text-xs text-gray-500">1h ago</span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Thank you for fixing the water pressure issue so quickly!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="py-3">
-                  <div className="flex items-start gap-3">
-                    <img src="https://i.pravatar.cc/150?img=32" className="w-10 h-10 rounded-full" alt="" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-semibold">Anna Sharma</p>
-                        <span className="text-xs text-gray-500">2h ago</span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Is it possible to get a parking spot closer to the entrance?
-                      </p>
-                      <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <button className="w-full mt-4 py-2 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-lg">
+                <button
+                  onClick={() => navigate(ROUTES.CHAT)}
+                  className="w-full mt-4 py-2 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-lg"
+                >
                   View All Messages
                 </button>
               </div>

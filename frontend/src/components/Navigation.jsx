@@ -22,6 +22,14 @@ function Navigation({ user, onLogout, showLanding }) {
               >
                 Dashboard
               </Link>
+              <Link to={ROUTES.CHAT} className="hover:text-blue-200 transition">
+                Messages
+              </Link>
+              {user.role === 'Tenant' && (
+                <Link to={ROUTES.TENANT_SEARCH} className="hover:text-blue-200 transition">
+                  Search Rooms
+                </Link>
+              )}
               <span className="text-blue-200">
                 Welcome, {user.full_name ? user.full_name : 'User'}
               </span>

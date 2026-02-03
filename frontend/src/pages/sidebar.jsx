@@ -4,14 +4,14 @@ import { Home, Calendar, Users, DollarSign, MessageSquare, Eye, Settings, Trendi
 
 export default function Sidebar() {
   const location = useLocation();
-  
+
   const menuItems = [
     { id: 'dashboard', icon: TrendingUp, label: 'Dashboard', path: '/owner/dashboard' },
     { id: 'rooms', icon: Home, label: 'My Rooms', path: '/owner/rooms' },
     { id: 'bookings', icon: Calendar, label: 'Bookings', path: '/owner/bookings' },
     { id: 'tenants', icon: Users, label: 'Tenants', path: '/owner/tenants' },
     { id: 'payments', icon: DollarSign, label: 'Payments', path: '/owner/payments' },
-    { id: 'messages', icon: MessageSquare, label: 'Messages', path: '/owner/messages' },
+    { id: 'messages', icon: MessageSquare, label: 'Messages', path: '/chat' },
     { id: 'visits', icon: Eye, label: 'Visits', path: '/owner/visits' },
     { id: 'settings', icon: Settings, label: 'Settings', path: '/owner/settings' }
   ];
@@ -33,16 +33,15 @@ export default function Sidebar() {
         {menuItems.map(item => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
-          
+
           return (
             <Link
               key={item.id}
               to={item.path}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 ${
-                isActive
-                  ? 'bg-blue-50 text-blue-600' 
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 ${isActive
+                  ? 'bg-blue-50 text-blue-600'
                   : 'text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <Icon className="w-5 h-5" />
               <span className="text-sm font-medium">{item.label}</span>

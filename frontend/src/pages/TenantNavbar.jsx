@@ -12,7 +12,7 @@ export default function TenantSidebar() {
     { path: '/tenant/search', icon: Search, label: 'Search Rooms' },
     { path: '/tenant/bookings', icon: Calendar, label: 'Bookings' },
     { path: '/tenant/complaints', icon: AlertTriangle, label: 'Complaints & Reviews' },
-    { path: '/tenant/chat', icon: MessageSquare, label: 'Chat' },
+    { path: '/chat', icon: MessageSquare, label: 'Chat' },
     { path: '/tenant/payments', icon: DollarSign, label: 'Payments' },
     { path: '/tenant/profile', icon: User, label: 'Profile' },
   ];
@@ -27,7 +27,7 @@ export default function TenantSidebar() {
           <div className="text-xl font-bold text-blue-600">Stay Spot</div>
         </div>
       </div>
-      
+
       <nav className="p-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -35,11 +35,10 @@ export default function TenantSidebar() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${
-                isActive(item.path)
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${isActive(item.path)
                   ? 'text-blue-600 bg-blue-50'
                   : 'text-gray-600 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <Icon className="w-5 h-5" />
               {item.label}

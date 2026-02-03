@@ -2,24 +2,28 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './sidebar';
 import { Home, Users, TrendingUp, Eye, Search, Filter, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin } from 'lucide-react';
 import { roomService } from '../services/roomService';
+import MapPicker from '../components/MapPicker';
 
 export default function OwnerRooms({ user }) {
-  const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(null);
-  const [selectedRoom, setSelectedRoom] = useState(null);
-  const [viewMode, setViewMode] = useState('grid');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedImages, setSelectedImages] = useState([]);
-  const [formData, setFormData] = useState({
+  const [rooms, setRooms] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showModal, setShowModal] = React.useState(null);
+  const [selectedRoom, setSelectedRoom] = React.useState(null);
+  const [viewMode, setViewMode] = React.useState('grid');
+  const [filterStatus, setFilterStatus] = React.useState('all');
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [selectedImages, setSelectedImages] = React.useState([]);
+  const [showMapSelector, setShowMapSelector] = React.useState(false);
+  const [formData, setFormData] = React.useState({
     title: '', location: '', price: '', roomNumber: '', roomType: 'Single Room',
     floor: '', size: '', status: 'Available', wifi: false, ac: false, tv: false,
+    parking: false, waterSupply: false, attachedBathroom: false, cctv: false,
+    kitchen: false, furniture: false,
     genderPreference: 'Any', latitude: '', longitude: ''
   });
 
   // Fetch rooms on component mount
-  useEffect(() => {
+  React.useEffect(() => {
     fetchRooms();
   }, []);
 
@@ -62,6 +66,12 @@ export default function OwnerRooms({ user }) {
       wifi: room.wifi,
       ac: room.ac,
       tv: room.tv,
+      parking: room.parking,
+      waterSupply: room.water_supply,
+      attachedBathroom: room.attached_bathroom,
+      cctv: room.cctv,
+      kitchen: room.kitchen,
+      furniture: room.furniture,
       genderPreference: room.gender_preference || 'Any',
       latitude: room.latitude || '',
       longitude: room.longitude || ''
@@ -75,8 +85,15 @@ export default function OwnerRooms({ user }) {
   };
 
   const handleMapClick = () => {
-    // Placeholder for map integration - you will add your map component here
-    alert('Map integration placeholder - add your map selection component here');
+    setShowMapSelector(true);
+  };
+
+  const handleLocationSelect = (coords) => {
+    setFormData({
+      ...formData,
+      latitude: coords.lat,
+      longitude: coords.lng
+    });
   };
 
   const handleSubmit = async () => {
@@ -103,7 +120,10 @@ export default function OwnerRooms({ user }) {
       setSelectedImages([]);
       setFormData({
         title: '', location: '', price: '', roomNumber: '', roomType: 'Single Room',
-        floor: '', size: '', status: 'Available', wifi: false, ac: false, tv: false,
+        floor: '', size: '', status: 'Available',
+        wifi: false, ac: false, tv: false,
+        parking: false, waterSupply: false, attachedBathroom: false,
+        cctv: false, kitchen: false, furniture: false,
         genderPreference: 'Any', latitude: '', longitude: ''
       });
     } catch (error) {
@@ -140,7 +160,7 @@ export default function OwnerRooms({ user }) {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-white border-b px-8 py-4 flex justify-between">
@@ -261,14 +281,13 @@ export default function OwnerRooms({ user }) {
               {filteredRooms.map(room => (
                 <div key={room.id} className="bg-white rounded-xl border hover:shadow-lg transition">
                   <div className="relative">
-                    <img 
-                      src={room.images && room.images.length > 0 ? room.images[0].image : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'} 
-                      className="w-full h-52 object-cover rounded-t-xl" 
-                      alt={room.title} 
+                    <img
+                      src={room.images && room.images.length > 0 ? room.images[0].image : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'}
+                      className="w-full h-52 object-cover rounded-t-xl"
+                      alt={room.title}
                     />
-                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold ${
-                      room.status === 'Available' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                    }`}>{room.status}</span>
+                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold ${room.status === 'Available' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+                      }`}>{room.status}</span>
                     <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/70 text-white text-xs rounded">
                       <Eye className="w-3 h-3 inline mr-1" />{room.views}
                     </div>
@@ -317,12 +336,12 @@ export default function OwnerRooms({ user }) {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">Room Number</label>
-                    <input type="text" value={formData.roomNumber} onChange={(e) => setFormData({...formData, roomNumber: e.target.value})} 
+                    <input type="text" value={formData.roomNumber} onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5" placeholder="101" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Room Type</label>
-                    <select value={formData.roomType} onChange={(e) => setFormData({...formData, roomType: e.target.value})} 
+                    <select value={formData.roomType} onChange={(e) => setFormData({ ...formData, roomType: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5">
                       <option>Single Room</option>
                       <option>Double Room</option>
@@ -331,32 +350,32 @@ export default function OwnerRooms({ user }) {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-2">Title *</label>
-                    <input type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} 
+                    <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5" placeholder="Luxury Apartment" required />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-2">Location *</label>
-                    <input type="text" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} 
+                    <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5" placeholder="Itahari, Tarahara" required />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Floor</label>
-                    <input type="text" value={formData.floor} onChange={(e) => setFormData({...formData, floor: e.target.value})} 
+                    <input type="text" value={formData.floor} onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5" placeholder="1" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Size (sq ft)</label>
-                    <input type="text" value={formData.size} onChange={(e) => setFormData({...formData, size: e.target.value})} 
+                    <input type="text" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5" placeholder="280" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Price/month *</label>
-                    <input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} 
+                    <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5" placeholder="12000" required />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Status</label>
-                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} 
+                    <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5">
                       <option>Available</option>
                       <option>Occupied</option>
@@ -365,7 +384,7 @@ export default function OwnerRooms({ user }) {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-2">Gender Preference</label>
-                    <select value={formData.genderPreference} onChange={(e) => setFormData({...formData, genderPreference: e.target.value})} 
+                    <select value={formData.genderPreference} onChange={(e) => setFormData({ ...formData, genderPreference: e.target.value })}
                       className="w-full border rounded-lg px-4 py-2.5">
                       <option>Any</option>
                       <option>Male</option>
@@ -379,7 +398,7 @@ export default function OwnerRooms({ user }) {
                   <div className="border-2 border-dashed rounded-lg p-8 text-center bg-gray-50">
                     <MapPin className="w-10 h-10 text-blue-600 mx-auto mb-3" />
                     <p className="text-sm text-gray-600 mb-4">Select the exact location of your room on map</p>
-                    <button 
+                    <button
                       type="button"
                       onClick={handleMapClick}
                       className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -387,9 +406,16 @@ export default function OwnerRooms({ user }) {
                       Open Map Selector
                     </button>
                     {(formData.latitude && formData.longitude) && (
-                      <p className="text-xs text-green-600 mt-3">
-                        ✓ Location set: {formData.latitude}, {formData.longitude}
-                      </p>
+                      <div className="mt-4">
+                        <MapPicker
+                          readOnly={true}
+                          initialLocation={{ lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) }}
+                          onLocationSelect={() => { }}
+                        />
+                        <p className="text-xs text-green-600 mt-2">
+                          ✓ Location set: {formData.latitude}, {formData.longitude}
+                        </p>
+                      </div>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
@@ -401,9 +427,9 @@ export default function OwnerRooms({ user }) {
                 <div className="border-2 border-dashed rounded-lg p-8 text-center mb-6">
                   <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                   <p className="text-sm text-gray-600 mb-2">Click to upload photos</p>
-                  <input 
-                    type="file" 
-                    multiple 
+                  <input
+                    type="file"
+                    multiple
                     accept="image/*"
                     onChange={handleImageSelect}
                     className="w-full"
@@ -416,16 +442,40 @@ export default function OwnerRooms({ user }) {
                 <h3 className="font-semibold text-lg mb-4">Amenities</h3>
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.wifi} onChange={(e) => setFormData({...formData, wifi: e.target.checked})} className="w-5 h-5" />
-                    <span>Wi-Fi</span>
+                    <input type="checkbox" checked={formData.wifi} onChange={(e) => setFormData({ ...formData, wifi: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">Wi-Fi</span>
                   </label>
                   <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.ac} onChange={(e) => setFormData({...formData, ac: e.target.checked})} className="w-5 h-5" />
-                    <span>AC</span>
+                    <input type="checkbox" checked={formData.ac} onChange={(e) => setFormData({ ...formData, ac: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">AC</span>
                   </label>
                   <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.tv} onChange={(e) => setFormData({...formData, tv: e.target.checked})} className="w-5 h-5" />
-                    <span>TV</span>
+                    <input type="checkbox" checked={formData.tv} onChange={(e) => setFormData({ ...formData, tv: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">TV</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" checked={formData.parking} onChange={(e) => setFormData({ ...formData, parking: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">Parking</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" checked={formData.waterSupply} onChange={(e) => setFormData({ ...formData, waterSupply: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">Water Supply</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" checked={formData.attachedBathroom} onChange={(e) => setFormData({ ...formData, attachedBathroom: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">Attached Bath</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" checked={formData.cctv} onChange={(e) => setFormData({ ...formData, cctv: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">CCTV</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" checked={formData.kitchen} onChange={(e) => setFormData({ ...formData, kitchen: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">Kitchen</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" checked={formData.furniture} onChange={(e) => setFormData({ ...formData, furniture: e.target.checked })} className="w-5 h-5" />
+                    <span className="text-sm">Furniture</span>
                   </label>
                 </div>
 
@@ -434,6 +484,37 @@ export default function OwnerRooms({ user }) {
                     {showModal === 'add' ? 'Add Room' : 'Save Changes'}
                   </button>
                   <button onClick={() => setShowModal(null)} className="px-6 py-3 border rounded-lg">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Map Selector Modal */}
+        {showMapSelector && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl">
+              <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 className="font-bold text-gray-800">Select Room Location</h3>
+                <button
+                  onClick={() => setShowMapSelector(false)}
+                  className="p-2 hover:bg-gray-200 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6">
+                <MapPicker
+                  onLocationSelect={handleLocationSelect}
+                  initialLocation={formData.latitude ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } : null}
+                />
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setShowMapSelector(false)}
+                    className="px-8 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-sm"
+                  >
+                    Confirm Location
+                  </button>
                 </div>
               </div>
             </div>
@@ -469,15 +550,18 @@ export default function OwnerRooms({ user }) {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-3">Status</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                      selectedRoom.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                    }`}>{selectedRoom.status}</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${selectedRoom.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                      }`}>{selectedRoom.status}</span>
                     {(selectedRoom.latitude && selectedRoom.longitude) && (
                       <div className="mt-4">
                         <h3 className="font-semibold mb-2 text-sm">Map Location</h3>
-                        <p className="text-xs text-gray-600">
-                          Lat: {selectedRoom.latitude}<br/>
-                          Lng: {selectedRoom.longitude}
+                        <MapPicker
+                          readOnly={true}
+                          initialLocation={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
+                          onLocationSelect={() => { }}
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          Lat: {selectedRoom.latitude}, Lng: {selectedRoom.longitude}
                         </p>
                       </div>
                     )}
