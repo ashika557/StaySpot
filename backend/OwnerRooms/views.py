@@ -5,11 +5,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, Payment, Chat
+from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, Payment
 from .serializers import (
     RoomSerializer, BookingSerializer, VisitSerializer, 
-    PaymentSerializer, ChatSerializer, TenantDashboardSerializer
+    PaymentSerializer, TenantDashboardSerializer
 )
+from chat.models import Conversation, Message
+from chat.serializers import MessageSerializer
+from notifications.utils import send_notification
 
 class RoomViewSet(viewsets.ModelViewSet):
     serializer_class = RoomSerializer
@@ -113,7 +116,11 @@ class RoomViewSet(viewsets.ModelViewSet):
         pref.save()
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        user = self.request.user
+        if not user.is_identity_verified and user.role != 'Admin':
+            from rest_framework import serializers
+            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before adding a room."})
+        serializer.save(owner=user)
     
     @action(detail=False, methods=['get'])
     def suggested(self, request):
@@ -197,12 +204,70 @@ class BookingViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'Tenant':
             return Booking.objects.filter(tenant=user)
-        elif user.role == 'Owner':
+        elif user.role in ['Owner', 'Admin']:
+            # Owners and Admins see bookings for their rooms (requests and active)
             return Booking.objects.filter(room__owner=user)
         return Booking.objects.none()
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        booking = self.get_object()
+        new_status = serializer.validated_data.get('status')
+        
+        if new_status:
+            if user.role == 'Tenant':
+                # Tenants can only Cancel their own bookings
+                if new_status != 'Cancelled':
+                     raise serializers.ValidationError("Tenants can only cancel bookings.")
+            elif user.role in ['Owner', 'Admin']:
+                # Owners and Admins can Confirm or Reject, or Cancel
+                if booking.room.owner != user and user.role != 'Admin':
+                    # Allow Admin to manage any booking, but regular owner only their own
+                    pass 
+                elif booking.room.owner != user:
+                    raise serializers.ValidationError("You do not own this room.")
+                    
+        serializer.save()
+
+        # Send notification about status change
+        if new_status:
+            recipient = booking.room.owner if user.role == 'Tenant' else booking.tenant
+            notif_type = f'booking_{new_status.lower()}'
+            send_notification(
+                recipient=recipient,
+                actor=user,
+                notification_type=notif_type,
+                text=f"Booking for {booking.room.title} has been {new_status.lower()}.",
+                related_id=booking.id
+            )
+    
+    def perform_destroy(self, instance):
+        recipient = instance.room.owner if self.request.user.role == 'Tenant' else instance.tenant
+        # Send notification before deletion
+        send_notification(
+            recipient=recipient,
+            actor=self.request.user,
+            notification_type='booking_cancelled',
+            text=f"Booking for {instance.room.title} has been deleted/cancelled.",
+            related_id=instance.id
+        )
+        instance.delete()
     
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user)
+        user = self.request.user
+        if not user.is_identity_verified and user.role != 'Admin':
+            from rest_framework import serializers
+            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
+        booking = serializer.save(tenant=user)
+        
+        # Notify room owner about new booking request
+        send_notification(
+            recipient=booking.room.owner,
+            actor=user,
+            notification_type='booking_request',
+            text=f"New booking request for {booking.room.title} from {user.full_name}.",
+            related_id=booking.id
+        )
 
 
 class VisitViewSet(viewsets.ModelViewSet):
@@ -213,12 +278,16 @@ class VisitViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'Tenant':
             return Visit.objects.filter(tenant=user)
-        elif user.role == 'Owner':
+        elif user.role in ['Owner', 'Admin']:
             return Visit.objects.filter(owner=user)
         return Visit.objects.none()
     
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user)
+        user = self.request.user
+        if not user.is_identity_verified and user.role != 'Admin':
+            from rest_framework import serializers
+            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
+        serializer.save(tenant=user)
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -232,18 +301,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
         elif user.role == 'Owner':
             return Payment.objects.filter(booking__room__owner=user)
         return Payment.objects.none()
-
-
-class ChatViewSet(viewsets.ModelViewSet):
-    serializer_class = ChatSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        return Chat.objects.filter(Q(sender=user) | Q(receiver=user))
-    
-    def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
 
 
 # Debug endpoint to check user info
@@ -297,10 +354,10 @@ def tenant_dashboard(request):
         visit_date__gte=timezone.now().date()
     ).order_by('visit_date', 'visit_time').first()
     
-    # Get current active booking
+    # Get current active booking (Active or Confirmed)
     current_booking = Booking.objects.filter(
         tenant=user, 
-        status='Active'
+        status__in=['Active', 'Confirmed']
     ).first()
     
     # Get payment reminders (pending and overdue)
@@ -309,9 +366,9 @@ def tenant_dashboard(request):
         status__in=['Pending', 'Overdue']
     ).order_by('due_date')[:5]
     
-    # Get recent chats (last 3 conversations)
-    recent_chats = Chat.objects.filter(
-        Q(sender=user) | Q(receiver=user)
+    # Get recent chats (last 3 messages from different conversations)
+    recent_messages = Message.objects.filter(
+        Q(conversation__owner=user) | Q(conversation__tenant=user)
     ).order_by('-timestamp')[:3]
     
     # Get suggested rooms (fallback to any available if no preferences)
@@ -346,14 +403,11 @@ def tenant_dashboard(request):
     
     print(f"DEBUG: Final suggested rooms count: {len(suggested_rooms)}")
     
-    # Serialize data
-    data = {
+    # Serialize data and return
+    return Response({
         'upcoming_visit': VisitSerializer(upcoming_visit, context={'request': request}).data if upcoming_visit else None,
         'current_booking': BookingSerializer(current_booking, context={'request': request}).data if current_booking else None,
         'payment_reminders': PaymentSerializer(payment_reminders, many=True, context={'request': request}).data,
-        'recent_chats': ChatSerializer(recent_chats, many=True, context={'request': request}).data,
+        'recent_chats': MessageSerializer(recent_messages, many=True, context={'request': request}).data,
         'suggested_rooms': RoomSerializer(suggested_rooms, many=True, context={'request': request}).data,
-    }
-    
-    serializer = TenantDashboardSerializer(data)
-    return Response(serializer.data)
+    })

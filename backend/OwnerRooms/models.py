@@ -112,7 +112,10 @@ class UserSearchPreference(models.Model):
 class Booking(models.Model):
     """Represents a tenant's booking/rental of a room."""
     STATUS_CHOICES = [
-        ('Active', 'Active'),
+        ('Pending', 'Pending'),
+        ('Confirmed', 'Confirmed'),
+        ('Rejected', 'Rejected'),
+        ('Active', 'Active'),  # Kept for backward compatibility (equivalent to Confirmed)
         ('Completed', 'Completed'),
         ('Cancelled', 'Cancelled'),
     ]
@@ -122,7 +125,7 @@ class Booking(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     monthly_rent = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

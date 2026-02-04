@@ -12,7 +12,7 @@ class RoomImageSerializer(serializers.ModelSerializer):
 class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'phone', 'role']
+        fields = ['id', 'full_name', 'email', 'phone', 'role', 'identity_document', 'is_identity_verified']
 
 
 class RoomSerializer(serializers.ModelSerializer):
