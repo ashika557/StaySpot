@@ -23,6 +23,18 @@ export const roomService = {
     }
   },
 
+  // Get room by ID
+  async getRoomById(id) {
+    try {
+      const response = await apiRequest(`/rooms/${id}/`);
+      if (!response.ok) throw new Error('Failed to fetch room');
+      return await response.json();
+    } catch (error) {
+      console.error('Error in getRoomById:', error);
+      throw error;
+    }
+  },
+
   // Get suggested rooms based on user preferences
   async getSuggestedRooms() {
     try {

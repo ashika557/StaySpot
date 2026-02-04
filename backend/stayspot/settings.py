@@ -24,6 +24,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -34,6 +35,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'OwnerRooms',  
+    'notifications',
     'chat',
 ]
 
@@ -165,9 +167,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'  # Set to None only with HTTPS + Secure
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
 SESSION_SAVE_EVERY_REQUEST = True
 
 # Email Configuration (Console backend for development)

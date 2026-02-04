@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
 import TenantSidebar from './TenantNavbar';
 import { roomService } from '../services/roomService';
@@ -402,10 +403,10 @@ const SearchRooms = ({ user }) => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center justify-between mt-2">
-                                                    <div className="text-[10px] text-gray-400 font-medium">Owner: {room.owner_name || 'Rajesh Basnet'}</div>
-                                                    <button className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition flex items-center gap-1">
+                                                    <div className="text-[10px] text-gray-400 font-medium">Owner: {room.owner?.full_name || 'Rajesh Basnet'}</div>
+                                                    <Link to={`/room/${room.id}`} className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition flex items-center gap-1">
                                                         Details <ChevronRight size={14} />
-                                                    </button>
+                                                    </Link>
                                                 </div>
                                             </div>
                                         </div>
@@ -447,6 +448,9 @@ const SearchRooms = ({ user }) => {
                                                 <div className="p-2 min-w-[150px]">
                                                     <h4 className="font-bold text-sm text-gray-900">{selectedRoom.title}</h4>
                                                     <p className="text-blue-600 font-bold text-xs mt-1">₹{parseFloat(selectedRoom.price).toLocaleString()}</p>
+                                                    <Link to={`/room/${selectedRoom.id}`} className="block mt-2 text-center py-1 bg-blue-600 text-white text-[10px] font-bold rounded hover:bg-blue-700 transition">
+                                                        View Details
+                                                    </Link>
                                                 </div>
                                             </InfoWindow>
                                         )}

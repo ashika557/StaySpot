@@ -11,7 +11,8 @@ function Register({ onLogin }) {
     phone: '',
     password: '',
     confirm_password: '',
-    role: 'Tenant'
+    role: 'Tenant',
+    identity_document: null
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -96,29 +97,33 @@ function Register({ onLogin }) {
     setLoading(true);
 
     try {
+      const data = new FormData();
+      data.append('full_name', formData.full_name);
+      data.append('email', formData.email);
+      data.append('phone', formData.phone);
+      data.append('password', formData.password);
+      data.append('role', formData.role);
+      if (formData.identity_document) {
+        data.append('identity_document', formData.identity_document);
+      }
+
       const response = await apiRequest(
         API_ENDPOINTS.REGISTER,
         {
           method: 'POST',
-          body: JSON.stringify({
-            full_name: formData.full_name,
-            email: formData.email,
-            phone: formData.phone,
-            password: formData.password,
-            role: formData.role
-          })
+          body: data
         },
         csrfToken
       );
 
-      const data = await response.json();
+      const result = await response.json();
 
       if (response.ok) {
         setSuccessMessage('Registration successful! Please enter the OTP sent to your phone.');
         setRegisteredEmail(formData.email);
         setStep('otp');
       } else {
-        setErrorMessage(data.error || 'Registration failed. Please try again.');
+        setErrorMessage(result.error || 'Registration failed. Please try again.');
       }
     } catch (error) {
       setErrorMessage('Network error. Please check if the backend is running.');
@@ -297,6 +302,25 @@ function Register({ onLogin }) {
                   <option value="Owner">Owner</option>
                   <option value="Tenant">Tenant</option>
                 </select>
+              </div>
+
+              <div>
+                <label htmlFor="identity_document" className="block text-sm font-medium text-gray-700">
+                  Identity Document (Citizenship/ID)
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <input
+                  id="identity_document"
+                  name="identity_document"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFormData(prev => ({ ...prev, identity_document: e.target.files[0] }))}
+                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Tenant: Identity for booking | Owner: Citizenship for adding rooms
+                </p>
               </div>
 
               <div>

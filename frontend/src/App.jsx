@@ -11,7 +11,13 @@ import TenantDashboard from './pages/TenantDashboard';
 import SearchRooms from './pages/SearchRooms';
 import VerifyEmail from './pages/VerifyEmail';
 import StaySpotLanding from './pages/LandingPage';
-import { ROUTES } from './constants/api';
+import Chat from './pages/Chat';
+import RoomDetails from './pages/RoomDetails';
+import TenantBookings from './pages/TenantBookings';
+import OwnerBookings from './pages/OwnerBookings';
+import Profile from './pages/Profile';
+import { ROUTES, API_ENDPOINTS } from './constants/api';
+import { apiRequest } from './utils/api';
 
 function App() {
   const [user, setUser] = React.useState(null);
@@ -24,8 +30,24 @@ function App() {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
       setShowLanding(false);
+      refreshUser();
     }
   }, []);
+
+  const refreshUser = async () => {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.GET_USER);
+      if (response.ok) {
+        const data = await response.json();
+        const updatedUser = data.user;
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        console.log("User profile refreshed:", updatedUser.is_identity_verified);
+      }
+    } catch (error) {
+      console.error("Failed to refresh user profile", error);
+    }
+  };
 
   const handleLogin = (userData) => {
     // Ensure full_name exists for tenants too
@@ -94,23 +116,46 @@ function App() {
         <Route path={`${ROUTES.RESET_PASSWORD}/:token`} element={<ResetPassword />} />
         <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail />} />
 
-        {/* Owner Routes */}
         <Route
-          path={ROUTES.OWNER_DASHBOARD}
-          element={user && user.role === 'Owner' ? <OwnerDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          path={ROUTES.TENANT_SEARCH}
+          element={user && user.role === 'Tenant' ? <SearchRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
         />
-        <Route
-          path={ROUTES.OWNER_ROOMS}
-          element={user && user.role === 'Owner' ? <OwnerRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-        />
-
         <Route
           path={ROUTES.TENANT_DASHBOARD}
           element={user && user.role === 'Tenant' ? <TenantDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
         />
         <Route
-          path={ROUTES.TENANT_SEARCH}
-          element={user && user.role === 'Tenant' ? <SearchRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          path={ROUTES.TENANT_BOOKINGS}
+          element={user && user.role === 'Tenant' ? <TenantBookings user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+        <Route
+          path={ROUTES.ROOM_DETAILS}
+          element={user ? <RoomDetails user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+
+        <Route
+          path={ROUTES.OWNER_DASHBOARD}
+          element={user && user.role === 'Owner' ? <OwnerDashboard user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+        <Route
+          path={ROUTES.OWNER_ROOMS}
+          element={user && user.role === 'Owner' ? <OwnerRooms user={user} refreshUser={refreshUser} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+        <Route
+          path={ROUTES.OWNER_BOOKINGS}
+          element={user && user.role === 'Owner' ? <OwnerBookings user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+
+        <Route
+          path={ROUTES.CHAT}
+          element={user ? <Chat user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+        />
+        <Route
+          path={ROUTES.PROFILE}
+          element={user ? <Profile user={user} refreshUser={refreshUser} onUpdateUser={(updatedUser) => {
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }} /> : <Navigate to={ROUTES.LOGIN} />}
         />
 
         {/* Catch-all */}

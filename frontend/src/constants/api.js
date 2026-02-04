@@ -9,14 +9,17 @@ export const API_ENDPOINTS = {
   LOGIN: '/login/',
   LOGOUT: '/logout/',
   USER: '/user/',
+  GET_USER: '/user/',
   CSRF: '/csrf/',
   FORGOT_PASSWORD: '/forgot-password/',
   RESET_PASSWORD: '/reset-password/',
   VERIFY_EMAIL: '/verify-email/',
   VERIFY_OTP: '/verify-otp/',
   RESEND_OTP: '/resend-otp/',
+  UPDATE_PROFILE: '/update-profile/',
   ROOMS: '/rooms/',
   CHAT: '/chat/',
+  NOTIFICATIONS: '/notifications/',
 };
 
 export const ROUTES = {
@@ -26,10 +29,14 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
   VERIFY_EMAIL: '/verify-email/:token',
+  PROFILE: '/profile',
   OWNER_DASHBOARD: '/owner/dashboard',
   OWNER_ROOMS: '/owner/rooms',
+  OWNER_BOOKINGS: '/owner/bookings',
   TENANT_DASHBOARD: '/tenant/dashboard',
   TENANT_SEARCH: '/tenant/search',
+  TENANT_BOOKINGS: '/tenant/bookings',
+  ROOM_DETAILS: '/room/:id',
   CHAT: '/chat',
 };
 
