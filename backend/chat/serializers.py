@@ -14,7 +14,7 @@ class MessageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Message
-        fields = ['id', 'conversation', 'sender', 'sender_name', 'text', 'is_read', 'timestamp']
+        fields = ['id', 'conversation', 'sender', 'sender_name', 'text', 'image', 'file', 'is_read', 'timestamp']
 
 class ConversationSerializer(serializers.ModelSerializer):
     other_user = serializers.SerializerMethodField()

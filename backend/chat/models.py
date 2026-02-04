@@ -32,7 +32,9 @@ class Message(models.Model):
         on_delete=models.CASCADE, 
         related_name='chat_sent_messages'
     )
-    text = models.TextField()
+    text = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='chat_images/', blank=True, null=True)
+    file = models.FileField(upload_to='chat_files/', blank=True, null=True)
     is_read = models.BooleanField(default=False)
     timestamp = models.DateTimeField(auto_now_add=True)
 

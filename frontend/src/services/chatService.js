@@ -61,7 +61,7 @@ class ChatService {
     /**
      * Connect to WebSocket for a specific conversation
      */
-    connect(conversationId, onMessageReceived) {
+    connect(conversationId, onEventReceived) {
         if (this.socket) {
             this.socket.close();
         }
@@ -80,8 +80,8 @@ class ChatService {
 
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (onMessageReceived) {
-                onMessageReceived(data);
+            if (onEventReceived) {
+                onEventReceived(data);
             }
         };
 
@@ -95,16 +95,82 @@ class ChatService {
     }
 
     /**
-     * Send a message via WebSocket
+     * Send a text message via WebSocket
      */
     sendMessage(message, senderId) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
+                type: 'chat_message',
                 message: message,
                 sender_id: senderId
             }));
         } else {
             console.error('WebSocket is not connected');
+        }
+    }
+
+    /**
+     * Send a seen event via WebSocket
+     */
+    sendSeenEvent(userId, conversationId) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({
+                type: 'message_seen',
+                user_id: userId,
+                conversation_id: conversationId
+            }));
+        }
+    }
+
+    /**
+     * Upload media via API and then notify via WebSocket
+     */
+    async sendMedia(conversationId, file, text, senderId, senderName) {
+        const formData = new FormData();
+        if (file.type.startsWith('image/')) {
+            formData.append('image', file);
+        } else {
+            formData.append('file', file);
+        }
+        if (text) formData.append('text', text);
+
+        const response = await apiRequest(`${API_ENDPOINTS.CHAT}${conversationId}/send_media/`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const savedMsg = await response.json();
+            // Notify others via websocket about the new media message
+            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                this.socket.send(JSON.stringify({
+                    type: 'chat_message',
+                    message: savedMsg.text,
+                    sender_id: senderId,
+                    sender_name: senderName,
+                    media_url: savedMsg.image || savedMsg.file,
+                    media_type: savedMsg.image ? 'image' : 'file',
+                    msg_id: savedMsg.id
+                }));
+            }
+            return savedMsg;
+        } else {
+            throw new Error('Failed to upload media');
+        }
+    }
+
+    /**
+     * Mark messages as read via API
+     */
+    async markAsRead(conversationId) {
+        try {
+            const response = await apiRequest(`${API_ENDPOINTS.CHAT}${conversationId}/mark_as_read/`, {
+                method: 'POST'
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('Error marking as read:', error);
+            return false;
         }
     }
 
