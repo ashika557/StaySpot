@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './sidebar';
 import { Home, Users, TrendingUp, Eye, Search, Filter, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin } from 'lucide-react';
 import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
+import { ROUTES } from '../constants/api';
+import OwnerHeader from '../components/OwnerHeader';
 
-export default function OwnerRooms({ user }) {
+export default function OwnerRooms({ user, refreshUser, onLogout }) {
+  const navigate = useNavigate();
   const [rooms, setRooms] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showModal, setShowModal] = React.useState(null);
@@ -25,6 +29,7 @@ export default function OwnerRooms({ user }) {
   // Fetch rooms on component mount
   React.useEffect(() => {
     fetchRooms();
+    if (refreshUser) refreshUser();
   }, []);
 
   const fetchRooms = async () => {
@@ -97,6 +102,16 @@ export default function OwnerRooms({ user }) {
   };
 
   const handleSubmit = async () => {
+    if (!user?.is_identity_verified && user?.role !== 'Admin') {
+      const errorMsg = user?.identity_document
+        ? 'Your identity document is pending verification by an administrator.'
+        : 'You must provide an identity document (Citizenship/ID) in your Profile before adding a room.';
+      alert(errorMsg);
+      setShowModal(null);
+      navigate(ROUTES.PROFILE);
+      return;
+    }
+
     if (!formData.title || !formData.location || !formData.price) {
       alert('Please fill required fields');
       return;
@@ -162,26 +177,13 @@ export default function OwnerRooms({ user }) {
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-white border-b px-8 py-4 flex justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">My Rooms</h2>
-            <p className="text-sm text-gray-500">Manage all your property listings</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              <Bell className="w-6 h-6 text-gray-600" />
-            </button>
-            <div className="flex items-center gap-3">
-              <img src="https://i.pravatar.cc/150?img=10" className="w-10 h-10 rounded-full" alt="" />
-              <div>
-                <p className="text-sm font-semibold">{user?.full_name}</p>
-                <p className="text-xs text-gray-500">{user?.role}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <OwnerHeader
+          user={user}
+          title="My Rooms"
+          subtitle="Manage all your property listings"
+          showIdentityWarning={true}
+          onLogout={onLogout}
+        />
 
         {/* Quick Stats */}
         {rooms.length > 0 && (
@@ -246,7 +248,17 @@ export default function OwnerRooms({ user }) {
                   <List className="w-4 h-4" />
                 </button>
               </div>
-              <button onClick={() => setShowModal('add')} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (!user?.is_identity_verified && user?.role !== 'Admin') {
+                    alert(user?.identity_document ? 'Verification Pending: You will be redirected to your profile.' : 'Unverified: You must upload your ID in your profile first.');
+                    navigate(ROUTES.PROFILE);
+                  } else {
+                    setShowModal('add');
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"
+              >
                 <Plus className="w-4 h-4" /> Add Room
               </button>
             </div>
@@ -272,7 +284,19 @@ export default function OwnerRooms({ user }) {
               </div>
               <h3 className="text-2xl font-bold mb-3">No rooms listed yet</h3>
               <p className="text-gray-500 mb-8">Start by adding your first property listing</p>
-              <button onClick={() => setShowModal('add')} className="px-8 py-3 bg-blue-600 text-white rounded-lg">Add Your First Room</button>
+              <button
+                onClick={() => {
+                  if (!user?.is_identity_verified && user?.role !== 'Admin') {
+                    alert(user?.identity_document ? 'Verification Pending: You will be redirected to your profile.' : 'Unverified: You must upload your ID in your profile first.');
+                    navigate(ROUTES.PROFILE);
+                  } else {
+                    setShowModal('add');
+                  }
+                }}
+                className="px-8 py-3 bg-blue-600 text-white rounded-lg"
+              >
+                Add Your First Room
+              </button>
             </div>
           ) : filteredRooms.length === 0 ? (
             <div className="text-center py-20"><p className="text-gray-500">No rooms found</p></div>

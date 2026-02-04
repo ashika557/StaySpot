@@ -5,8 +5,9 @@ import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../constants/api';
+import OwnerHeader from '../components/OwnerHeader';
 
-export default function OwnerDashboard({ user }) {
+export default function OwnerDashboard({ user, onLogout }) {
   const [totalRooms, setTotalRooms] = useState(0);
   const [availableRooms, setAvailableRooms] = useState(0);
   const [occupiedRooms, setOccupiedRooms] = useState(0);
@@ -76,30 +77,12 @@ export default function OwnerDashboard({ user }) {
       <Sidebar />
 
       <div className="flex-1 overflow-auto">
-        {/* Top Header */}
-        <div className="bg-white border-b px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Dashboard Overview</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Welcome back, {user?.full_name}! Here's what's happening with your properties.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-gray-100 rounded-full relative">
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                <Bell className="w-6 h-6 text-gray-600" />
-              </button>
-              <div className="flex items-center gap-3">
-                <img src="https://i.pravatar.cc/150?img=10" alt="Profile" className="w-10 h-10 rounded-full" />
-                <div>
-                  <p className="text-sm font-semibold">{user?.full_name}</p>
-                  <p className="text-xs text-gray-500">{user?.role}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <OwnerHeader
+          user={user}
+          title="Dashboard Overview"
+          subtitle={`Welcome back, ${user?.full_name}! Here's what's happening with your properties.`}
+          onLogout={onLogout}
+        />
 
         {/* Main Content */}
         <div className="p-8">

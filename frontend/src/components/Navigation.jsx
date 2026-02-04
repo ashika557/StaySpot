@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../constants/api';
+import NotificationBell from './NotificationBell';
 
 function Navigation({ user, onLogout, showLanding }) {
-  // Only show nav if NOT landing
-  if (showLanding) return null;
+  // Only show nav if NOT landing and NOT Owner/Admin (they have their own sidebar/header)
+  if (showLanding || (user && ['Owner', 'Admin'].includes(user.role))) return null;
 
   return (
     <nav className="bg-blue-600 text-white shadow-lg">
@@ -17,7 +18,7 @@ function Navigation({ user, onLogout, showLanding }) {
           {user ? (
             <>
               <Link
-                to={user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD}
+                to={['Owner', 'Admin'].includes(user.role) ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD}
                 className="hover:text-blue-200 transition"
               >
                 Dashboard
@@ -30,6 +31,10 @@ function Navigation({ user, onLogout, showLanding }) {
                   Search Rooms
                 </Link>
               )}
+              <Link to={ROUTES.PROFILE} className="hover:text-blue-200 transition">
+                Profile
+              </Link>
+              <NotificationBell user={user} />
               <span className="text-blue-200">
                 Welcome, {user.full_name ? user.full_name : 'User'}
               </span>
