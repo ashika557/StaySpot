@@ -16,8 +16,26 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     
+    # Identity Verification
+    identity_document = models.ImageField(upload_to='identity_docs/', null=True, blank=True)
+    is_identity_verified = models.BooleanField(default=False)
+    
     def __str__(self):
         return f"{self.full_name} ({self.role})"
+
+class PendingVerificationManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            identity_document__isnull=False, 
+            is_identity_verified=False
+        ).exclude(identity_document='')
+
+class PendingVerification(User):
+    objects = PendingVerificationManager()
+    class Meta:
+        proxy = True
+        verbose_name = 'Pending Identity Verification'
+        verbose_name_plural = 'Pending Identity Verifications'
 
 
 class PasswordResetToken(models.Model):

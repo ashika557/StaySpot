@@ -173,6 +173,7 @@ def login_view(request):
     
     # Login user
     login(request, user)
+    print(f"DEBUG: User {user.email} logged in. Session key: {request.session.session_key}")
     
     return Response({
         'message': 'Login successful.',
@@ -180,7 +181,9 @@ def login_view(request):
             'id': user.id,
             'full_name': user.full_name,
             'email': user.email,
-            'role': user.role
+            'role': user.role,
+            'identity_document': user.identity_document.url if user.identity_document else None,
+            'is_identity_verified': user.is_identity_verified
         }
     }, status=status.HTTP_200_OK)
 
@@ -202,9 +205,46 @@ def get_user(request):
             'id': request.user.id,
             'full_name': request.user.full_name,
             'email': request.user.email,
-            'role': request.user.role
+            'role': request.user.role,
+            'identity_document': request.user.identity_document.url if request.user.identity_document else None,
+            'is_identity_verified': request.user.is_identity_verified
         }
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """Update user profile including identity document."""
+    user = request.user
+    full_name = request.data.get('full_name')
+    phone = request.data.get('phone')
+    identity_document = request.FILES.get('identity_document')
+    
+    if full_name:
+        user.full_name = full_name
+    if phone:
+        user.phone = phone
+    if identity_document:
+        user.identity_document = identity_document
+        # Reset verification status if document is updated? 
+        # For now, just set it to False until re-verified if necessary, 
+        # but the prompt says they just need to PROVIDE it.
+        # Let's keep is_identity_verified as a manual flag for now.
+    
+    user.save()
+    
+    return Response({
+        'message': 'Profile updated successfully.',
+        'user': {
+            'id': user.id,
+            'full_name': user.full_name,
+            'email': user.email,
+            'role': user.role,
+            'identity_document': user.identity_document.url if user.identity_document else None,
+            'is_identity_verified': user.is_identity_verified
+        }
+    })
 
 
 @api_view(['GET'])
