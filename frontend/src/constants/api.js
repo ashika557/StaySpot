@@ -36,6 +36,7 @@ export const ROUTES = {
   TENANT_DASHBOARD: '/tenant/dashboard',
   TENANT_SEARCH: '/tenant/search',
   TENANT_BOOKINGS: '/tenant/bookings',
+  TENANT_PAYMENTS: '/tenant/payments',
   ROOM_DETAILS: '/room/:id',
   CHAT: '/chat',
 };
