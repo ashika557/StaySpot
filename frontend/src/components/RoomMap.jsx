@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, StandaloneSearchBox } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, StandaloneSearchBox } from '@react-google-maps/api';
 import { MapPin, Navigation, School, Briefcase, Info } from 'lucide-react';
+import { useMapContext } from '../context/MapContext';
 
-import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES } from '../constants/config';
+import { GOOGLE_MAPS_API_KEY } from '../constants/config';
 
 const mapContainerStyle = {
     width: '100%',
@@ -16,11 +17,7 @@ const defaultCenter = {
 };
 
 const RoomMap = ({ rooms }) => {
-    const { isLoaded } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        libraries: GOOGLE_MAPS_LIBRARIES
-    });
+    const { isLoaded } = useMapContext();
 
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [workplace, setWorkplace] = useState(null);
