@@ -10,6 +10,7 @@ export default function TenantSidebar() {
   const menuItems = [
     { path: '/tenant/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/tenant/search', icon: Search, label: 'Search Rooms' },
+    { path: '/tenant/visits', icon: Calendar, label: 'My Visits' }, // Calendar icon is reused or use Eye
     { path: '/tenant/bookings', icon: Calendar, label: 'Bookings' },
     { path: '/tenant/complaints', icon: AlertTriangle, label: 'Complaints & Reviews' },
     { path: '/chat', icon: MessageSquare, label: 'Chat' },
@@ -36,8 +37,8 @@ export default function TenantSidebar() {
               key={item.path}
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${isActive(item.path)
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:bg-gray-50'
+                ? 'text-blue-600 bg-blue-50'
+                : 'text-gray-600 hover:bg-gray-50'
                 }`}
             >
               <Icon className="w-5 h-5" />
