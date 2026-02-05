@@ -55,6 +55,7 @@ class NotificationService {
         const wsUrl = `${protocol}//${hostname}:8000/ws/notifications/`;
 
         console.log(`[NotificationService] Connecting to ${wsUrl}`);
+        this.onNotificationReceived = onNotification;
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
