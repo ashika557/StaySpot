@@ -128,9 +128,9 @@ function UpcomingVisitCard({ visit }) {
     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-gray-800">Upcoming Visit</h2>
-        <span className="text-sm text-gray-500">
-          {visit.status}
-        </span>
+        <Link to="/tenant/visits" className="text-sm text-blue-600 font-bold hover:underline">
+          View All
+        </Link>
       </div>
 
       <div className="flex items-center gap-4">
