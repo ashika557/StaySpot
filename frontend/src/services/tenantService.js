@@ -144,6 +144,36 @@ export const paymentService = {
         }
     },
 
+    // Verified eSewa payment
+    verifyEsewaPayment: async (paymentId, paymentData) => {
+        try {
+            const response = await apiRequest(`/payments/${paymentId}/verify_esewa/`, {
+                method: 'POST',
+                body: JSON.stringify(paymentData),
+            });
+            if (!response.ok) throw new Error('Failed to verify eSewa payment');
+            return await response.json();
+        } catch (error) {
+            console.error('Error verifying eSewa payment:', error);
+            throw error;
+        }
+    },
+
+    // Verify Khalti payment
+    verifyKhaltiPayment: async (paymentId, token, amount) => {
+        try {
+            const response = await apiRequest(`/payments/${paymentId}/verify_khalti/`, {
+                method: 'POST',
+                body: JSON.stringify({ token, amount }),
+            });
+            if (!response.ok) throw new Error('Failed to verify Khalti payment');
+            return await response.json();
+        } catch (error) {
+            console.error('Error verifying Khalti payment:', error);
+            throw error;
+        }
+    },
+
     // Mark payment as paid
     markAsPaid: async (paymentId) => {
         try {
