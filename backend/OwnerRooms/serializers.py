@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from .models import Room, RoomImage, Booking, Visit, Payment, Chat
+from .models import Room, RoomImage, Booking, Visit, Chat
 from accounts.models import User
+from payments.models import Payment
+from payments.serializers import PaymentSerializer
 
 class RoomImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -104,23 +106,7 @@ class VisitSerializer(serializers.ModelSerializer):
 
 
 # Payment serializers
-class PaymentSerializer(serializers.ModelSerializer):
-    booking = BookingSerializer(read_only=True)
-    booking_id = serializers.PrimaryKeyRelatedField(
-        queryset=Booking.objects.all(), 
-        source='booking', 
-        write_only=True
-    )
-    tenant_name = serializers.CharField(source='booking.tenant.full_name', read_only=True)
-    room_number = serializers.CharField(source='booking.room.room_number', read_only=True)
-    
-    class Meta:
-        model = Payment
-        fields = [
-            'id', 'booking', 'booking_id', 'tenant_name', 'room_number',
-            'amount', 'due_date', 'paid_date', 'status', 'payment_type', 'created_at'
-        ]
-        read_only_fields = ['id', 'created_at']
+# PaymentSerializer moved to payments app
 
 
 # Chat serializers

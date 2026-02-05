@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'OwnerRooms',  
     'notifications',
     'chat',
+    'payments',
 ]
 
 MIDDLEWARE = [

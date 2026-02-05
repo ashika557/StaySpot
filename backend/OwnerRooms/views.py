@@ -5,11 +5,13 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, Payment
+from .models import Room, RoomImage, UserSearchPreference, Booking, Visit
+from payments.models import Payment
 from .serializers import (
     RoomSerializer, BookingSerializer, VisitSerializer, 
-    PaymentSerializer, TenantDashboardSerializer
+    TenantDashboardSerializer
 )
+# PaymentSerializer imported locally in tenant_dashboard to avoid circular import
 from chat.models import Conversation, Message
 from chat.serializers import MessageSerializer
 from notifications.utils import send_notification
@@ -229,6 +231,15 @@ class BookingViewSet(viewsets.ModelViewSet):
                     
         serializer.save()
 
+        # Update Room status based on booking status
+        if new_status in ['Confirmed', 'Active']:
+            booking.room.status = 'Occupied'
+            booking.room.save()
+        elif new_status in ['Cancelled', 'Rejected', 'Completed']:
+            # If a booking is cancelled/rejected/completed, room becomes available again
+            booking.room.status = 'Available'
+            booking.room.save()
+
         # Send notification about status change
         if new_status:
             recipient = booking.room.owner if user.role == 'Tenant' else booking.tenant
@@ -240,9 +251,28 @@ class BookingViewSet(viewsets.ModelViewSet):
                 text=f"Booking for {booking.room.title} has been {new_status.lower()}.",
                 related_id=booking.id
             )
+
+            # Auto-create Payment if confirmed
+            if new_status in ['Confirmed', 'Active']:
+                from payments.models import Payment
+                # Check if initial rent payment exists
+                if not Payment.objects.filter(booking=booking, payment_type='Rent').exists():
+                    Payment.objects.create(
+                        booking=booking,
+                        amount=booking.monthly_rent,
+                        due_date=booking.start_date,
+                        status='Pending',
+                        payment_type='Rent'
+                    )
     
     def perform_destroy(self, instance):
         recipient = instance.room.owner if self.request.user.role == 'Tenant' else instance.tenant
+        
+        # If the booking was confirmed/active, make the room available again upon deletion
+        if instance.status in ['Confirmed', 'Active']:
+            instance.room.status = 'Available'
+            instance.room.save()
+
         # Send notification before deletion
         send_notification(
             recipient=recipient,
@@ -287,20 +317,49 @@ class VisitViewSet(viewsets.ModelViewSet):
         if not user.is_identity_verified and user.role != 'Admin':
             from rest_framework import serializers
             raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
-        serializer.save(tenant=user)
+        visit = serializer.save(tenant=user)
+        
+        # Notify room owner about new visit request
+        send_notification(
+            recipient=visit.owner,
+            actor=user,
+            notification_type='visit_requested',
+            text=f"New visit request for {visit.room.title} from {user.full_name}.",
+            related_id=visit.id
+        )
 
-
-class PaymentViewSet(viewsets.ModelViewSet):
-    serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
+    def perform_update(self, serializer):
         user = self.request.user
-        if user.role == 'Tenant':
-            return Payment.objects.filter(booking__tenant=user)
-        elif user.role == 'Owner':
-            return Payment.objects.filter(booking__room__owner=user)
-        return Payment.objects.none()
+        visit = self.get_object()
+        old_status = visit.status
+        new_status = serializer.validated_data.get('status')
+        
+        serializer.save()
+        
+        if new_status and new_status != old_status:
+            # Determine notification recipient and type
+            recipient = visit.owner if user.role == 'Tenant' else visit.tenant
+            
+            # Map status to notification type
+            notif_type = f'visit_{new_status.lower()}'
+            if new_status == 'Scheduled':
+                notif_type = 'visit_approved'
+            elif new_status == 'Completed':
+                # Maybe no notification for completed? Or add it. 
+                # For now let's just stick to the ones we added to model.
+                return
+
+            if notif_type in ['visit_approved', 'visit_rejected', 'visit_cancelled']:
+                send_notification(
+                    recipient=recipient,
+                    actor=user,
+                    notification_type=notif_type,
+                    text=f"Your visit request for {visit.room.title} has been {new_status.lower()}.",
+                    related_id=visit.id
+                )
+
+
+# PaymentViewSet moved to payments app
 
 
 # Debug endpoint to check user info
@@ -404,6 +463,7 @@ def tenant_dashboard(request):
     print(f"DEBUG: Final suggested rooms count: {len(suggested_rooms)}")
     
     # Serialize data and return
+    from payments.serializers import PaymentSerializer
     return Response({
         'upcoming_visit': VisitSerializer(upcoming_visit, context={'request': request}).data if upcoming_visit else None,
         'current_booking': BookingSerializer(current_booking, context={'request': request}).data if current_booking else None,
