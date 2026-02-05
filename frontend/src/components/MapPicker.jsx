@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, StandaloneSearchBox, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, Marker, StandaloneSearchBox, InfoWindow } from '@react-google-maps/api';
+import { useMapContext } from '../context/MapContext';
 import { Search, GraduationCap, MapPin, Navigation, Info } from 'lucide-react';
-import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES, CONFIG } from '../constants/config';
+import { GOOGLE_MAPS_API_KEY, CONFIG } from '../constants/config';
 
 const mapContainerStyle = {
     width: '100%',
@@ -10,11 +11,7 @@ const mapContainerStyle = {
 };
 
 const MapPicker = ({ onLocationSelect, initialLocation, readOnly = false }) => {
-    const { isLoaded } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        libraries: GOOGLE_MAPS_LIBRARIES
-    });
+    const { isLoaded } = useMapContext();
 
     const defaultCenter = CONFIG.DEFAULT_CENTER;
 
