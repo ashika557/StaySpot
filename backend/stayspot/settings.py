@@ -179,3 +179,8 @@ DEFAULT_FROM_EMAIL = 'noreply@stayspot.com'
 
 # Frontend URL for link generation
 FRONTEND_URL = 'http://localhost:3000'
+
+# eSewa Configuration (UAT/Sandbox defaults)
+ESEWA_SECRET_KEY = '8gBm/:&EnhH.1/q'
+ESEWA_PRODUCT_CODE = 'EPAYTEST'
+ESEWA_GATEWAY_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'

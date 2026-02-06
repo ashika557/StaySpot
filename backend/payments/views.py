@@ -1,3 +1,8 @@
+import hmac
+import hashlib
+import base64
+import json
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -19,70 +24,97 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Payment.objects.filter(booking__room__owner=user)
         return Payment.objects.none()
 
+    @action(detail=True, methods=['get'])
+    def get_esewa_params(self, request, pk=None):
+        """Generates signed parameters for eSewa v2 initiation."""
+        payment = self.get_object()
+        transaction_uuid = f"PAY-{payment.id}-{timezone.now().timestamp()}"
+        
+        # Format string for signature calculation
+        # Format: total_amount={total_amount},transaction_uuid={transaction_uuid},product_code={product_code}
+        amount_str = str(int(payment.amount)) if payment.amount == int(payment.amount) else str(payment.amount)
+        data_to_sign = f"total_amount={amount_str},transaction_uuid={transaction_uuid},product_code={settings.ESEWA_PRODUCT_CODE}"
+        
+        secret_key = settings.ESEWA_SECRET_KEY
+        signature = hmac.new(
+            secret_key.encode(),
+            data_to_sign.encode(),
+            hashlib.sha256
+        ).digest()
+        signature_base64 = base64.b64encode(signature).decode()
+
+        params = {
+            "amount": amount_str,
+            "failure_url": f"{settings.FRONTEND_URL}/tenant/payments?status=failure",
+            "product_delivery_charge": "0",
+            "product_service_charge": "0",
+            "product_code": settings.ESEWA_PRODUCT_CODE,
+            "signature": signature_base64,
+            "signed_field_names": "total_amount,transaction_uuid,product_code",
+            "success_url": f"{settings.FRONTEND_URL}/tenant/payments?status=success&payment_id={payment.id}&method=esewa",
+            "tax_amount": "0",
+            "total_amount": amount_str,
+            "transaction_uuid": transaction_uuid,
+            "esewa_url": settings.ESEWA_GATEWAY_URL
+        }
+        return Response(params)
+
     @action(detail=True, methods=['post'])
     def verify_esewa(self, request, pk=None):
-        """Action to verify eSewa payment (V2)."""
+        """Action to verify eSewa v2 payment."""
         payment = self.get_object()
-        import requests
-        import base64
-        import json
+        encoded_data = request.data.get('data')
         
-        # In V2, eSewa returns a base64 encoded 'data' field in the query params upon success
-        encoded_data = request.query_params.get('data')
+        if not encoded_data:
+            return Response({'error': 'Encoded data is required'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # If 'data' is not present, check body (sometimes it comes differently depending on implementation)
-        if not encoded_data:
-             encoded_data = request.data.get('data')
-
-        print(f"DEBUG: eSewa V2 Verify Request - PaymentID: {pk}, Data: {encoded_data}")
-
-        if not encoded_data:
-             return Response({'error': 'No data received from eSewa'}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            # Decode the base64 data
+            # Decode the base64 data from eSewa
             decoded_bytes = base64.b64decode(encoded_data)
             decoded_str = decoded_bytes.decode('utf-8')
-            data = json.loads(decoded_str)
+            response_data = json.loads(decoded_str)
             
-            print(f"DEBUG: eSewa V2 Decoded Data: {data}")
+            # Verify signature in response
+            resp_sig = response_data.get('signature')
+            resp_fields = response_data.get('signed_field_names', '').split(',')
             
-            # Extract fields
-            status_code = data.get('status')
-            transaction_uuid = data.get('transaction_uuid')
-            total_amount = data.get('total_amount')
-            ref_id = data.get('ref_id') # eSewa reference ID
+            message = []
+            for field in resp_fields:
+                message.append(f"{field}={response_data.get(field)}")
+            message_str = ",".join(message)
             
-            # Verify status
-            if status_code == 'COMPLETE':
-                # Optional: Verify signature/amount again if needed, but the redirect implies success if signature matched eSewa's side
-                
-                # Check if transaction_uuid matches our format (PAY-{id}-{timestamp})
-                if str(payment.id) not in transaction_uuid:
-                     print(f"DEBUG: Transaction UUID mismatch. Expected ID {payment.id} in {transaction_uuid}")
-                
-                payment.status = 'Paid'
-                payment.paid_date = timezone.now().date()
-                payment.payment_method = 'eSewa'
-                payment.transaction_id = ref_id if ref_id else transaction_uuid
-                payment.save()
+            secret_key = settings.ESEWA_SECRET_KEY
+            expected_sig = base64.b64encode(
+                hmac.new(secret_key.encode(), message_str.encode(), hashlib.sha256).digest()
+            ).decode()
+            
+            if resp_sig != expected_sig:
+                 return Response({'error': 'Invalid signature'}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Notify Owner
-                send_notification(
-                    recipient=payment.booking.room.owner,
-                    actor=payment.booking.tenant,
-                    notification_type='payment_received',
-                    text=f"Payment of ₹{payment.amount} received via eSewa for {payment.booking.room.title}.",
-                    related_id=payment.id
-                )
-                return Response({'status': 'Payment verified successfully'})
-            else:
-                 print(f"DEBUG: eSewa status not COMPLETE: {status_code}")
-                 return Response({'error': 'eSewa payment failed'}, status=status.HTTP_400_BAD_REQUEST)
+            if response_data.get('status') != 'COMPLETE':
+                 return Response({'error': 'Payment not complete'}, status=status.HTTP_400_BAD_REQUEST)
 
+            transaction_id = response_data.get('transaction_code')
+            
+            payment.status = 'Paid'
+            payment.paid_date = timezone.now().date()
+            payment.payment_method = 'eSewa'
+            payment.transaction_id = transaction_id
+            payment.save()
+    
+            # Notify Owner
+            send_notification(
+                recipient=payment.booking.room.owner,
+                actor=payment.booking.tenant,
+                notification_type='payment_received',
+                text=f"Payment of NPR {payment.amount} received via eSewa for {payment.booking.room.title}.",
+                related_id=payment.id
+            )
+    
+            return Response({'status': 'Payment verified successfully'})
+            
         except Exception as e:
-            print(f"DEBUG: eSewa Exception: {e}")
-            return Response({'error': 'Verification error'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
     @action(detail=True, methods=['post'])
