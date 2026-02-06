@@ -183,7 +183,8 @@ def login_view(request):
             'email': user.email,
             'role': user.role,
             'identity_document': user.identity_document.url if user.identity_document else None,
-            'is_identity_verified': user.is_identity_verified
+            'is_identity_verified': user.is_identity_verified,
+            'profile_photo': user.profile_photo.url if user.profile_photo else None
         }
     }, status=status.HTTP_200_OK)
 
@@ -207,7 +208,8 @@ def get_user(request):
             'email': request.user.email,
             'role': request.user.role,
             'identity_document': request.user.identity_document.url if request.user.identity_document else None,
-            'is_identity_verified': request.user.is_identity_verified
+            'is_identity_verified': request.user.is_identity_verified,
+            'profile_photo': request.user.profile_photo.url if request.user.profile_photo else None
         }
     }, status=status.HTTP_200_OK)
 
@@ -220,6 +222,7 @@ def update_profile(request):
     full_name = request.data.get('full_name')
     phone = request.data.get('phone')
     identity_document = request.FILES.get('identity_document')
+    profile_photo = request.FILES.get('profile_photo')
     
     if full_name:
         user.full_name = full_name
@@ -231,6 +234,8 @@ def update_profile(request):
         # For now, just set it to False until re-verified if necessary, 
         # but the prompt says they just need to PROVIDE it.
         # Let's keep is_identity_verified as a manual flag for now.
+    if profile_photo:
+        user.profile_photo = profile_photo
     
     user.save()
     
@@ -242,7 +247,8 @@ def update_profile(request):
             'email': user.email,
             'role': user.role,
             'identity_document': user.identity_document.url if user.identity_document else None,
-            'is_identity_verified': user.is_identity_verified
+            'is_identity_verified': user.is_identity_verified,
+            'profile_photo': user.profile_photo.url if user.profile_photo else None
         }
     })
 

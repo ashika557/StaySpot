@@ -1,63 +1,106 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '../constants/api';
+import { Link, useLocation } from 'react-router-dom';
+import { ROUTES, getMediaUrl } from '../constants/api';
 import NotificationBell from './NotificationBell';
+import { Home, LogOut } from 'lucide-react';
 
 function Navigation({ user, onLogout, showLanding }) {
-  // Only show nav if NOT landing and NOT Owner/Admin (they have their own sidebar/header)
-  if (showLanding || (user && ['Owner', 'Admin'].includes(user.role))) return null;
+  const location = useLocation();
+
+  if (showLanding || !user) return null;
+
+  const isOwner = user.role === 'Owner' || user.role === 'owner';
+  const isTenant = user.role === 'Tenant' || user.role === 'tenant';
+
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="bg-blue-600 text-white shadow-lg">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to={ROUTES.HOME} className="text-2xl font-bold">
-          StaySpot
-        </Link>
+    <nav className="bg-blue-600 text-white shadow-lg sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link to={ROUTES.HOME} className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+              <Home className="w-5 h-5 text-blue-600" />
+            </div>
+            <span className="text-xl font-bold">StaySpot</span>
+          </Link>
 
-        <div className="flex items-center space-x-4">
-          {user ? (
-            <>
+          {/* Main Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
+            <Link
+              to={isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD)
+                  ? 'bg-white text-blue-600 shadow-md'
+                  : 'text-white hover:bg-blue-700'
+                }`}
+            >
+              Dashboard
+            </Link>
+            <Link
+              to={ROUTES.CHAT}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.CHAT)
+                  ? 'bg-white text-blue-600 shadow-md'
+                  : 'text-white hover:bg-blue-700'
+                }`}
+            >
+              Messages
+            </Link>
+            {isTenant && (
               <Link
-                to={['Owner', 'Admin'].includes(user.role) ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD}
-                className="hover:text-blue-200 transition"
+                to={ROUTES.TENANT_SEARCH}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.TENANT_SEARCH)
+                    ? 'bg-white text-blue-600 shadow-md'
+                    : 'text-white hover:bg-blue-700'
+                  }`}
               >
-                Dashboard
+                Search Rooms
               </Link>
-              <Link to={ROUTES.CHAT} className="hover:text-blue-200 transition">
-                Messages
+            )}
+            <Link
+              to={ROUTES.PROFILE}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.PROFILE)
+                  ? 'bg-white text-blue-600 shadow-md'
+                  : 'text-white hover:bg-blue-700'
+                }`}
+            >
+              Profile
+            </Link>
+          </div>
+
+          {/* Right Side */}
+          <div className="flex items-center gap-4">
+            {/* Notification Bell */}
+            <NotificationBell user={user} />
+
+            {/* User Info */}
+            <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-blue-500">
+              <div className="text-right">
+                <p className="text-xs text-blue-100">Welcome back,</p>
+                <p className="text-sm font-semibold truncate max-w-[120px]">
+                  {user.full_name || 'User'}
+                </p>
+              </div>
+
+              {/* Profile Picture */}
+              <Link to={ROUTES.PROFILE} className="relative group">
+                <img
+                  src={user.profile_photo ? getMediaUrl(user.profile_photo) : `https://ui-avatars.com/api/?name=${user.full_name || 'User'}&background=fff&color=3b82f6&bold=true&size=128`}
+                  alt="Profile"
+                  className="w-10 h-10 rounded-full border-2 border-white object-cover group-hover:scale-105 transition-transform shadow-md"
+                />
               </Link>
-              {user.role === 'Tenant' && (
-                <Link to={ROUTES.TENANT_SEARCH} className="hover:text-blue-200 transition">
-                  Search Rooms
-                </Link>
-              )}
-              <Link to={ROUTES.PROFILE} className="hover:text-blue-200 transition">
-                Profile
-              </Link>
-              <NotificationBell user={user} />
-              <span className="text-blue-200">
-                Welcome, {user.full_name ? user.full_name : 'User'}
-              </span>
+
+              {/* Logout Button */}
               <button
                 onClick={onLogout}
-                className="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded transition"
+                className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg"
               >
-                Logout
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
               </button>
-            </>
-          ) : (
-            <>
-              <Link to={ROUTES.REGISTER} className="hover:text-blue-200 transition">
-                Register
-              </Link>
-              <Link
-                to={ROUTES.LOGIN}
-                className="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded transition"
-              >
-                Login
-              </Link>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </div>
     </nav>

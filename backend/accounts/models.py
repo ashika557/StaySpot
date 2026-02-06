@@ -20,6 +20,9 @@ class User(AbstractUser):
     identity_document = models.ImageField(upload_to='identity_docs/', null=True, blank=True)
     is_identity_verified = models.BooleanField(default=False)
     
+    # Profile Photo
+    profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+    
     def __str__(self):
         return f"{self.full_name} ({self.role})"
 
