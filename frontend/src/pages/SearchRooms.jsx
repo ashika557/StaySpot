@@ -156,28 +156,9 @@ const SearchRooms = ({ user }) => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
-            <TenantSidebar />
+            <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
-                <div className="bg-white border-b px-8 py-4 sticky top-0 z-10">
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-2xl font-bold text-gray-800">Search Rooms</h1>
-                        <div className="flex items-center gap-3">
-                            <div className="text-right">
-                                <div className="text-sm font-bold text-gray-900 leading-none">
-                                    {user?.full_name || 'User'}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">{user?.role}</div>
-                            </div>
-                            <img
-                                src={`https://ui-avatars.com/api/?name=${user?.full_name || 'User'}&background=random`}
-                                className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
-                                alt="User"
-                            />
-                        </div>
-                    </div>
-                </div>
 
                 {/* Main Content area */}
                 <div className="flex-1 overflow-auto p-8">
@@ -383,7 +364,12 @@ const SearchRooms = ({ user }) => {
                                             <div className="flex-1 min-w-0 flex flex-col justify-between">
                                                 <div>
                                                     <div className="flex justify-between items-start">
-                                                        <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">{room.title}</h3>
+                                                        <div className="flex flex-col">
+                                                            <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">{room.title}</h3>
+                                                            {room.status === 'Occupied' && (
+                                                                <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded w-fit">OCCUPIED</span>
+                                                            )}
+                                                        </div>
                                                         <div className="text-blue-600 font-bold text-sm">Rs. {parseFloat(room.price).toLocaleString()}/m</div>
                                                     </div>
                                                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
@@ -393,10 +379,12 @@ const SearchRooms = ({ user }) => {
                                                     <div className="flex items-center gap-2 mt-2">
                                                         <div className="flex gap-0.5">
                                                             {[1, 2, 3, 4, 5].map(i => (
-                                                                <Star key={i} size={12} fill={i <= 4 ? "#FBBF24" : "none"} color={i <= 4 ? "#FBBF24" : "#D1D5DB"} />
+                                                                <Star key={i} size={12} fill={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "none"} color={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "#D1D5DB"} />
                                                             ))}
                                                         </div>
-                                                        <span className="text-[10px] text-gray-400 font-bold">4.0 (24 reviews)</span>
+                                                        <span className="text-[10px] text-gray-400 font-bold">
+                                                            {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0} reviews)
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center justify-between mt-2">

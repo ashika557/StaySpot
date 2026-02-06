@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { visitService } from '../services/tenantService';
 import { Link } from 'react-router-dom';
+import { getMediaUrl } from '../constants/api';
 
 export default function TenantVisits({ user }) {
     const [visits, setVisits] = useState([]);
@@ -109,7 +110,7 @@ export default function TenantVisits({ user }) {
                                             <div className="w-full md:w-48 h-32 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                                                 <img
                                                     src={visit.room.images && visit.room.images.length > 0
-                                                        ? `http://127.0.0.1:8000${visit.room.images[0].image}`
+                                                        ? getMediaUrl(visit.room.images[0].image)
                                                         : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop'}
                                                     alt={visit.room.title}
                                                     className="w-full h-full object-cover"

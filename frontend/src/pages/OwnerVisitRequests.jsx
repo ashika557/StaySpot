@@ -13,12 +13,18 @@ import {
     CalendarDays
 } from 'lucide-react';
 import { visitService } from '../services/tenantService';
+import { getMediaUrl } from '../constants/api';
+import TenantDetailsModal from '../components/TenantDetailsModal';
 
 export default function OwnerVisitRequests({ user, onLogout }) {
     const [visits, setVisits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('All Requests');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Modal State
+    const [selectedTenant, setSelectedTenant] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchVisits();
@@ -79,6 +85,16 @@ export default function OwnerVisitRequests({ user, onLogout }) {
     const todayCount = visits.filter(v =>
         new Date(v.visit_date).toDateString() === new Date().toDateString()
     ).length;
+
+    const handleOpenModal = (tenant) => {
+        setSelectedTenant(tenant);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedTenant(null);
+    };
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -179,8 +195,8 @@ export default function OwnerVisitRequests({ user, onLogout }) {
 
                                             {/* Date Box */}
                                             <div className={`p-4 rounded-xl text-center min-w-[100px] ${visit.status === 'Pending' ? 'bg-orange-50 text-orange-700' :
-                                                    visit.status === 'Scheduled' || visit.status === 'Approved' ? 'bg-green-50 text-green-700' :
-                                                        'bg-gray-50 text-gray-700'
+                                                visit.status === 'Scheduled' || visit.status === 'Approved' ? 'bg-green-50 text-green-700' :
+                                                    'bg-gray-50 text-gray-700'
                                                 }`}>
                                                 <div className="text-2xl font-bold">
                                                     {new Date(visit.visit_date).getDate()}
@@ -195,8 +211,13 @@ export default function OwnerVisitRequests({ user, onLogout }) {
 
                                             {/* Info */}
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-1">
-                                                    <h3 className="font-bold text-gray-900 text-lg">
+                                                <div className="flex items-center gap-3 mb-1 cursor-pointer group" onClick={() => handleOpenModal(visit.tenant)}>
+                                                    <img
+                                                        src={visit.tenant.profile_photo ? getMediaUrl(visit.tenant.profile_photo) : `https://ui-avatars.com/api/?name=${visit.tenant.full_name}&background=random`}
+                                                        className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                                        alt=""
+                                                    />
+                                                    <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">
                                                         {visit.tenant.full_name}
                                                     </h3>
                                                     <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(visit.status)}`}>
@@ -279,6 +300,13 @@ export default function OwnerVisitRequests({ user, onLogout }) {
                     </div>
                 </div>
             </div>
+
+            {/* Tenant Details Modal */}
+            <TenantDetailsModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                tenant={selectedTenant}
+            />
         </div>
     );
 }

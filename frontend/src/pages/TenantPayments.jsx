@@ -42,17 +42,14 @@ export default function TenantPayments({ user }) {
 
     const handlePaymentCallback = async () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const status = urlParams.get('status'); // Our success_url sets this
+        const status = urlParams.get('status');
         const paymentId = urlParams.get('payment_id');
         const method = urlParams.get('method');
+        const encodedData = urlParams.get('data');
 
-        // eSewa V2 returns a base64 encoded 'data' parameter
-        const data = urlParams.get('data');
-
-        if (status === 'success' && paymentId && method === 'esewa') {
+        if (status === 'success' && paymentId && method === 'esewa' && encodedData) {
             try {
-                // Pass the data param to backend verification
-                await paymentService.verifyEsewaPayment(paymentId, { data });
+                await paymentService.verifyEsewaPayment(paymentId, encodedData);
                 alert("eSewa payment verified successfully!");
                 fetchPayments();
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -66,59 +63,45 @@ export default function TenantPayments({ user }) {
         }
     };
 
-    const handleEsewaPayment = (payment) => {
-        console.log("Initiating eSewa V2 payment for:", payment);
+    const handleEsewaPayment = async (payment) => {
+        try {
+            // Get signed parameters from backend
+            const params = await paymentService.getEsewaParams(payment.id);
+            const esewaUrl = params.esewa_url;
 
-        // eSewa V2 Credentials (RC Environment / Production)
-        // Use environment variables if available, otherwise fallback to Test Environment
-        const path = process.env.REACT_APP_ESEWA_URL || "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
-        const totalAmount = payment.amount;
-        const transactionUuid = `PAY-${payment.id}-${Date.now()}`;
-        const productCode = process.env.REACT_APP_ESEWA_PRODUCT_CODE || "EPAYTEST";
-        const secretKey = process.env.REACT_APP_ESEWA_SECRET_KEY || "8gBm/:&EnhH.1/q";
+            // These are the fields eSewa v2 expects
+            const formFields = {
+                amount: params.amount,
+                failure_url: params.failure_url,
+                product_delivery_charge: params.product_delivery_charge,
+                product_service_charge: params.product_service_charge,
+                product_code: params.product_code,
+                signature: params.signature,
+                signed_field_names: params.signed_field_names,
+                success_url: params.success_url,
+                tax_amount: params.tax_amount,
+                total_amount: params.total_amount,
+                transaction_uuid: params.transaction_uuid
+            };
 
-        // Generate Signature
-        // Message format: total_amount,transaction_uuid,product_code
-        const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
+            const form = document.createElement('form');
+            form.setAttribute('method', 'POST');
+            form.setAttribute('action', esewaUrl);
 
-        // Note: You need to install crypto-js: npm install crypto-js
-        const CryptoJS = require("crypto-js");
-        const hash = CryptoJS.HmacSHA256(message, secretKey);
-        const signature = CryptoJS.enc.Base64.stringify(hash);
+            for (const key in formFields) {
+                const hiddenField = document.createElement('input');
+                hiddenField.setAttribute('type', 'hidden');
+                hiddenField.setAttribute('name', key);
+                hiddenField.setAttribute('value', formFields[key]);
+                form.appendChild(hiddenField);
+            }
 
-        // eSewa V2 Parameters
-        const params = {
-            amount: payment.amount,
-            failure_url: `${window.location.origin}${window.location.pathname}?status=failure`,
-            product_delivery_charge: "0",
-            product_service_charge: "0",
-            product_code: productCode,
-            signature: signature,
-            signed_field_names: "total_amount,transaction_uuid,product_code",
-            success_url: `${window.location.origin}${window.location.pathname}?status=success&payment_id=${payment.id}&method=esewa`,
-            tax_amount: "0",
-            total_amount: totalAmount,
-            transaction_uuid: transactionUuid
-        };
-
-        console.log("eSewa V2 Params:", params);
-        console.log("Generated Signature:", signature);
-
-        const form = document.createElement('form');
-        form.setAttribute('method', 'POST');
-        form.setAttribute('action', path);
-
-        for (const key in params) {
-            const hiddenField = document.createElement('input');
-            hiddenField.setAttribute('type', 'hidden');
-            hiddenField.setAttribute('name', key);
-            hiddenField.setAttribute('value', params[key]);
-            form.appendChild(hiddenField);
+            document.body.appendChild(form);
+            form.submit();
+        } catch (error) {
+            console.error('Error initiating eSewa payment:', error);
+            alert('Failed to initiate payment. Please try again.');
         }
-
-        document.body.appendChild(form);
-        console.log("Submitting form to:", path);
-        form.submit();
     };
 
     const handleKhaltiPayment = (payment) => {

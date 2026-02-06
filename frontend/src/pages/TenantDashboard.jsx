@@ -53,30 +53,10 @@ export default function TenantDashboard({ user }) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <TenantSidebar />
+      <TenantSidebar user={user} />
 
       {/* Main Area */}
       <div className="flex-1 overflow-auto">
-        {/* Header */}
-        <div className="bg-white border-b px-8 py-4 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-sm font-bold text-gray-900 leading-none">
-                  {user?.full_name || 'User'}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">{user?.role}</div>
-              </div>
-              <img
-                src={`https://ui-avatars.com/api/?name=${user?.full_name || 'User'}&background=random`}
-                className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
-                alt="User"
-              />
-            </div>
-          </div>
-        </div>
-
         <div className="p-8">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-3 gap-6">
@@ -363,6 +343,7 @@ function SuggestedRoomsSection({ rooms }) {
 
 // Room Card Component
 function RoomCard({ room }) {
+  const navigate = useNavigate();
   const imageUrl = room.images && room.images.length > 0
     ? getMediaUrl(room.images[0].image)
     : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop';
@@ -384,15 +365,34 @@ function RoomCard({ room }) {
         <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5">
           {room.room_type}
         </div>
-        <h3 className="font-bold text-gray-900 line-clamp-1 leading-tight mb-1 group-hover:text-blue-600 transition">
-          {room.title}
-        </h3>
-        <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
+        <div className="flex flex-col mb-1">
+          <h3 className="font-bold text-gray-900 line-clamp-1 leading-tight group-hover:text-blue-600 transition">
+            {room.title}
+          </h3>
+          {room.status === 'Occupied' && (
+            <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded w-fit mt-0.5">OCCUPIED</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-gray-500 text-xs mb-1.5">
           <MapPin className="w-3 h-3 shrink-0" />
           <span className="truncate">{room.location}</span>
         </div>
 
-        <button className="w-full py-2 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-blue-600 hover:text-white rounded-xl transition-all flex items-center justify-center gap-2 group/btn">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex gap-0.5">
+            {[1, 2, 3, 4, 5].map(i => (
+              <Star key={i} size={10} fill={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "none"} color={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "#D1D5DB"} />
+            ))}
+          </div>
+          <span className="text-[10px] text-gray-400 font-bold">
+            {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0})
+          </span>
+        </div>
+
+        <button
+          onClick={() => navigate(`/room/${room.id}`)}
+          className="w-full py-2 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-blue-600 hover:text-white rounded-xl transition-all flex items-center justify-center gap-2 group/btn"
+        >
           See Details
           <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition" />
         </button>

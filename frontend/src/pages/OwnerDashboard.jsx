@@ -3,9 +3,11 @@ import Sidebar from './sidebar';
 import { Home, Calendar, DollarSign, Bell, MessageSquare } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';
+import { visitService } from '../services/tenantService'; // Import visitService
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../constants/api';
+import { ROUTES, getMediaUrl } from '../constants/api'; // getMediaUrl needed for avatar
 import OwnerHeader from '../components/OwnerHeader';
+import TenantDetailsModal from '../components/TenantDetailsModal'; // Import Modal
 
 export default function OwnerDashboard({ user, onLogout }) {
   const [totalRooms, setTotalRooms] = useState(0);
@@ -13,13 +15,20 @@ export default function OwnerDashboard({ user, onLogout }) {
   const [occupiedRooms, setOccupiedRooms] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [recentChats, setRecentChats] = useState([]);
+  const [visitRequests, setVisitRequests] = useState([]); // State for visits
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const navigate = useNavigate();
 
-  // Fetch room data when component loads
+  // Fetch data when component loads
   useEffect(() => {
     getRoomData();
     getRecentChats();
+    getVisitRequests(); // Fetch visits
   }, []);
 
   async function getRecentChats() {
@@ -31,39 +40,29 @@ export default function OwnerDashboard({ user, onLogout }) {
     }
   }
 
+  async function getVisitRequests() {
+    try {
+      const visits = await visitService.getAllVisits();
+      // Filter for 'Pending' visits only for the dashboard widget
+      const pending = visits.filter(v => v.status === 'Pending').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setVisitRequests(pending);
+    } catch (error) {
+      console.error("Failed to load visit requests", error);
+    }
+  }
+
   // Function to get room statistics from backend
   async function getRoomData() {
     try {
-      console.log('Fetching rooms from: /rooms/');
-
       const response = await apiRequest('/rooms/');
-
-      console.log('Response status:', response.status);
-
       if (response.ok) {
         const rooms = await response.json();
-        console.log('Rooms data:', rooms);
-
-        // Count total rooms
         setTotalRooms(rooms.length);
-        console.log('Total rooms:', rooms.length);
-
-        // Count available rooms
         const available = rooms.filter(room => room.status === 'Available').length;
         setAvailableRooms(available);
-        console.log('Available rooms:', available);
-
-        // Count occupied rooms
         const occupied = rooms.filter(room => room.status === 'Occupied').length;
         setOccupiedRooms(occupied);
-        console.log('Occupied rooms:', occupied);
-
-        // TODO: Calculate income later
-        setTotalIncome(0);
-      } else {
-        console.error('Response not OK:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
+        setTotalIncome(0); // Todo: Implement income calculation
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
@@ -72,19 +71,21 @@ export default function OwnerDashboard({ user, onLogout }) {
     }
   }
 
+  const handleOpenModal = (tenant) => {
+    setSelectedTenant(tenant);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTenant(null);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar user={user} />
 
       <div className="flex-1 overflow-auto">
-        <OwnerHeader
-          user={user}
-          title="Dashboard Overview"
-          subtitle={`Welcome back, ${user?.full_name}! Here's what's happening with your properties.`}
-          onLogout={onLogout}
-        />
-
-        {/* Main Content */}
         <div className="p-8">
           {loading ? (
             <div className="text-center py-8">
@@ -156,55 +157,42 @@ export default function OwnerDashboard({ user, onLogout }) {
             {/* Left Column: Visit Requests */}
             <div className="bg-white rounded-xl border shadow-sm">
               <div className="p-6 border-b flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Recent Visit Requests</h3>
+                <h3 className="text-lg font-semibold">New Visit Requests</h3>
                 <span className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
-                  3 New
+                  {visitRequests.length} New
                 </span>
               </div>
               <div className="p-6">
-                <div className="flex items-center justify-between py-3 border-b">
-                  <div className="flex items-center gap-3">
-                    <img src="https://i.pravatar.cc/150?img=20" className="w-10 h-10 rounded-full" alt="" />
-                    <div>
-                      <p className="font-semibold">Anshu Khadka</p>
-                      <p className="text-sm text-gray-500">Itahari, Tarahara</p>
+                {visitRequests.length > 0 ? (
+                  visitRequests.slice(0, 3).map((visit) => (
+                    <div key={visit.id} className="flex items-center justify-between py-3 border-b last:border-0 hover:bg-gray-50 transition rounded-lg px-2 cursor-pointer" onClick={() => handleOpenModal(visit.tenant)}>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={visit.tenant.profile_photo ? getMediaUrl(visit.tenant.profile_photo) : `https://ui-avatars.com/api/?name=${visit.tenant.full_name}&background=random`}
+                          className="w-10 h-10 rounded-full object-cover"
+                          alt=""
+                        />
+                        <div>
+                          <p className="font-semibold text-gray-900">{visit.tenant.full_name}</p>
+                          <p className="text-sm text-gray-500 truncate max-w-[150px]">{visit.room.title}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">{new Date(visit.visit_date).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-500">{visit.visit_time.slice(0, 5)}</p>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <p>No new visit requests.</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">Dec 15, 2025</p>
-                    <p className="text-xs text-gray-500">2:00 PM</p>
-                  </div>
-                </div>
+                )}
 
-                <div className="flex items-center justify-between py-3 border-b">
-                  <div className="flex items-center gap-3">
-                    <img src="https://i.pravatar.cc/150?img=21" className="w-10 h-10 rounded-full" alt="" />
-                    <div>
-                      <p className="font-semibold">Hari Sharma</p>
-                      <p className="text-sm text-gray-500">Riverside Studio</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">Dec 16, 2025</p>
-                    <p className="text-xs text-gray-500">10:30 AM</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <img src="https://i.pravatar.cc/150?img=22" className="w-10 h-10 rounded-full" alt="" />
-                    <div>
-                      <p className="font-semibold">Mamata Wagle</p>
-                      <p className="text-sm text-gray-500">Garden View</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">Dec 18, 2025</p>
-                    <p className="text-xs text-gray-500">4:00 PM</p>
-                  </div>
-                </div>
-
-                <button className="w-full mt-4 py-2 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-lg">
+                <button
+                  onClick={() => navigate('/owner/visits')}
+                  className="w-full mt-4 py-2 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-lg"
+                >
                   View All Requests
                 </button>
               </div>
@@ -221,8 +209,12 @@ export default function OwnerDashboard({ user, onLogout }) {
                   recentChats.map((chat) => (
                     <div key={chat.id} className="py-3 border-b last:border-0 cursor-pointer hover:bg-gray-50 transition" onClick={() => navigate(ROUTES.CHAT)}>
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                          {chat.other_user.full_name[0]}
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold overflow-hidden">
+                          {chat.other_user.profile_photo ? (
+                            <img src={getMediaUrl(chat.other_user.profile_photo)} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            chat.other_user.full_name[0]
+                          )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
@@ -253,6 +245,13 @@ export default function OwnerDashboard({ user, onLogout }) {
           </div>
         </div>
       </div>
+
+      {/* Tenant Details Modal */}
+      <TenantDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        tenant={selectedTenant}
+      />
     </div>
   );
 }

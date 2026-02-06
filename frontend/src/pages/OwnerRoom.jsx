@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './sidebar';
-import { Home, Users, TrendingUp, Eye, Search, Filter, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin } from 'lucide-react';
+import { Home, Users, TrendingUp, Eye, Search, Filter, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin, Star, Calendar, DollarSign, LayoutGrid } from 'lucide-react';
 import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
-import { ROUTES } from '../constants/api';
+import { ROUTES, getMediaUrl } from '../constants/api';
 import OwnerHeader from '../components/OwnerHeader';
 
 export default function OwnerRooms({ user, refreshUser, onLogout }) {
@@ -174,16 +174,9 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <OwnerHeader
-          user={user}
-          title="My Rooms"
-          subtitle="Manage all your property listings"
-          showIdentityWarning={true}
-          onLogout={onLogout}
-        />
 
         {/* Quick Stats */}
         {rooms.length > 0 && (
@@ -241,10 +234,10 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
             <div className="flex gap-3">
               <button className="px-4 py-2 border rounded-lg flex items-center gap-2"><Filter className="w-4 h-4" /> Filters</button>
               <div className="flex border rounded-lg">
-                <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : ''}`}>
+                <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
                   <Grid className="w-4 h-4" />
                 </button>
-                <button onClick={() => setViewMode('list')} className={`p-2 ${viewMode === 'list' ? 'bg-blue-600 text-white' : ''}`}>
+                <button onClick={() => setViewMode('list')} className={`p-2 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
                   <List className="w-4 h-4" />
                 </button>
               </div>
@@ -269,7 +262,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
             <div className="flex gap-3 mb-6">
               {['all', 'available', 'occupied', 'disabled'].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)}
-                  className={`px-4 py-2 rounded-lg capitalize ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                  className={`px - 4 py - 2 rounded - lg capitalize ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'} `}>
                   {s} ({statusCounts[s]})
                 </button>
               ))}
@@ -306,19 +299,30 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                 <div key={room.id} className="bg-white rounded-xl border hover:shadow-lg transition">
                   <div className="relative">
                     <img
-                      src={room.images && room.images.length > 0 ? room.images[0].image : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'}
+                      src={room.images && room.images.length > 0 ? getMediaUrl(room.images[0].image) : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'}
                       className="w-full h-52 object-cover rounded-t-xl"
                       alt={room.title}
                     />
-                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold ${room.status === 'Available' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                      }`}>{room.status}</span>
+                    <span className={`absolute top - 3 left - 3 px - 3 py - 1 rounded - full text - xs font - semibold ${room.status === 'Available' ? 'bg-green-500 text-white' :
+                      room.status === 'Occupied' ? 'bg-orange-500 text-white' : 'bg-blue-500 text-white'
+                      } `}>{room.status === 'Occupied' ? 'Rented' : room.status}</span>
                     <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/70 text-white text-xs rounded">
                       <Eye className="w-3 h-3 inline mr-1" />{room.views}
                     </div>
                   </div>
                   <div className="p-5">
                     <h3 className="font-bold text-lg mb-2">{room.title}</h3>
-                    <p className="text-sm text-gray-500 mb-3"><MapPin className="w-4 h-4 inline mr-1" />{room.location}</p>
+                    <p className="text-sm text-gray-500 mb-1"><MapPin className="w-4 h-4 inline mr-1" />{room.location}</p>
+                    <div className="flex items-center gap-1 mb-3">
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map(i => (
+                          <Star key={i} size={10} fill={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "none"} color={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "#D1D5DB"} />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-bold">
+                        {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0})
+                      </span>
+                    </div>
                     <div className="flex gap-2 mb-4 text-xs flex-wrap">
                       {room.wifi && <span className="px-2 py-1 bg-gray-100 rounded">Wi-Fi</span>}
                       {room.ac && <span className="px-2 py-1 bg-gray-100 rounded">AC</span>}
@@ -555,7 +559,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
               </div>
               <div className="p-6">
                 {selectedRoom.images && selectedRoom.images.length > 0 ? (
-                  <img src={selectedRoom.images[0].image} className="w-full h-64 object-cover rounded-lg mb-6" alt={selectedRoom.title} />
+                  <img src={getMediaUrl(selectedRoom.images[0].image)} className="w-full h-64 object-cover rounded-lg mb-6" alt={selectedRoom.title} />
                 ) : (
                   <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500" className="w-full h-64 object-cover rounded-lg mb-6" alt="Room" />
                 )}
@@ -574,8 +578,9 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-3">Status</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${selectedRoom.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                      }`}>{selectedRoom.status}</span>
+                    <span className={`px - 3 py - 1 rounded - full text - sm font - semibold ${selectedRoom.status === 'Available' ? 'bg-green-100 text-green-700' :
+                      selectedRoom.status === 'Occupied' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+                      } `}>{selectedRoom.status === 'Occupied' ? 'Rented' : selectedRoom.status}</span>
                     {(selectedRoom.latitude && selectedRoom.longitude) && (
                       <div className="mt-4">
                         <h3 className="font-semibold mb-2 text-sm">Map Location</h3>
