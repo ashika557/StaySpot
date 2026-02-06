@@ -5,6 +5,7 @@ import { GoogleMap, Marker } from '@react-google-maps/api';
 import TenantSidebar from './TenantNavbar';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
+import { chatService } from '../services/chatService';
 import { visitService } from '../services/tenantService'; // Added import
 import { getMediaUrl, ROUTES } from '../constants/api';
 import { CONFIG, GOOGLE_MAPS_API_KEY } from '../constants/config';
@@ -36,16 +37,41 @@ const RoomDetails = ({ user }) => {
     });
     const [bookingLoading, setBookingLoading] = useState(false);
 
+    const [userBooking, setUserBooking] = useState(null);
+    const [reviews, setReviews] = useState([]);
+    const [reviewLoading, setReviewLoading] = useState(false);
+    const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
     const { isLoaded } = useMapContext();
 
-    const [userBooking, setUserBooking] = useState(null);
-
-    useEffect(() => {
-        fetchRoomDetails();
-        if (user && user.role === 'Tenant') {
-            fetchUserBooking();
+    const fetchRoomReviews = async () => {
+        try {
+            const data = await roomService.getRoomReviews(id);
+            setReviews(data);
+        } catch (err) {
+            console.error("Failed to fetch reviews", err);
         }
-    }, [id, user]);
+    };
+
+    const handleReviewSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            setReviewLoading(true);
+            await roomService.addRoomReview({
+                room: parseInt(id),
+                rating: newReview.rating,
+                comment: newReview.comment
+            });
+            setNewReview({ rating: 5, comment: '' });
+            fetchRoomReviews();
+            fetchRoomDetails(); // Refresh room to get updated average rating
+            alert('Review posted successfully!');
+        } catch (err) {
+            console.error(err);
+            alert('Failed to post review: ' + err.message);
+        } finally {
+            setReviewLoading(false);
+        }
+    };
 
     const fetchUserBooking = async () => {
         try {
@@ -69,6 +95,14 @@ const RoomDetails = ({ user }) => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchRoomDetails();
+        fetchRoomReviews();
+        if (user && user.role === 'Tenant') {
+            fetchUserBooking();
+        }
+    }, [id, user]);
 
     const handleBookingRequest = async (e) => {
         e.preventDefault();
@@ -149,6 +183,16 @@ const RoomDetails = ({ user }) => {
                         </button>
                         <h1 className="text-xl font-bold text-gray-800">Room Details</h1>
                     </div>
+                    {(!user?.is_identity_verified && user?.role !== 'Admin') && (
+                        <div className={`flex-1 max-w-md mx-6 border-l-4 p-2 flex items-center gap-2 ${user?.identity_document ? 'bg-blue-50 border-blue-500' : 'bg-yellow-100 border-yellow-500'}`}>
+                            <ShieldCheck className={`w-4 h-4 ${user?.identity_document ? 'text-blue-600' : 'text-yellow-600'}`} />
+                            <p className={`text-[10px] font-medium ${user?.identity_document ? 'text-blue-700' : 'text-yellow-700'}`}>
+                                {user?.identity_document
+                                    ? 'Identity document pending admin approval. You can book once verified.'
+                                    : 'Identity document missing. Please upload your Citizenship/ID in the Profile to book.'}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-8 max-w-5xl mx-auto w-full pb-24">
@@ -163,10 +207,100 @@ const RoomDetails = ({ user }) => {
 
                             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                                 <h2 className="text-2xl font-bold text-gray-900">{room.title}</h2>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map(i => (
+                                            <Star key={i} size={16} fill={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "none"} color={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "#D1D5DB"} />
+                                        ))}
+                                    </div>
+                                    <span className="text-sm text-gray-500 font-bold">
+                                        {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0} reviews)
+                                    </span>
+                                </div>
+                                {room.status === 'Occupied' && (
+                                    <div className="inline-flex items-center gap-1 bg-red-50 text-red-600 px-2 py-1 rounded-md text-xs font-bold mt-2">
+                                        Occupied
+                                    </div>
+                                )}
                                 {/* ... Other details ... */}
                                 <p className="text-gray-600 leading-relaxed mb-6 mt-4">
                                     {room.description || `A comfortable ${room.room_type.toLowerCase()} located in ${room.location}.`}
                                 </p>
+
+                                {/* Reviews Section */}
+                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-xl font-bold text-gray-900">Reviews ({reviews.length})</h3>
+                                    </div>
+
+                                    {user?.role === 'Tenant' && userBooking && (userBooking.status === 'Confirmed' || userBooking.status === 'Completed' || userBooking.status === 'Active') && !reviews.some(r => r.tenant?.id === user?.id) && (
+                                        <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                            <h4 className="font-bold text-gray-900 mb-2">Write a Review</h4>
+                                            <form onSubmit={handleReviewSubmit} className="space-y-4">
+                                                <div className="flex gap-2">
+                                                    {[1, 2, 3, 4, 5].map(star => (
+                                                        <button
+                                                            key={star}
+                                                            type="button"
+                                                            onClick={() => setNewReview({ ...newReview, rating: star })}
+                                                            className={`${newReview.rating >= star ? 'text-yellow-500' : 'text-gray-300'} transition-colors`}
+                                                        >
+                                                            <Star size={24} fill={newReview.rating >= star ? 'currentColor' : 'none'} />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <textarea
+                                                    required
+                                                    className="w-full p-3 border rounded-xl bg-white text-sm"
+                                                    placeholder="Share your experience..."
+                                                    value={newReview.comment}
+                                                    onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                                                    rows="3"
+                                                ></textarea>
+                                                <button
+                                                    type="submit"
+                                                    disabled={reviewLoading}
+                                                    className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition disabled:opacity-50"
+                                                >
+                                                    {reviewLoading ? 'Posting...' : 'Submit Review'}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-6">
+                                        {reviews.length > 0 ? (
+                                            reviews.map(review => (
+                                                <div key={review.id} className="pb-6 border-b last:border-0 last:pb-0">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                                                {review.tenant?.full_name?.[0] || 'T'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-sm text-gray-900">{review.tenant?.full_name || 'Tenant'}</p>
+                                                                <p className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-0.5">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star
+                                                                    key={i}
+                                                                    size={14}
+                                                                    className={i < review.rating ? 'text-yellow-500' : 'text-gray-300'}
+                                                                    fill={i < review.rating ? 'currentColor' : 'none'}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-gray-500 text-center py-4 text-sm">No reviews yet. Be the first to review!</p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -176,27 +310,84 @@ const RoomDetails = ({ user }) => {
                                 <h3 className="font-bold text-gray-900 mb-4">Landlord</h3>
                                 {/* Owner Info */}
                                 <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                                        {room.owner?.full_name?.[0] || 'O'}
+                                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg overflow-hidden">
+                                        {room.owner?.profile_photo ? (
+                                            <img src={getMediaUrl(room.owner.profile_photo)} alt={room.owner.full_name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            room.owner?.full_name?.[0] || 'O'
+                                        )}
                                     </div>
                                     <div>
                                         <div className="font-bold text-gray-900">{room.owner?.full_name || 'Landlord'}</div>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await chatService.startConversation(room.owner.id);
+                                                    navigate(ROUTES.CHAT);
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    alert('Failed to start chat');
+                                                }
+                                            }}
+                                            className="text-sm text-blue-600 font-bold hover:underline"
+                                        >
+                                            Message Landlord
+                                        </button>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-3">
-                                    <button
-                                        onClick={() => setShowBookingModal(true)}
-                                        className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition"
-                                    >
-                                        Request to Book
-                                    </button>
-                                    <button
-                                        onClick={() => setShowVisitModal(true)}
-                                        className="w-full bg-white text-blue-600 border border-blue-200 py-3 rounded-xl font-bold hover:bg-blue-50 transition"
-                                    >
-                                        Schedule a Visit
-                                    </button>
+                                    {/* Debug: {console.log('Room Status:', room.status)} */}
+                                    {(room.status === 'Occupied' || room.status?.toLowerCase() === 'occupied') ? (
+                                        <div className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-bold text-center border border-red-100 flex items-center justify-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            </svg>
+                                            This room is currently occupied
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() => {
+                                                    if (!user?.is_identity_verified && user?.role !== 'Admin') {
+                                                        const errorMsg = user?.identity_document
+                                                            ? 'Your identity document is pending verification by an administrator.'
+                                                            : 'You must provide an identity document (Citizenship/ID) before requesting a booking.';
+
+                                                        if (confirm(errorMsg + "\n\nClick OK to upload/view your document.")) {
+                                                            navigate(ROUTES.VERIFICATION_REQUEST);
+                                                        }
+                                                        return;
+                                                    }
+                                                    setShowBookingModal(true);
+                                                }}
+                                                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition"
+                                            >
+                                                Request to Book
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (!user?.is_identity_verified && user?.role !== 'Admin') {
+                                                        const errorMsg = user?.identity_document
+                                                            ? 'Your identity document is pending verification by an administrator.'
+                                                            : 'You must provide an identity document (Citizenship/ID) before scheduling a visit.';
+
+                                                        if (confirm(errorMsg + "\n\nClick OK to upload/view your document.")) {
+                                                            navigate(ROUTES.VERIFICATION_REQUEST);
+                                                        }
+                                                        return;
+                                                    }
+                                                    setShowVisitModal(true);
+                                                }}
+                                                className="w-full bg-white text-blue-600 border border-blue-200 py-3 rounded-xl font-bold hover:bg-blue-50 transition"
+                                            >
+                                                Schedule a Visit
+                                            </button>
+                                            <p className="text-xs text-center text-gray-400 mt-2">
+                                                Current Status: <span className="font-semibold text-gray-600">{room.status}</span>
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>

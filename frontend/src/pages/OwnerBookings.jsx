@@ -56,15 +56,9 @@ const OwnerBookings = ({ user, onLogout }) => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
-            <Sidebar />
+            <Sidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-auto">
-                <OwnerHeader
-                    user={user}
-                    title="Booking Requests"
-                    subtitle="Manage and review all booking requests"
-                    onLogout={onLogout}
-                />
 
                 <div className="p-8">
                     <div className="flex justify-between items-center mb-8">
@@ -168,8 +162,12 @@ const RequestCard = ({ booking, onApprove, onReject }) => {
             </div>
 
             <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                    {booking.tenant.full_name[0]}
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 overflow-hidden">
+                    {booking.tenant.profile_photo ? (
+                        <img src={getMediaUrl(booking.tenant.profile_photo)} alt={booking.tenant.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                        booking.tenant.full_name[0]
+                    )}
                 </div>
                 <div>
                     <h3 className="font-bold text-gray-900">{booking.tenant.full_name}</h3>
@@ -248,8 +246,12 @@ const HistoryRow = ({ booking }) => {
     return (
         <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 text-sm">
-                    {booking.tenant.full_name[0]}
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 text-sm overflow-hidden">
+                    {booking.tenant.profile_photo ? (
+                        <img src={getMediaUrl(booking.tenant.profile_photo)} alt={booking.tenant.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                        booking.tenant.full_name[0]
+                    )}
                 </div>
                 <div>
                     <div className="font-bold text-gray-900 text-sm">{booking.tenant.full_name}</div>

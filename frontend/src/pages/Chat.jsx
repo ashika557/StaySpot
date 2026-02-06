@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Send, Paperclip, MoreVertical, Phone, Video, Smile, ArrowLeft, Check, CheckCheck } from 'lucide-react';
 import { chatService } from '../services/chatService';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ROUTES } from '../constants/api';
+import { ROUTES, getMediaUrl } from '../constants/api';
 import Sidebar from './sidebar';
 import TenantSidebar from './TenantNavbar';
 import { useLocation } from 'react-router-dom';
@@ -135,8 +135,12 @@ const Chat = ({ user }) => {
                     <div className={`w-full md:w-1/3 bg-white border-r border-gray-100 flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
                         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                                    {user.full_name[0]}
+                                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                                    {user.profile_photo ? (
+                                        <img src={getMediaUrl(user.profile_photo)} alt={user.full_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        user.full_name[0]
+                                    )}
                                 </div>
                                 <h2 className="font-bold text-gray-800">Messages</h2>
                             </div>
@@ -170,8 +174,12 @@ const Chat = ({ user }) => {
                                             ${activeChat?.id === conv.id ? 'border-blue-600 bg-blue-50/30' : 'border-transparent'}
                                         `}
                                     >
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm">
-                                            {conv.other_user.full_name[0]}
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm overflow-hidden">
+                                            {conv.other_user.profile_photo ? (
+                                                <img src={getMediaUrl(conv.other_user.profile_photo)} alt={conv.other_user.full_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                conv.other_user.full_name[0]
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-baseline">
@@ -199,7 +207,13 @@ const Chat = ({ user }) => {
                                 <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-white shadow-sm z-10">
                                     <div className="flex items-center gap-3">
                                         <button onClick={() => setActiveChat(null)} className="md:hidden p-2 -ml-2 text-gray-500"><ArrowLeft className="w-5 h-5" /></button>
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">{activeChat.other_user.full_name[0]}</div>
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold overflow-hidden">
+                                            {activeChat.other_user.profile_photo ? (
+                                                <img src={getMediaUrl(activeChat.other_user.profile_photo)} alt={activeChat.other_user.full_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                activeChat.other_user.full_name[0]
+                                            )}
+                                        </div>
                                         <div>
                                             <h3 className="font-bold text-gray-800">{activeChat.other_user.full_name}</h3>
                                             <p className="text-[10px] text-green-500 font-bold uppercase tracking-wider">Online</p>

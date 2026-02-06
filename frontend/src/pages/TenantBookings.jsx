@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, ArrowRight, XCircle } from 'lucide-react';
 import TenantSidebar from './TenantNavbar';
 import { bookingService } from '../services/bookingService';
+import { chatService } from '../services/chatService';
 import { getMediaUrl, ROUTES } from '../constants/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -48,13 +49,9 @@ const TenantBookings = ({ user }) => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
-            <TenantSidebar />
+            <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-auto">
-                <div className="bg-white border-b px-8 py-4 sticky top-0 z-10">
-                    <h1 className="text-2xl font-bold text-gray-800">Bookings</h1>
-                </div>
-
                 <div className="p-8">
                     {/* Tabs */}
                     <div className="flex gap-2 mb-8">
@@ -115,6 +112,16 @@ const BookingCard = ({ booking, onCancel, navigate }) => {
         }
     };
 
+    const handleMessageOwner = async () => {
+        try {
+            await chatService.startConversation(booking.room.owner.id);
+            navigate(ROUTES.CHAT);
+        } catch (error) {
+            console.error(error);
+            alert('Failed to start chat with owner');
+        }
+    };
+
     return (
         <div className="bg-white rounded-2xl p-4 flex gap-6 border border-gray-100 shadow-sm hover:shadow-md transition">
             <div className="w-48 h-32 rounded-xl overflow-hidden shrink-0">
@@ -125,7 +132,16 @@ const BookingCard = ({ booking, onCancel, navigate }) => {
                 <div className="flex justify-between items-start">
                     <div>
                         <h3 className="font-bold text-gray-900 text-lg">{booking.room.title}</h3>
-                        <div className="text-sm text-gray-500 mt-1">Landlord: {booking.room.owner.full_name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 overflow-hidden">
+                                {booking.room.owner.profile_photo ? (
+                                    <img src={getMediaUrl(booking.room.owner.profile_photo)} alt={booking.room.owner.full_name} className="w-full h-full object-cover" />
+                                ) : (
+                                    booking.room.owner.full_name[0]
+                                )}
+                            </div>
+                            <div className="text-sm text-gray-500">Landlord: {booking.room.owner.full_name}</div>
+                        </div>
                         <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                             <MapPin size={14} /> {booking.room.location}
                         </div>
@@ -141,6 +157,13 @@ const BookingCard = ({ booking, onCancel, navigate }) => {
                     </div>
 
                     <div className="flex gap-3">
+                        <button
+                            onClick={handleMessageOwner}
+                            className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-bold hover:bg-blue-100 transition mr-auto"
+                        >
+                            Message Owner
+                        </button>
+
                         <button
                             onClick={() => navigate(`/room/${booking.room.id}`)}
                             className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-50 transition"
