@@ -11,8 +11,7 @@ function Register({ onLogin }) {
     phone: '',
     password: '',
     confirm_password: '',
-    role: 'Tenant',
-    identity_document: null
+    role: 'Tenant'
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -103,9 +102,7 @@ function Register({ onLogin }) {
       data.append('phone', formData.phone);
       data.append('password', formData.password);
       data.append('role', formData.role);
-      if (formData.identity_document) {
-        data.append('identity_document', formData.identity_document);
-      }
+
 
       const response = await apiRequest(
         API_ENDPOINTS.REGISTER,
@@ -304,24 +301,7 @@ function Register({ onLogin }) {
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="identity_document" className="block text-sm font-medium text-gray-700">
-                  Identity Document (Citizenship/ID)
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <input
-                  id="identity_document"
-                  name="identity_document"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setFormData(prev => ({ ...prev, identity_document: e.target.files[0] }))}
-                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  required
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Tenant: Identity for booking | Owner: Citizenship for adding rooms
-                </p>
-              </div>
+
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">

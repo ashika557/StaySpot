@@ -16,9 +16,11 @@ import RoomDetails from './pages/RoomDetails';
 import TenantBookings from './pages/TenantBookings';
 import TenantVisits from './pages/TenantVisits';
 import TenantPayments from './pages/TenantPayments';
+import ComplaintsReviews from './pages/ComplaintsReviews';
 import OwnerBookings from './pages/OwnerBookings';
 import OwnerVisitRequests from './pages/OwnerVisitRequests';
 import Profile from './pages/Profile';
+import VerificationRequest from './pages/VerificationRequest';
 import { ROUTES, API_ENDPOINTS } from './constants/api';
 import { apiRequest } from './utils/api';
 import { MapProvider } from './context/MapContext';
@@ -142,6 +144,10 @@ function App() {
             element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
           />
           <Route
+            path={ROUTES.TENANT_COMPLAINTS}
+            element={user && user.role === 'Tenant' ? <ComplaintsReviews user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
             path={ROUTES.ROOM_DETAILS}
             element={user ? <RoomDetails user={user} /> : <Navigate to={ROUTES.LOGIN} />}
           />
@@ -173,6 +179,11 @@ function App() {
               setUser(updatedUser);
               localStorage.setItem('user', JSON.stringify(updatedUser));
             }} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+
+          <Route
+            path={ROUTES.VERIFICATION_REQUEST}
+            element={user ? <VerificationRequest user={user} refreshUser={refreshUser} /> : <Navigate to={ROUTES.LOGIN} />}
           />
 
           {/* Catch-all */}

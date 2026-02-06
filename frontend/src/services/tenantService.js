@@ -144,12 +144,24 @@ export const paymentService = {
         }
     },
 
-    // Verified eSewa payment
-    verifyEsewaPayment: async (paymentId, paymentData) => {
+    // Get signed parameters for eSewa v2 initiation
+    getEsewaParams: async (paymentId) => {
+        try {
+            const response = await apiRequest(`/payments/${paymentId}/get_esewa_params/`);
+            if (!response.ok) throw new Error('Failed to get eSewa parameters');
+            return await response.json();
+        } catch (error) {
+            console.error('Error getting eSewa parameters:', error);
+            throw error;
+        }
+    },
+
+    // Verify eSewa payment v2
+    verifyEsewaPayment: async (paymentId, data) => {
         try {
             const response = await apiRequest(`/payments/${paymentId}/verify_esewa/`, {
                 method: 'POST',
-                body: JSON.stringify(paymentData),
+                body: JSON.stringify({ data }),
             });
             if (!response.ok) throw new Error('Failed to verify eSewa payment');
             return await response.json();

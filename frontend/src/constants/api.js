@@ -20,6 +20,8 @@ export const API_ENDPOINTS = {
   ROOMS: '/rooms/',
   CHAT: '/chat/',
   NOTIFICATIONS: '/notifications/',
+  REVIEWS: '/reviews/',
+  COMPLAINTS: '/complaints/',
 };
 
 export const ROUTES = {
@@ -30,6 +32,7 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   VERIFY_EMAIL: '/verify-email/:token',
   PROFILE: '/profile',
+  VERIFICATION_REQUEST: '/verification-request',
   OWNER_DASHBOARD: '/owner/dashboard',
   OWNER_ROOMS: '/owner/rooms',
   OWNER_BOOKINGS: '/owner/bookings',
@@ -39,6 +42,7 @@ export const ROUTES = {
   TENANT_PAYMENTS: '/tenant/payments',
   ROOM_DETAILS: '/room/:id',
   CHAT: '/chat',
+  TENANT_COMPLAINTS: '/tenant/complaints',
 };
 
 /**
