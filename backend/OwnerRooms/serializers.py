@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Room, RoomImage, Booking, Visit, Chat
+from .models import Room, RoomImage, Booking, Visit, Chat, RoomReview, Complaint
 from accounts.models import User
 from payments.models import Payment
 from payments.serializers import PaymentSerializer
@@ -14,7 +14,16 @@ class RoomImageSerializer(serializers.ModelSerializer):
 class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'phone', 'role', 'identity_document', 'is_identity_verified']
+        fields = ['id', 'full_name', 'email', 'phone', 'role', 'identity_document', 'is_identity_verified', 'profile_photo']
+
+
+class RoomReviewSerializer(serializers.ModelSerializer):
+    tenant = UserBasicSerializer(read_only=True)
+    
+    class Meta:
+        model = RoomReview
+        fields = ['id', 'tenant', 'room', 'rating', 'comment', 'created_at']
+        read_only_fields = ['id', 'tenant', 'created_at']
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -25,6 +34,8 @@ class RoomSerializer(serializers.ModelSerializer):
         required=False
     )
     owner = UserBasicSerializer(read_only=True)
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Room
@@ -34,9 +45,19 @@ class RoomSerializer(serializers.ModelSerializer):
             'parking', 'water_supply', 'attached_bathroom', 'cctv', 
             'kitchen', 'furniture', 'gender_preference', 'latitude', 
             'longitude', 'views', 'images', 'uploaded_images', 
+            'average_rating', 'review_count',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'views', 'created_at', 'updated_at']
+    
+    def get_average_rating(self, obj):
+        reviews = obj.reviews.all()
+        if not reviews.exists():
+            return 0
+        return sum(r.rating for r in reviews) / reviews.count()
+    
+    def get_review_count(self, obj):
+        return obj.reviews.count()
     
     def create(self, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
@@ -143,3 +164,30 @@ class TenantDashboardSerializer(serializers.Serializer):
     payment_reminders = PaymentSerializer(many=True)
     recent_chats = ChatSerializer(many=True)
     suggested_rooms = RoomSerializer(many=True)
+
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    tenant = UserBasicSerializer(read_only=True)
+    owner = UserBasicSerializer(read_only=True)
+    owner_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), 
+        source='owner', 
+        write_only=True
+    )
+    room = RoomSerializer(read_only=True)
+    room_id = serializers.PrimaryKeyRelatedField(
+        queryset=Room.objects.all(), 
+        source='room', 
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+    
+    class Meta:
+        model = Complaint
+        fields = [
+            'id', 'tenant', 'owner', 'owner_id', 'room', 'room_id',
+            'complaint_type', 'description', 'image', 'status', 
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'tenant', 'created_at', 'updated_at']

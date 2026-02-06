@@ -179,5 +179,51 @@ class Chat(models.Model):
     class Meta:
         ordering = ['-timestamp']
     
+
+class RoomReview(models.Model):
+    """Stores tenant reviews and ratings for rooms."""
+    tenant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='room_reviews')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['tenant', 'room'] # One review per tenant per room
+
     def __str__(self):
-        return f"{self.sender.full_name} to {self.receiver.full_name} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+        return f"Review by {self.tenant.full_name} for {self.room.title} - {self.rating} stars"
+
+
+class Complaint(models.Model):
+    """Represents a complaint filed by a tenant."""
+    COMPLAINT_TYPES = [
+        ('Maintenance', 'Maintenance'),
+        ('Noise', 'Noise'),
+        ('Billing', 'Billing'),
+        ('Security', 'Security'),
+        ('Other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Investigating', 'Investigating'),
+        ('Resolved', 'Resolved'),
+    ]
+    
+    tenant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='filed_complaints')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_complaints')
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints')
+    complaint_type = models.CharField(max_length=50, choices=COMPLAINT_TYPES, default='Maintenance')
+    description = models.TextField()
+    image = models.ImageField(upload_to='complaint_images/', blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Complaint from {self.tenant.full_name} - {self.complaint_type} ({self.status})"

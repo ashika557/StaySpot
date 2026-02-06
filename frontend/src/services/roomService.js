@@ -197,4 +197,74 @@ export const roomService = {
       throw error;
     }
   },
+
+  getRoomReviews: async (roomId) => {
+    try {
+      const response = await apiRequest(`/rooms/${roomId}/reviews/`);
+      if (!response.ok) throw new Error('Failed to fetch reviews');
+      return await response.json();
+    } catch (error) {
+      console.error('Error in getRoomReviews:', error);
+      throw error;
+    }
+  },
+
+  addRoomReview: async (reviewData) => {
+    try {
+      const response = await apiRequest('/reviews/', {
+        method: 'POST',
+        body: JSON.stringify(reviewData)
+      });
+      if (!response.ok) {
+        let errorMsg = 'Failed to post review';
+        try {
+          const errorData = await response.json();
+          if (Array.isArray(errorData)) {
+            errorMsg = errorData[0];
+          } else if (typeof errorData === 'object') {
+            errorMsg = errorData.detail || errorData.non_field_errors?.[0] || Object.values(errorData)[0];
+          }
+        } catch (e) { }
+        throw new Error(errorMsg);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error in addRoomReview:', error);
+      throw error;
+    }
+  },
+
+  updateRoomReview: async (reviewId, reviewData) => {
+    try {
+      const response = await apiRequest(`/reviews/${reviewId}/`, {
+        method: 'PUT',
+        body: JSON.stringify(reviewData)
+      });
+      if (!response.ok) {
+        let errorMsg = 'Failed to update review';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.detail || Object.values(errorData)[0];
+        } catch (e) { }
+        throw new Error(errorMsg);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error in updateRoomReview:', error);
+      throw error;
+    }
+  },
+
+  deleteRoomReview: async (reviewId) => {
+    try {
+      const response = await apiRequest(`/reviews/${reviewId}/`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete review');
+      return true;
+    } catch (error) {
+      console.error('Error in deleteRoomReview:', error);
+      throw error;
+    }
+  }
 };

@@ -5,11 +5,12 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Room, RoomImage, UserSearchPreference, Booking, Visit
+from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, RoomReview, Complaint
 from payments.models import Payment
 from .serializers import (
     RoomSerializer, BookingSerializer, VisitSerializer, 
-    TenantDashboardSerializer
+    TenantDashboardSerializer, RoomReviewSerializer,
+    ComplaintSerializer
 )
 # PaymentSerializer imported locally in tenant_dashboard to avoid circular import
 from chat.models import Conversation, Message
@@ -28,8 +29,8 @@ class RoomViewSet(viewsets.ModelViewSet):
         if user.role == 'Owner':
             queryset = queryset.filter(owner=user)
         else:
-            # Tenants see only Available rooms (or rooms they are interested in)
-            queryset = queryset.filter(status='Available')
+            # Tenants see Available rooms (and Occupied rooms so they can still see details)
+            queryset = queryset.filter(status__in=['Available', 'Occupied'])
             
         # Filtering logic
         location = self.request.query_params.get('location')
@@ -106,7 +107,14 @@ class RoomViewSet(viewsets.ModelViewSet):
             self.update_user_preferences(user, location, gender, room_type, wifi, ac, tv)
             
         return queryset
-    
+
+    @action(detail=True, methods=['get'])
+    def reviews(self, request, pk=None):
+        room = self.get_object()
+        reviews = room.reviews.all()
+        serializer = RoomReviewSerializer(reviews, many=True)
+        return Response(serializer.data)
+            
     def update_user_preferences(self, user, location, gender, room_type, wifi, ac, tv):
         pref, created = UserSearchPreference.objects.get_or_create(user=user)
         if location: pref.location = location
@@ -409,7 +417,7 @@ def tenant_dashboard(request):
     # Get upcoming visit (next scheduled visit)
     upcoming_visit = Visit.objects.filter(
         tenant=user, 
-        status='Scheduled',
+        status__in=['Pending', 'Approved', 'Scheduled'],
         visit_date__gte=timezone.now().date()
     ).order_by('visit_date', 'visit_time').first()
     
@@ -471,3 +479,70 @@ def tenant_dashboard(request):
         'recent_chats': MessageSerializer(recent_messages, many=True, context={'request': request}).data,
         'suggested_rooms': RoomSerializer(suggested_rooms, many=True, context={'request': request}).data,
     })
+
+class RoomReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = RoomReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return RoomReview.objects.all()
+
+    def perform_create(self, serializer):
+        room_id = self.request.data.get('room')
+        user = self.request.user
+        
+        # Check if user has a valid booking for this room
+        from .models import Booking
+        has_booking = Booking.objects.filter(
+            tenant=user,
+            room_id=room_id,
+            status__in=['Confirmed', 'Active', 'Completed']
+        ).exists()
+        
+        if not has_booking:
+            from rest_framework import serializers
+            raise serializers.ValidationError("You can only review rooms you have a confirmed booking for.")
+            
+        # Assign the current tenant to the review
+        try:
+            serializer.save(tenant=user)
+        except Exception as e:
+            from django.db import IntegrityError
+            if isinstance(e, IntegrityError):
+                from rest_framework import serializers
+                raise serializers.ValidationError("You have already reviewed this room.")
+            raise e
+
+    def perform_update(self, serializer):
+        if serializer.instance.tenant != self.request.user:
+            from rest_framework import serializers
+            raise serializers.ValidationError("You can only edit your own reviews.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.tenant != self.request.user:
+            from rest_framework import serializers
+            raise serializers.ValidationError("You can only delete your own reviews.")
+        instance.delete()
+    
+    @action(detail=False, methods=['get'], url_path='room/(?P<room_id>[^/.]+)')
+    def by_room(self, request, room_id=None):
+        reviews = RoomReview.objects.filter(room_id=room_id)
+        serializer = self.get_serializer(reviews, many=True)
+        return Response(serializer.data)
+
+
+class ComplaintViewSet(viewsets.ModelViewSet):
+    serializer_class = ComplaintSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'Tenant':
+            return Complaint.objects.filter(tenant=user)
+        elif user.role in ['Owner', 'Admin']:
+            return Complaint.objects.filter(owner=user)
+        return Complaint.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user)
