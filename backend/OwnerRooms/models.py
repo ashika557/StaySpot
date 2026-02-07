@@ -5,12 +5,15 @@ class Room(models.Model):
     ROOM_TYPES = [
         ('Single Room', 'Single Room'),
         ('Double Room', 'Double Room'),
+        ('Shared Room', 'Shared Room'),
+        ('Family Room', 'Family Room'),
         ('Apartment', 'Apartment'),
     ]
     
     STATUS_CHOICES = [
+        ('Pending Verification', 'Pending Verification'),
         ('Available', 'Available'),
-        ('Occupied', 'Occupied'),
+        ('Rented', 'Rented'),
         ('Disabled', 'Disabled'),
     ]
     
@@ -25,34 +28,58 @@ class Room(models.Model):
     # Basic Information
     title = models.CharField(max_length=200)
     location = models.CharField(max_length=300)
-    room_number = models.CharField(max_length=50, blank=True)
     room_type = models.CharField(max_length=50, choices=ROOM_TYPES, default='Single Room')
     floor = models.CharField(max_length=50, blank=True)
     size = models.CharField(max_length=50, blank=True)
     
-    # Pricing
+    # Pricing & Deposit
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Available')
     
-    # Amenities
-    wifi = models.BooleanField(default=False)
-    ac = models.BooleanField(default=False)
-    tv = models.BooleanField(default=False)
-    parking = models.BooleanField(default=False)
-    water_supply = models.BooleanField(default=False)
-    attached_bathroom = models.BooleanField(default=False)
-    cctv = models.BooleanField(default=False)
-    kitchen = models.BooleanField(default=False)
-    furniture = models.BooleanField(default=False)
-    
-    # NEW FIELDS
+    # Matching & Preferences
+    preferred_tenant = models.CharField(
+        max_length=50, 
+        choices=[
+            ('Any', 'Any'),
+            ('Students', 'Students'),
+            ('Working Professionals', 'Working Professionals'),
+            ('Family', 'Family')
+        ],
+        default='Any'
+    )
     gender_preference = models.CharField(
         max_length=10, 
         choices=GENDER_PREFERENCE_CHOICES, 
         default='Any'
     )
+    
+    # Amenities & Specs
+    toilet_type = models.CharField(
+        max_length=20, 
+        choices=[('Attached', 'Attached'), ('Shared', 'Shared')], 
+        default='Shared'
+    )
+    kitchen_access = models.BooleanField(default=False)
+    furnished = models.BooleanField(default=False)
+    wifi = models.BooleanField(default=False)
+    parking = models.BooleanField(default=False)
+    water_supply = models.BooleanField(default=False)
+    electricity_backup = models.CharField(
+        max_length=20, 
+        choices=[('Inverter', 'Inverter'), ('None', 'None')], 
+        default='None'
+    )
+    available_from = models.DateField(null=True, blank=True)
+    
+    # House Rules
+    cooking_allowed = models.BooleanField(default=False)
+    smoking_allowed = models.BooleanField(default=False)
+    drinking_allowed = models.BooleanField(default=False)
+    pets_allowed = models.BooleanField(default=False)
+    visitor_allowed = models.BooleanField(default=False)
     latitude = models.DecimalField(
         max_digits=9, 
         decimal_places=6, 
@@ -101,8 +128,8 @@ class UserSearchPreference(models.Model):
     gender_preference = models.CharField(max_length=20, blank=True, null=True)
     room_type = models.CharField(max_length=50, blank=True, null=True)
     wifi = models.BooleanField(default=False)
-    ac = models.BooleanField(default=False)
-    tv = models.BooleanField(default=False)
+    kitchen_access = models.BooleanField(default=False)
+    furnished = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

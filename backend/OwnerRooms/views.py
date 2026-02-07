@@ -29,24 +29,32 @@ class RoomViewSet(viewsets.ModelViewSet):
         if user.role == 'Owner':
             queryset = queryset.filter(owner=user)
         else:
-            # Tenants see Available rooms (and Occupied rooms so they can still see details)
-            queryset = queryset.filter(status__in=['Available', 'Occupied'])
+            # Tenants see rooms only from verified owners (or Admins)
+            # Also include 'Pending Verification' just in case some rooms are still in that state
+            queryset = queryset.filter(
+                (Q(owner__is_identity_verified=True) | Q(owner__role='Admin')),
+                status__in=['Available', 'Occupied', 'Pending Verification']
+            )
             
         # Filtering logic
         location = self.request.query_params.get('location')
+        if location:
+            # Flexible location search: check if search term is in location field
+            # or if any word in the search term matches the location
+            location_queries = Q(location__icontains=location)
+            for word in location.split():
+                if len(word) > 2: # Only search for significant words
+                    location_queries |= Q(location__icontains=word)
+            queryset = queryset.filter(location_queries)
         gender = self.request.query_params.get('gender_preference')
         room_type = self.request.query_params.get('room_type')
         
         # Amenities
         wifi = self.request.query_params.get('wifi')
-        ac = self.request.query_params.get('ac')
-        tv = self.request.query_params.get('tv')
-        parking = self.request.query_params.get('parking')
         water_supply = self.request.query_params.get('water_supply')
-        attached_bathroom = self.request.query_params.get('attached_bathroom')
-        cctv = self.request.query_params.get('cctv')
-        kitchen = self.request.query_params.get('kitchen')
-        furniture = self.request.query_params.get('furniture')
+        kitchen_access = self.request.query_params.get('kitchen_access')
+        furnished = self.request.query_params.get('furnished')
+        parking = self.request.query_params.get('parking')
 
         # Price Range
         min_price = self.request.query_params.get('min_price')
@@ -66,14 +74,10 @@ class RoomViewSet(viewsets.ModelViewSet):
         
         # Boolean Filters
         if wifi == 'true': queryset = queryset.filter(wifi=True)
-        if ac == 'true': queryset = queryset.filter(ac=True)
-        if tv == 'true': queryset = queryset.filter(tv=True)
         if parking == 'true': queryset = queryset.filter(parking=True)
         if water_supply == 'true': queryset = queryset.filter(water_supply=True)
-        if attached_bathroom == 'true': queryset = queryset.filter(attached_bathroom=True)
-        if cctv == 'true': queryset = queryset.filter(cctv=True)
-        if kitchen == 'true': queryset = queryset.filter(kitchen=True)
-        if furniture == 'true': queryset = queryset.filter(furniture=True)
+        if kitchen_access == 'true': queryset = queryset.filter(kitchen_access=True)
+        if furnished == 'true': queryset = queryset.filter(furnished=True)
 
         if min_price:
             queryset = queryset.filter(price__gte=min_price)
@@ -104,7 +108,7 @@ class RoomViewSet(viewsets.ModelViewSet):
             
         # Update user preferences if filtering (only for Tenants)
         if user.role == 'Tenant' and (location or gender or room_type or min_price or max_price):
-            self.update_user_preferences(user, location, gender, room_type, wifi, ac, tv)
+            self.update_user_preferences(user, location, gender, room_type, wifi, kitchen_access, furnished)
             
         return queryset
 
@@ -115,21 +119,22 @@ class RoomViewSet(viewsets.ModelViewSet):
         serializer = RoomReviewSerializer(reviews, many=True)
         return Response(serializer.data)
             
-    def update_user_preferences(self, user, location, gender, room_type, wifi, ac, tv):
+    def update_user_preferences(self, user, location, gender, room_type, wifi, kitchen_access, furnished):
         pref, created = UserSearchPreference.objects.get_or_create(user=user)
         if location: pref.location = location
         if gender: pref.gender_preference = gender
         if room_type: pref.room_type = room_type
         if wifi == 'true': pref.wifi = True
-        if ac == 'true': pref.ac = True
-        if tv == 'true': pref.tv = True
+        if kitchen_access == 'true': pref.kitchen_access = True
+        if furnished == 'true': pref.furnished = True
         pref.save()
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_identity_verified and user.role != 'Admin':
+        # Relaxed requirement: Allow creation if document is uploaded, even if not yet verified
+        if not user.identity_document and user.role != 'Admin':
             from rest_framework import serializers
-            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before adding a room."})
+            raise serializers.ValidationError({"error": "You must upload an identity document before adding a room."})
         serializer.save(owner=user)
     
     @action(detail=False, methods=['get'])
@@ -139,7 +144,9 @@ class RoomViewSet(viewsets.ModelViewSet):
         if user.role != 'Tenant':
             return Response({'error': 'Only tenants have suggestions'}, status=status.HTTP_400_BAD_REQUEST)
             
-        queryset = Room.objects.filter(status='Available')
+        queryset = Room.objects.filter(
+            status='Available'
+        ).filter(Q(owner__is_identity_verified=True) | Q(owner__role='Admin'))
         
         try:
             pref = user.search_preference
@@ -153,10 +160,10 @@ class RoomViewSet(viewsets.ModelViewSet):
                 q_objects |= Q(room_type=pref.room_type)
             if pref.wifi:
                 q_objects |= Q(wifi=True)
-            if pref.ac:
-                q_objects |= Q(ac=True)
-            if pref.tv:
-                q_objects |= Q(tv=True)
+            if pref.kitchen_access:
+                q_objects |= Q(kitchen_access=True)
+            if pref.furnished:
+                q_objects |= Q(furnished=True)
             
             if q_objects:
                 queryset = queryset.filter(q_objects).distinct()
@@ -439,7 +446,9 @@ def tenant_dashboard(request):
     ).order_by('-timestamp')[:3]
     
     # Get suggested rooms (fallback to any available if no preferences)
-    suggested_rooms = Room.objects.filter(status='Available')
+    suggested_rooms = Room.objects.filter(
+        status='Available'
+    ).filter(Q(owner__is_identity_verified=True) | Q(owner__role='Admin'))
     print(f"DEBUG: All available rooms count: {suggested_rooms.count()}")
     
     try:
@@ -454,10 +463,10 @@ def tenant_dashboard(request):
             q_objects |= Q(room_type=pref.room_type)
         if pref.wifi:
             q_objects |= Q(wifi=True)
-        if pref.ac:
-            q_objects |= Q(ac=True)
-        if pref.tv:
-            q_objects |= Q(tv=True)
+        if pref.kitchen_access:
+            q_objects |= Q(kitchen_access=True)
+        if pref.furnished:
+            q_objects |= Q(furnished=True)
         
         if q_objects:
             suggested_rooms = suggested_rooms.filter(q_objects).distinct()

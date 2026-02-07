@@ -40,11 +40,14 @@ class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = [
-            'id', 'owner', 'title', 'location', 'room_number', 'room_type',
-            'floor', 'size', 'price', 'status', 'wifi', 'ac', 'tv',
-            'parking', 'water_supply', 'attached_bathroom', 'cctv', 
-            'kitchen', 'furniture', 'gender_preference', 'latitude', 
-            'longitude', 'views', 'images', 'uploaded_images', 
+            'id', 'owner', 'title', 'location', 'room_type',
+            'floor', 'size', 'price', 'deposit', 'status', 
+            'preferred_tenant', 'gender_preference', 
+            'toilet_type', 'kitchen_access', 'furnished', 
+            'wifi', 'parking', 'water_supply', 'electricity_backup',
+            'available_from', 'cooking_allowed', 'smoking_allowed', 
+            'drinking_allowed', 'pets_allowed', 'visitor_allowed',
+            'latitude', 'longitude', 'views', 'images', 'uploaded_images', 
             'average_rating', 'review_count',
             'created_at', 'updated_at'
         ]
