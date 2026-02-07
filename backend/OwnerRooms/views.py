@@ -131,10 +131,22 @@ class RoomViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        # Relaxed requirement: Allow creation if document is uploaded, even if not yet verified
-        if not user.identity_document and user.role != 'Admin':
+        
+        # Admin bypass
+        if user.role == 'Admin':
+            serializer.save(owner=user)
+            return
+            
+        # Check verification status
+        if user.verification_status != 'Approved':
             from rest_framework import serializers
-            raise serializers.ValidationError({"error": "You must upload an identity document before adding a room."})
+            error_messages = {
+                'Not Submitted': "You must upload an identity document before listing a room. Please go to your Profile page to upload your Citizenship/ID.",
+                'Pending': "Your document is not verified yet.",
+                'Rejected': f"Your identity verification was rejected. Reason: {user.rejection_reason or 'Document does not meet requirements'}. Please resubmit your verification."
+            }
+            raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
+            
         serializer.save(owner=user)
     
     @action(detail=False, methods=['get'])
@@ -300,10 +312,22 @@ class BookingViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_identity_verified and user.role != 'Admin':
-            from rest_framework import serializers
-            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
-        booking = serializer.save(tenant=user)
+        
+        # Admin bypass
+        if user.role == 'Admin':
+            booking = serializer.save(tenant=user)
+        else:
+            # Check verification status
+            if user.verification_status != 'Approved':
+                from rest_framework import serializers
+                error_messages = {
+                    'Not Submitted': "You must upload an identity document before booking a room. Please go to your profile to submit verification.",
+                    'Pending': "Your identity verification is pending admin approval. You cannot book rooms until your document is approved.",
+                    'Rejected': f"Your identity verification was rejected. Reason: {user.rejection_reason or 'Document does not meet requirements'}. Please resubmit your verification."
+                }
+                raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
+            
+            booking = serializer.save(tenant=user)
         
         # Notify room owner about new booking request
         send_notification(
@@ -329,10 +353,22 @@ class VisitViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_identity_verified and user.role != 'Admin':
-            from rest_framework import serializers
-            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
-        visit = serializer.save(tenant=user)
+        
+        # Admin bypass
+        if user.role == 'Admin':
+            visit = serializer.save(tenant=user)
+        else:
+            # Check verification status
+            if user.verification_status != 'Approved':
+                from rest_framework import serializers
+                error_messages = {
+                    'Not Submitted': "You must upload an identity document before scheduling a visit. Please go to your profile to submit verification.",
+                    'Pending': "Your identity verification is pending admin approval. You cannot schedule visits until your document is approved.",
+                    'Rejected': f"Your identity verification was rejected. Reason: {user.rejection_reason or 'Document does not meet requirements'}. Please resubmit your verification."
+                }
+                raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
+            
+            visit = serializer.save(tenant=user)
         
         # Notify room owner about new visit request
         send_notification(
