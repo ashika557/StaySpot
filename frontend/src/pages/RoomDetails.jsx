@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader } from 'lucide-react';
+import { Star, MapPin, Navigation, School, Hospital, Utensils, ShoppingBag, Shield, Check, Info, Clock, ChevronRight, MessageSquare, Phone, Mail, Link as LinkIcon, Facebook, Instagram, Twitter, Wifi, Wind, Tv, User, Calendar, ShieldCheck, ArrowLeft, Loader } from 'lucide-react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import TenantSidebar from '../components/TenantSidebar';
+import Footer from '../components/Footer';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
 import { chatService } from '../services/chatService';
@@ -24,6 +25,8 @@ const RoomDetails = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [nearbyPlaces, setNearbyPlaces] = useState([]);
+    const [map, setMap] = useState(null);
 
     // Visit Modal State
     const [showVisitModal, setShowVisitModal] = useState(false);
@@ -104,6 +107,41 @@ const RoomDetails = ({ user }) => {
         }
     }, [id, user]);
 
+    useEffect(() => {
+        if (room && isLoaded && map) {
+            fetchNearbyPlaces();
+        }
+    }, [room, isLoaded, map]);
+
+    const fetchNearbyPlaces = () => {
+        if (!window.google || !room.latitude || !room.longitude || !map) return;
+
+        const service = new window.google.maps.places.PlacesService(map);
+        const location = new window.google.maps.LatLng(parseFloat(room.latitude), parseFloat(room.longitude));
+
+        const types = ['restaurant', 'hospital', 'shopping_mall', 'school', 'university'];
+
+        service.nearbySearch(
+            {
+                location: location,
+                radius: 2000,
+                type: types
+            },
+            (results, status) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+                    const formattedPlaces = results.slice(0, 8).map(place => ({
+                        id: place.place_id,
+                        name: place.name,
+                        type: place.types[0],
+                        rating: place.rating,
+                        address: place.vicinity
+                    }));
+                    setNearbyPlaces(formattedPlaces);
+                }
+            }
+        );
+    };
+
     const handleBookingRequest = async (e) => {
         e.preventDefault();
         try {
@@ -171,12 +209,12 @@ const RoomDetails = ({ user }) => {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
-            <TenantSidebar />
+        <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
+            <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-auto">
                 {/* Header */}
-                <div className="bg-white border-b px-8 py-4 sticky top-0 z-10 flex items-center justify-between">
+                <div className="bg-white border-b px-8 py-4 sticky top-0 z-10 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-4">
                         <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition">
                             <ArrowLeft size={20} />
@@ -195,7 +233,7 @@ const RoomDetails = ({ user }) => {
                     )}
                 </div>
 
-                <div className="p-8 max-w-5xl mx-auto w-full pb-24">
+                <div className="p-8 max-w-7xl mx-auto w-full pb-24">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column: Images & Info */}
                         <div className="lg:col-span-2 space-y-6">
@@ -441,6 +479,87 @@ const RoomDetails = ({ user }) => {
                                         </>
                                     )}
                                 </div>
+
+                                {/* Location Map & Nearby Surroundings */}
+                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                    <h3 className="font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
+                                        <MapPin className="w-5 h-5 text-blue-600" />
+                                        Location & Surroundings
+                                    </h3>
+
+                                    {isLoaded && room.latitude ? (
+                                        <div className="space-y-4">
+                                            <div className="h-64 rounded-xl overflow-hidden border border-gray-100">
+                                                <GoogleMap
+                                                    mapContainerStyle={{ width: '100%', height: '100%' }}
+                                                    center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                    zoom={15}
+                                                    onLoad={(mapInstance) => setMap(mapInstance)}
+                                                    options={{
+                                                        disableDefaultUI: false,
+                                                        mapTypeControl: false,
+                                                        streetViewControl: false,
+                                                        styles: [{ "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "on" }] }]
+                                                    }}
+                                                >
+                                                    <Marker
+                                                        position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                        animation={window.google?.maps.Animation.DROP}
+                                                        icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' }}
+                                                    />
+                                                </GoogleMap>
+                                            </div>
+
+                                            {/* Nearby Places Discovery */}
+                                            <div className="mt-6 pt-6 border-t border-gray-50">
+                                                <h4 className="text-[10px] font-black text-gray-400 mb-4 uppercase tracking-widest flex items-center gap-2">
+                                                    <Navigation className="w-3.5 h-3.5 text-blue-500" />
+                                                    Surroundings (Within 2KM)
+                                                </h4>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {nearbyPlaces.length > 0 ? (
+                                                        nearbyPlaces.map(place => (
+                                                            <div key={place.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-md transition-all duration-300 group">
+                                                                <div className="w-9 h-9 rounded-lg bg-white shadow-sm border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:border-blue-100 transition-colors">
+                                                                    {place.type.includes('restaurant') || place.type.includes('food') ? <Utensils className="w-4 h-4 text-orange-500" /> :
+                                                                        place.type.includes('hospital') || place.type.includes('health') ? <Hospital className="w-4 h-4 text-red-500" /> :
+                                                                            place.type.includes('shopping') ? <ShoppingBag className="w-4 h-4 text-blue-500" /> :
+                                                                                place.type.includes('school') || place.type.includes('university') ? <School className="w-4 h-4 text-indigo-500" /> :
+                                                                                    <MapPin className="w-4 h-4 text-gray-400" />}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <h5 className="font-bold text-gray-900 text-xs truncate">{place.name}</h5>
+                                                                        {place.rating && (
+                                                                            <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                                                                <Star className="w-2.5 h-2.5 fill-current" />
+                                                                                {place.rating}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-[10px] text-gray-500 truncate mt-0.5">{place.address}</p>
+                                                                    <span className="text-[8px] font-black text-gray-300 uppercase tracking-tighter mt-1 block">
+                                                                        {place.type.replace(/_/g, ' ')}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic animate-pulse">Scanning area...</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="h-40 bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200">
+                                            <MapPin className="w-8 h-8 mb-2 opacity-20" />
+                                            <p className="text-xs font-bold uppercase tracking-widest">Map data unavailable</p>
+                                            <p className="text-[10px] opacity-60 mt-1">Address: {room.location}</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -512,6 +631,7 @@ const RoomDetails = ({ user }) => {
                     </div>
                 </div>
             )}
+            <Footer />
         </div>
     );
 };
