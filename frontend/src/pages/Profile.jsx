@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest, getCsrfToken } from '../utils/api';
 import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
-import Sidebar from './sidebar';
-import TenantSidebar from './TenantNavbar';
+import OwnerSidebar from '../components/OwnerSidebar';
+import TenantSidebar from '../components/TenantSidebar';
 
 function Profile({ user, onUpdateUser, refreshUser }) {
     const [formData, setFormData] = useState({
@@ -73,7 +73,7 @@ function Profile({ user, onUpdateUser, refreshUser }) {
     };
 
     const isOwner = user?.role === 'Owner' || user?.role === 'owner';
-    const SidebarComponent = isOwner ? Sidebar : TenantSidebar;
+    const SidebarComponent = isOwner ? OwnerSidebar : TenantSidebar;
 
     return (
         <div className="flex h-screen bg-gray-50">

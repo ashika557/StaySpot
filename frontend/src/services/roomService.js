@@ -55,25 +55,30 @@ export const roomService = {
     formData.append('title', roomData.title);
     formData.append('location', roomData.location);
     formData.append('price', roomData.price);
-    formData.append('room_number', roomData.roomNumber || '');
+    formData.append('deposit', roomData.deposit || 0);
     formData.append('room_type', roomData.roomType);
     formData.append('floor', roomData.floor || '');
     formData.append('size', roomData.size || '');
-    formData.append('status', roomData.status);
-    formData.append('wifi', roomData.wifi);
-    formData.append('ac', roomData.ac);
-    formData.append('tv', roomData.tv);
-    formData.append('parking', roomData.parking);
-    formData.append('water_supply', roomData.waterSupply);
-    formData.append('attached_bathroom', roomData.attachedBathroom);
-    formData.append('cctv', roomData.cctv);
-    formData.append('kitchen', roomData.kitchen);
-    formData.append('furniture', roomData.furniture);
+    formData.append('preferred_tenant', roomData.preferredTenant || 'Any');
+    formData.append('toilet_type', roomData.toiletType || 'Shared');
+    formData.append('kitchen_access', roomData.kitchenAccess || false);
+    formData.append('furnished', roomData.furnished || false);
+    formData.append('available_from', roomData.availableFrom || '');
+    formData.append('electricity_backup', roomData.electricityBackup || 'None');
 
-    // Add new fields: gender preference and map location
+    // House Rules
+    formData.append('cooking_allowed', roomData.cookingAllowed || false);
+    formData.append('smoking_allowed', roomData.smokingAllowed || false);
+    formData.append('drinking_allowed', roomData.drinkingAllowed || false);
+    formData.append('pets_allowed', roomData.petsAllowed || false);
+    formData.append('visitor_allowed', roomData.visitorAllowed || false);
+
+    formData.append('status', roomData.status || 'Available');
+    formData.append('wifi', roomData.wifi || false);
+    formData.append('parking', roomData.parking || false);
+    formData.append('water_supply', roomData.waterSupply || false);
     formData.append('gender_preference', roomData.genderPreference || 'Any');
 
-    // Only append coordinates if they have values to avoid conversion errors on backend
     if (roomData.latitude !== undefined && roomData.latitude !== null && roomData.latitude !== '') {
       formData.append('latitude', parseFloat(roomData.latitude).toFixed(6));
     }
@@ -116,25 +121,30 @@ export const roomService = {
     formData.append('title', roomData.title);
     formData.append('location', roomData.location);
     formData.append('price', roomData.price);
-    formData.append('room_number', roomData.roomNumber || '');
+    formData.append('deposit', roomData.deposit || 0);
     formData.append('room_type', roomData.roomType);
     formData.append('floor', roomData.floor || '');
     formData.append('size', roomData.size || '');
-    formData.append('status', roomData.status);
-    formData.append('wifi', roomData.wifi);
-    formData.append('ac', roomData.ac);
-    formData.append('tv', roomData.tv);
-    formData.append('parking', roomData.parking);
-    formData.append('water_supply', roomData.waterSupply);
-    formData.append('attached_bathroom', roomData.attachedBathroom);
-    formData.append('cctv', roomData.cctv);
-    formData.append('kitchen', roomData.kitchen);
-    formData.append('furniture', roomData.furniture);
+    formData.append('preferred_tenant', roomData.preferredTenant || 'Any');
+    formData.append('toilet_type', roomData.toiletType || 'Shared');
+    formData.append('kitchen_access', roomData.kitchenAccess || false);
+    formData.append('furnished', roomData.furnished || false);
+    formData.append('available_from', roomData.availableFrom || '');
+    formData.append('electricity_backup', roomData.electricityBackup || 'None');
 
-    // Add new fields: gender preference and map location
+    // House Rules
+    formData.append('cooking_allowed', roomData.cookingAllowed || false);
+    formData.append('smoking_allowed', roomData.smokingAllowed || false);
+    formData.append('drinking_allowed', roomData.drinkingAllowed || false);
+    formData.append('pets_allowed', roomData.petsAllowed || false);
+    formData.append('visitor_allowed', roomData.visitorAllowed || false);
+
+    formData.append('status', roomData.status);
+    formData.append('wifi', roomData.wifi || false);
+    formData.append('parking', roomData.parking || false);
+    formData.append('water_supply', roomData.waterSupply || false);
     formData.append('gender_preference', roomData.genderPreference || 'Any');
 
-    // Only append coordinates if they have values to avoid conversion errors on backend
     if (roomData.latitude !== undefined && roomData.latitude !== null && roomData.latitude !== '') {
       formData.append('latitude', parseFloat(roomData.latitude).toFixed(6));
     }

@@ -3,8 +3,8 @@ import { Search, Send, Paperclip, MoreVertical, Phone, Video, Smile, ArrowLeft, 
 import { chatService } from '../services/chatService';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ROUTES, getMediaUrl } from '../constants/api';
-import Sidebar from './sidebar';
-import TenantSidebar from './TenantNavbar';
+import OwnerSidebar from '../components/OwnerSidebar';
+import TenantSidebar from '../components/TenantSidebar';
 import { useLocation } from 'react-router-dom';
 
 const Chat = ({ user }) => {
@@ -127,7 +127,7 @@ const Chat = ({ user }) => {
 
     return (
         <div className="flex h-screen bg-gray-50">
-            {user?.role === 'Owner' ? <Sidebar /> : <TenantSidebar />}
+            {user?.role === 'Owner' ? <OwnerSidebar /> : <TenantSidebar />}
 
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
                 <div className="bg-white w-full max-w-6xl h-[85vh] rounded-2xl shadow-xl overflow-hidden flex transition-all duration-300">
