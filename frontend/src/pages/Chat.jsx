@@ -125,9 +125,11 @@ const Chat = ({ user }) => {
 
     if (!user) return <Navigate to={ROUTES.LOGIN} />;
 
+    const isOwner = user?.role === 'Owner';
+
     return (
         <div className="flex h-screen bg-gray-50">
-            {user?.role === 'Owner' ? <OwnerSidebar /> : <TenantSidebar />}
+            {isOwner ? <OwnerSidebar user={user} /> : <TenantSidebar user={user} />}
 
             <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
                 <div className="bg-white w-full max-w-6xl h-[85vh] rounded-2xl shadow-xl overflow-hidden flex transition-all duration-300">
