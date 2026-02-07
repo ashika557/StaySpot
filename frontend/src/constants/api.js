@@ -6,6 +6,9 @@ export const API_BASE_URL = 'http://localhost:8000/api';
 
 export const API_ENDPOINTS = {
   REGISTER: '/register/',
+  REQUEST_REGISTRATION_OTP: '/request-registration-otp/',
+  VERIFY_REGISTRATION_OTP: '/verify-registration-otp/',
+  VERIFY_FORGOT_PASSWORD_OTP: '/verify-forgot-password-otp/',
   LOGIN: '/login/',
   LOGOUT: '/logout/',
   USER: '/user/',
