@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
+import Footer from '../components/Footer';
 import { Calendar, MapPin, DollarSign, MessageCircle, Star, ChevronRight, MessageSquare } from 'lucide-react';
 import { dashboardService } from '../services/tenantService';
 import { roomService } from '../services/roomService';
@@ -43,7 +44,7 @@ export default function TenantDashboard({ user }) {
   if (loading) {
     return (
       <div className="flex h-screen bg-gray-50">
-        <TenantSidebar />
+        <TenantSidebar user={user} />
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -82,6 +83,7 @@ export default function TenantDashboard({ user }) {
             </div>
           </div>
         </div>
+        <Footer />
       </div>
     </div>
   );
