@@ -55,35 +55,39 @@ const RoomMap = ({ rooms }) => {
     const calculateDistances = (origin) => {
         if (!window.google || !rooms.length) return;
 
-        const service = new window.google.maps.DistanceMatrixService();
-        const destinations = rooms
-            .filter(r => r.latitude && r.longitude)
-            .map(r => ({ lat: parseFloat(r.latitude), lng: parseFloat(r.longitude) }));
+        try {
+            const service = new window.google.maps.DistanceMatrixService();
+            const destinations = rooms
+                .filter(r => r.latitude && r.longitude)
+                .map(r => ({ lat: parseFloat(r.latitude), lng: parseFloat(r.longitude) }));
 
-        if (destinations.length === 0) return;
+            if (destinations.length === 0) return;
 
-        service.getDistanceMatrix(
-            {
-                origins: [origin],
-                destinations: destinations,
-                travelMode: window.google.maps.TravelMode.DRIVING,
-            },
-            (response, status) => {
-                if (status === 'OK') {
-                    const results = {};
-                    const roomList = rooms.filter(r => r.latitude && r.longitude);
-                    response.rows[0].elements.forEach((element, index) => {
-                        if (element.status === 'OK') {
-                            results[roomList[index].id] = {
-                                distance: element.distance.text,
-                                duration: element.duration.text
-                            };
-                        }
-                    });
-                    setDistances(results);
+            service.getDistanceMatrix(
+                {
+                    origins: [origin],
+                    destinations: destinations,
+                    travelMode: window.google.maps.TravelMode.DRIVING,
+                },
+                (response, status) => {
+                    if (status === 'OK' && response) {
+                        const results = {};
+                        const roomList = rooms.filter(r => r.latitude && r.longitude);
+                        response.rows[0].elements.forEach((element, index) => {
+                            if (element && element.status === 'OK') {
+                                results[roomList[index].id] = {
+                                    distance: element.distance.text,
+                                    duration: element.duration.text
+                                };
+                            }
+                        });
+                        setDistances(results);
+                    }
                 }
-            }
-        );
+            );
+        } catch (err) {
+            console.error("RoomMap distance calculation failed:", err);
+        }
     };
 
     if (!isLoaded) return <div className="h-[600px] flex items-center justify-center bg-gray-50 rounded-2xl">Loading Map...</div>;
@@ -140,7 +144,7 @@ const RoomMap = ({ rooms }) => {
                                 position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
                                 onClick={() => setSelectedRoom(room)}
                                 icon={{
-                                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
                                 }}
                             />
                         )
@@ -167,7 +171,7 @@ const RoomMap = ({ rooms }) => {
                                     alt=""
                                 />
                                 <h4 className="font-bold text-gray-900 text-sm line-clamp-1">{selectedRoom.title}</h4>
-                                <p className="text-blue-600 font-bold text-xs mt-1">₹{selectedRoom.price}/month</p>
+                                <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
                                 {distances[selectedRoom.id] && (
                                     <div className="mt-2 pt-2 border-t flex flex-col gap-0.5">
                                         <div className="flex justify-between text-[10px] font-bold text-gray-500">
@@ -180,9 +184,9 @@ const RoomMap = ({ rooms }) => {
                                         </div>
                                     </div>
                                 )}
-                                <button className="w-full mt-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-md">
+                                <Link to={`/room/${selectedRoom.id}`} className="block w-full mt-3 py-2 bg-blue-600 text-white text-center text-[10px] font-bold rounded-md hover:bg-blue-700 transition">
                                     View Details
-                                </button>
+                                </Link>
                             </div>
                         </InfoWindow>
                     )}
