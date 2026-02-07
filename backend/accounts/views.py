@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from datetime import timedelta
-from .models import User, PasswordResetToken, EmailVerificationToken, PhoneOTP
+from .models import User, PasswordResetToken, EmailVerificationToken, PhoneOTP, PreRegistrationOTP
 from django.core.mail import send_mail
 from django.conf import settings
 import re
@@ -17,10 +17,80 @@ import random
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def register(request):
-    """Registration API for Owner and Tenant."""
-    data = request.data
+def request_registration_otp(request):
+    """Send a 6-digit code to the user's email before registration."""
+    email = request.data.get('email', '').strip()
     
+    if not email:
+        return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # Check if email is already registered
+    if User.objects.filter(email=email).exists():
+        return Response({'error': 'An account with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # Generate OTP
+    otp_code = PreRegistrationOTP.generate_otp()
+    
+    # Save or update OTP
+    PreRegistrationOTP.objects.update_or_create(
+        email=email,
+        defaults={'otp_code': otp_code, 'is_verified': False, 'created_at': timezone.now()}
+    )
+    
+    # Send email
+    subject = 'StaySpot Registration Code'
+    message = f'Your verification code for StaySpot registration is: {otp_code}'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    
+    try:
+        send_mail(subject, message, from_email, [email])
+        print(f"DEBUG: Registration OTP for {email} is {otp_code}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return Response({'error': 'Failed to send verification email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    return Response({
+        'message': 'Verification code sent to your email.',
+        'otp_dev': otp_code # Remove in production
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_registration_otp(request):
+    """Verify the 6-digit registration code."""
+    email = request.data.get('email', '').strip()
+    otp_code = request.data.get('otp_code', '').strip()
+    
+    if not email or not otp_code:
+        return Response({'error': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        otp_entry = PreRegistrationOTP.objects.get(email=email, otp_code=otp_code)
+        if not otp_entry.is_valid():
+            return Response({'error': 'Code expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        otp_entry.is_verified = True
+        otp_entry.save()
+        
+        return Response({'message': 'Email verified successfully. You can now complete your registration.'}, status=status.HTTP_200_OK)
+    except PreRegistrationOTP.DoesNotExist:
+        return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register(request):
+    """Registration API updated to require pre-verified email."""
+    data = request.data
+    email = data.get('email', '').strip()
+    
+    # Check if email was verified
+    try:
+        otp_entry = PreRegistrationOTP.objects.get(email=email)
+        if not otp_entry.is_verified:
+            return Response({'error': 'Email not verified. Please verify your email first.'}, status=status.HTTP_400_BAD_REQUEST)
+    except PreRegistrationOTP.DoesNotExist:
+        return Response({'error': 'Email not verified. Please verify your email first.'}, status=status.HTTP_400_BAD_REQUEST)
+
     # Validate required fields
     required_fields = ['full_name', 'email', 'phone', 'password', 'role']
     for field in required_fields:
@@ -30,89 +100,32 @@ def register(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
-    # Validate email format
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    if not re.match(email_pattern, data['email']):
-        return Response(
-            {'error': 'Invalid email format.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Validate role
-    if data['role'] not in ['Owner', 'Tenant']:
-        return Response(
-            {'error': 'Role must be either Owner or Tenant.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Check if user already exists
-    if User.objects.filter(email=data['email']).exists():
-        return Response(
-            {'error': 'User with this email already exists.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if User.objects.filter(username=data['email']).exists():
-        return Response(
-            {'error': 'User with this email already exists.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
     # Create user
     try:
         user = User.objects.create_user(
-            username=data['email'],
-            email=data['email'],
+            username=email,
+            email=email,
             password=data['password'],
             full_name=data['full_name'],
             phone=data['phone'],
             role=data['role'],
-            is_active=False  # Deactivate until email is verified
+            is_active=True # Already verified via email OTP
         )
         
-        # Create verification token
-        verification_token = EmailVerificationToken.objects.create(user=user)
-        
-        # Create Phone OTP
-        otp_code = PhoneOTP.generate_otp()
-        PhoneOTP.objects.create(user=user, otp_code=otp_code)
-        
-        # Send verification email
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        verification_link = f"{frontend_url}/verify-email/{verification_token.token}"
-        
-        subject = 'Verify your StaySpot account'
-        message = f'Hi {user.full_name},\n\nPlease click the link below to verify your email address and activate your account:\n\n{verification_link}\n\nThis link will expire in 24 hours.'
-        from_email = settings.DEFAULT_FROM_EMAIL
-        recipient_list = [user.email]
-        
-        try:
-            send_mail(subject, message, from_email, recipient_list)
-        except Exception as mail_error:
-            # For development, we might not have SMTP configured correctly
-            print(f"Failed to send email: {mail_error}")
-            print(f"Verification link: {verification_link}")
-        
-        # Log OTP for development
-        print(f"PHONE OTP for {user.phone}: {otp_code}")
+        # Clean up pre-registration OTP
+        otp_entry.delete()
         
         return Response({
-            'message': 'Registration successful. Please enter the OTP sent to your phone.',
+            'message': 'Registration successful! You can now login.',
             'user': {
                 'id': user.id,
                 'full_name': user.full_name,
                 'email': user.email,
-                'role': user.role,
-                'phone': user.phone
-            },
-            'otp_dev': otp_code, # For development convenience
-            'verification_link_dev': verification_link
+                'role': user.role
+            }
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -183,8 +196,8 @@ def login_view(request):
             'email': user.email,
             'role': user.role,
             'identity_document': user.identity_document.url if user.identity_document else None,
-            'is_identity_verified': user.is_identity_verified,
-            'profile_photo': user.profile_photo.url if user.profile_photo else None
+            'profile_photo': user.profile_photo.url if user.profile_photo else None,
+            'is_identity_verified': user.is_identity_verified
         }
     }, status=status.HTTP_200_OK)
 
@@ -208,8 +221,8 @@ def get_user(request):
             'email': request.user.email,
             'role': request.user.role,
             'identity_document': request.user.identity_document.url if request.user.identity_document else None,
-            'is_identity_verified': request.user.is_identity_verified,
-            'profile_photo': request.user.profile_photo.url if request.user.profile_photo else None
+            'profile_photo': request.user.profile_photo.url if request.user.profile_photo else None,
+            'is_identity_verified': request.user.is_identity_verified
         }
     }, status=status.HTTP_200_OK)
 
@@ -230,10 +243,9 @@ def update_profile(request):
         user.phone = phone
     if identity_document:
         user.identity_document = identity_document
-        # Reset verification status if document is updated? 
-        # For now, just set it to False until re-verified if necessary, 
-        # but the prompt says they just need to PROVIDE it.
-        # Let's keep is_identity_verified as a manual flag for now.
+        if user.verification_status == 'Not Submitted' or user.verification_status == 'Rejected':
+            user.verification_status = 'Pending'
+            user.is_identity_verified = False
     if profile_photo:
         user.profile_photo = profile_photo
     
@@ -247,8 +259,8 @@ def update_profile(request):
             'email': user.email,
             'role': user.role,
             'identity_document': user.identity_document.url if user.identity_document else None,
-            'is_identity_verified': user.is_identity_verified,
-            'profile_photo': user.profile_photo.url if user.profile_photo else None
+            'profile_photo': user.profile_photo.url if user.profile_photo else None,
+            'is_identity_verified': user.is_identity_verified
         }
     })
 
@@ -265,53 +277,66 @@ def get_csrf_token(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
-    """Generate password reset token and send reset link."""
+    """Modified to send OTP to phone instead of email link."""
     data = request.data
-    
-    # Validate input
-    email = data.get('email', '').strip()
     phone = data.get('phone', '').strip()
     
-    if not email and not phone:
-        return Response(
-            {'error': 'Email or phone number is required.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Find user by email or phone
+    if not phone:
+        return Response({'error': 'Phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
     try:
-        if email:
-            user = User.objects.get(email=email)
-        else:
-            user = User.objects.get(phone=phone)
-    except User.DoesNotExist:
-        # Don't reveal if user exists or not for security
+        user = User.objects.get(phone=phone)
+        
+        # Create Phone OTP for Password Reset
+        otp_code = PhoneOTP.generate_otp()
+        PhoneOTP.objects.filter(user=user, purpose='PasswordReset', is_verified=False).delete()
+        PhoneOTP.objects.create(user=user, phone=phone, otp_code=otp_code, purpose='PasswordReset')
+        
+        # Log for dev
+        print(f"DEBUG: Password Reset OTP for {phone} is {otp_code}")
+        
         return Response({
-            'message': 'If an account exists with this email/phone, a password reset link has been sent.'
+            'message': 'A reset code has been sent to your phone.',
+            'otp_dev': otp_code # Dev only
         }, status=status.HTTP_200_OK)
-    
-    # Invalidate any existing unused tokens for this user
-    PasswordResetToken.objects.filter(user=user, used=False).update(used=True)
-    
-    # Create new token (expires in 1 hour)
-    expires_at = timezone.now() + timedelta(hours=1)
-    reset_token = PasswordResetToken.objects.create(
-        user=user,
-        expires_at=expires_at
-    )
-    
-    # In production, send email/SMS here
-    # For now, we'll return the token in the response (for development/testing)
-    reset_link = f"http://localhost:3000/reset-password/{reset_token.token}"
-    
-    # Log for development (remove in production)
-    print(f"Password reset link for {user.email}: {reset_link}")
-    
-    return Response({
-        'message': 'If an account exists with this email/phone, a password reset link has been sent.',
-        'reset_link': reset_link  # Remove this in production
-    }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        # Avoid user enumeration
+        return Response({'message': 'If an account exists with this phone number, a code has been sent.'}, status=status.HTTP_200_OK)
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_forgot_password_otp(request):
+    """Verify phone OTP and return a reset token."""
+    phone = request.data.get('phone', '').strip()
+    otp_code = request.data.get('otp_code', '').strip()
+    
+    if not phone or not otp_code:
+        return Response({'error': 'Phone and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        user = User.objects.get(phone=phone)
+        otp = PhoneOTP.objects.get(user=user, otp_code=otp_code, purpose='PasswordReset', is_verified=False)
+        
+        if not otp.is_valid():
+            return Response({'error': 'OTP expired.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        otp.is_verified = True
+        otp.save()
+        
+        # Create a Password Reset Token that will be consumed in the final step
+        reset_token = PasswordResetToken.objects.create(
+            user=user,
+            expires_at=timezone.now() + timedelta(minutes=15)
+        )
+        
+        return Response({
+            'token': reset_token.token,
+            'message': 'OTP verified. You can now reset your password.'
+        }, status=status.HTTP_200_OK)
+        
+    except (User.DoesNotExist, PhoneOTP.DoesNotExist):
+        return Response({'error': 'Invalid phone or code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -323,70 +348,26 @@ def reset_password(request, token):
     password = data.get('password', '').strip()
     confirm_password = data.get('confirm_password', '').strip()
     
-    if not password:
-        return Response(
-            {'error': 'Password is required.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if not confirm_password:
-        return Response(
-            {'error': 'Please confirm your password.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    if not password or not confirm_password:
+        return Response({'error': 'Password and confirmation are required.'}, status=status.HTTP_400_BAD_REQUEST)
     
     if password != confirm_password:
-        return Response(
-            {'error': 'Passwords do not match.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
     
     # Find token
     try:
         reset_token = PasswordResetToken.objects.get(token=token)
     except PasswordResetToken.DoesNotExist:
-        return Response(
-            {'error': 'Invalid or expired reset token.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'error': 'Invalid or expired reset token.'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validate token
     if not reset_token.is_valid():
-        return Response(
-            {'error': 'Invalid or expired reset token.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'error': 'Invalid or expired reset token.'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validate password strength - custom requirements first
-    has_upper = any(c.isupper() for c in password)
-    has_lower = any(c.islower() for c in password)
-    has_number = any(c.isdigit() for c in password)
-    
-    custom_errors = []
-    if len(password) < 8:
-        custom_errors.append('Password must be at least 8 characters long.')
-    if not has_upper:
-        custom_errors.append('Password must contain at least one uppercase letter.')
-    if not has_lower:
-        custom_errors.append('Password must contain at least one lowercase letter.')
-    if not has_number:
-        custom_errors.append('Password must contain at least one number.')
-    
-    if custom_errors:
-        return Response(
-            {'error': ' '.join(custom_errors)},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Additional Django password validation
+    # Validate password strength
     try:
         validate_password(password, reset_token.user)
     except DjangoValidationError as e:
-        errors = list(e.messages)
-        return Response(
-            {'error': errors[0]},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'error': list(e.messages)[0]}, status=status.HTTP_400_BAD_REQUEST)
     
     # Update password
     reset_token.user.set_password(password)
@@ -396,43 +377,32 @@ def reset_password(request, token):
     reset_token.used = True
     reset_token.save()
     
-    return Response({
-        'message': 'Password has been reset successfully. You can now login with your new password.'
-    }, status=status.HTTP_200_OK)
+    return Response({'message': 'Password has been reset successfully. You can now login.'}, status=status.HTTP_200_OK)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_email(request, token):
-    """Verify email using token."""
+    """Verify email using token (Legacy link support)."""
     try:
         verification_token = EmailVerificationToken.objects.get(token=token)
+        if not verification_token.is_valid():
+            return Response({'error': 'Invalid or expired verification token.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = verification_token.user
+        user.is_active = True
+        user.save()
+        
+        verification_token.used = True
+        verification_token.save()
+        
+        return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
     except EmailVerificationToken.DoesNotExist:
-        return Response(
-            {'error': 'Invalid or expired verification token.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if not verification_token.is_valid():
-        return Response(
-            {'error': 'Invalid or expired verification token.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Activate user
-    user = verification_token.user
-    user.is_active = True
-    user.save()
-    
-    # Mark token as used
-    verification_token.used = True
-    verification_token.save()
-    
-    return Response({
-        'message': 'Email verified successfully. You can now login.'
-    }, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid verification token.'}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_otp(request):
-    """Verify phone OTP."""
+    """Verify phone OTP for registration (legacy support if needed)."""
     data = request.data
     email = data.get('email')
     otp_code = data.get('otp_code')
@@ -445,7 +415,7 @@ def verify_otp(request):
     
     try:
         user = User.objects.get(email=email)
-        otp = PhoneOTP.objects.filter(user=user, otp_code=otp_code).first()
+        otp = PhoneOTP.objects.filter(user=user, otp_code=otp_code, purpose='Registration').first()
         
         if not otp:
             return Response(
@@ -523,3 +493,60 @@ def resend_otp(request):
             {'error': str(e)},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approve_verification(request, user_id):
+    """Admin endpoint to approve identity verification."""
+    if not request.user.is_staff:
+        return Response({'error': 'Admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+        user.verification_status = 'Approved'
+        user.is_identity_verified = True
+        user.rejection_reason = None
+        user.save()
+        
+        return Response({
+            'message': f'Verification approved for {user.full_name}.',
+            'user': {
+                'id': user.id,
+                'full_name': user.full_name,
+                'email': user.email,
+                'verification_status': user.verification_status
+            }
+        })
+    except User.DoesNotExist:
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reject_verification(request, user_id):
+    """Admin endpoint to reject identity verification."""
+    if not request.user.is_staff:
+        return Response({'error': 'Admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+        rejection_reason = request.data.get('rejection_reason', 'Document does not meet verification requirements.')
+        
+        user.verification_status = 'Rejected'
+        user.is_identity_verified = False
+        user.rejection_reason = rejection_reason
+        user.save()
+        
+        return Response({
+            'message': f'Verification rejected for {user.full_name}.',
+            'user': {
+                'id': user.id,
+                'full_name': user.full_name,
+                'email': user.email,
+                'verification_status': user.verification_status,
+                'rejection_reason': user.rejection_reason
+            }
+        })
+    except User.DoesNotExist:
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
