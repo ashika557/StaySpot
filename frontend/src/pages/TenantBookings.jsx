@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, ArrowRight, XCircle } from 'lucide-react';
 import TenantSidebar from '../components/TenantSidebar';
+import Footer from '../components/Footer';
 import { bookingService } from '../services/bookingService';
 import { chatService } from '../services/chatService';
 import { getMediaUrl, ROUTES } from '../constants/api';
