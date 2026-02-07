@@ -5,11 +5,11 @@ from .models import User, PasswordResetToken, PendingVerification
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'full_name', 'phone', 'role', 'is_identity_verified', 'is_staff')
-    list_filter = ('role', 'is_identity_verified', 'is_staff', 'is_superuser')
+    list_display = ('username', 'email', 'full_name', 'phone', 'role', 'is_identity_verified', 'verification_status', 'is_staff')
+    list_filter = ('role', 'is_identity_verified', 'verification_status', 'is_staff', 'is_superuser')
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Additional Info', {'fields': ('full_name', 'phone', 'role')}),
-        ('Identity Verification', {'fields': ('identity_document', 'identity_preview', 'is_identity_verified')}),
+        ('Identity Verification', {'fields': ('identity_document', 'identity_preview', 'is_identity_verified', 'verification_status')}),
     )
     readonly_fields = ('identity_preview',)
     
@@ -49,7 +49,7 @@ class PendingVerificationAdmin(admin.ModelAdmin):
     identity_preview.short_description = 'Document Preview'
 
     def verify_users(self, request, queryset):
-        count = queryset.update(is_identity_verified=True)
+        count = queryset.update(is_identity_verified=True, verification_status='Approved')
         self.message_user(request, f"{count} users have been successfully verified.")
     verify_users.short_description = 'Verify selected users'
 
