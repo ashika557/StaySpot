@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import TenantSidebar from '../components/TenantSidebar';
+import Footer from '../components/Footer';
 import {
     Calendar,
     MapPin,
@@ -68,7 +69,7 @@ export default function TenantVisits({ user }) {
 
     return (
         <div className="flex h-screen bg-gray-50">
-            <TenantSidebar />
+            <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
@@ -188,6 +189,7 @@ export default function TenantVisits({ user }) {
                         )}
 
                     </div>
+                    <Footer user={user} />
                 </div>
             </div>
         </div>

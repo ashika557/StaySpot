@@ -4,6 +4,7 @@ import OwnerSidebar from '../components/OwnerSidebar';
 import { bookingService } from '../services/bookingService';
 import { getMediaUrl } from '../constants/api';
 import OwnerHeader from '../components/OwnerHeader';
+import Footer from '../components/Footer';
 
 const OwnerBookings = ({ user, onLogout }) => {
     const [bookings, setBookings] = useState([]);
