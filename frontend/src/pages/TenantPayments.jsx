@@ -180,7 +180,7 @@ export default function TenantPayments({ user }) {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC]">
-            <TenantSidebar />
+            <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
