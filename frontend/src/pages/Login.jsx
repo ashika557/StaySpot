@@ -65,7 +65,7 @@ function Login({ onLogin }) {
 
     try {
       console.log('Attempting login...');
-      
+
       const response = await apiRequest(
         API_ENDPOINTS.LOGIN,
         {
@@ -86,12 +86,12 @@ function Login({ onLogin }) {
         // Save user data to localStorage
         setUser(data.user);
         console.log('User data saved to localStorage:', data.user);
-        
+
         // Call the onLogin callback
         onLogin(data.user);
-        
+
         // Navigate to appropriate dashboard
-        navigate(formData.role === 'Owner' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD);
+        navigate(formData.role === 'Owner' || formData.role === 'Admin' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD);
       } else {
         setErrorMessage(data.error || 'Login failed. Please check your credentials.');
       }
@@ -132,9 +132,8 @@ function Login({ onLogin }) {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.email ? 'border-red-500' : 'border-gray-300'
+                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
                 placeholder="Enter your email"
               />
               {errors.email && (
@@ -152,9 +151,8 @@ function Login({ onLogin }) {
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.password ? 'border-red-500' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.password ? 'border-red-500' : 'border-gray-300'
+                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
                 placeholder="Enter your password"
               />
               {errors.password && (

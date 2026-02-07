@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { getCsrfToken, apiRequest } from '../utils/api';
 import { API_ENDPOINTS, ROUTES } from '../constants/api';
 
-function Register({ onLogin }) {
+function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     full_name: '',
@@ -18,9 +18,8 @@ function Register({ onLogin }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [csrfToken, setCsrfToken] = useState('');
-  const [step, setStep] = useState('form'); // 'form' or 'otp'
+  const [step, setStep] = useState('form'); // 'form', 'email_otp', 'success'
   const [otp, setOtp] = useState('');
-  const [registeredEmail, setRegisteredEmail] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
 
   useEffect(() => {
@@ -40,29 +39,19 @@ function Register({ onLogin }) {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Full Name is required';
-    }
-
+    if (!formData.full_name.trim()) newErrors.full_name = 'Full Name is required';
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
     }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone is required';
-    }
-
+    if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
-
-    if (!formData.confirm_password) {
-      newErrors.confirm_password = 'Please confirm your password';
-    } else if (formData.password !== formData.confirm_password) {
+    if (formData.password !== formData.confirm_password) {
       newErrors.confirm_password = 'Passwords do not match';
     }
 
@@ -72,43 +61,27 @@ function Register({ onLogin }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleRequestOtp = async (e) => {
+    if (e) e.preventDefault();
+    if (!validateForm()) return;
+
+    setLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
 
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
     try {
-      const data = new FormData();
-      data.append('full_name', formData.full_name);
-      data.append('email', formData.email);
-      data.append('phone', formData.phone);
-      data.append('password', formData.password);
-      data.append('role', formData.role);
-
-
       const response = await apiRequest(
-        API_ENDPOINTS.REGISTER,
+        API_ENDPOINTS.REQUEST_REGISTRATION_OTP,
         {
           method: 'POST',
-          body: data
+          body: JSON.stringify({
+            email: formData.email,
+            phone: formData.phone
+          })
         },
         csrfToken
       );
@@ -116,327 +89,257 @@ function Register({ onLogin }) {
       const result = await response.json();
 
       if (response.ok) {
-        setSuccessMessage('Registration successful! Please enter the OTP sent to your phone.');
-        setRegisteredEmail(formData.email);
-        setStep('otp');
+        setSuccessMessage('Verification code sent to your email!');
+        setStep('email_otp');
+        setResendTimer(60);
       } else {
-        setErrorMessage(result.error || 'Registration failed. Please try again.');
+        setErrorMessage(result.error || 'Failed to send verification code.');
       }
     } catch (error) {
-      setErrorMessage('Network error. Please check if the backend is running.');
+      setErrorMessage('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOtpSubmit = async (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
-    setSuccessMessage('');
-
     if (!otp || otp.length !== 6) {
-      setErrorMessage('Please enter a valid 6-digit OTP.');
+      setErrorMessage('Please enter a 6-digit code.');
       return;
     }
 
     setLoading(true);
+    setErrorMessage('');
 
     try {
       const response = await apiRequest(
-        API_ENDPOINTS.VERIFY_OTP,
+        API_ENDPOINTS.VERIFY_REGISTRATION_OTP,
         {
           method: 'POST',
           body: JSON.stringify({
-            email: registeredEmail,
+            email: formData.email,
             otp_code: otp
           })
         },
         csrfToken
       );
 
-      const data = await response.json();
-
       if (response.ok) {
-        setSuccessMessage('Phone verified successfully! You can now login.');
-        setTimeout(() => {
-          navigate(ROUTES.LOGIN);
-        }, 2000);
+        setSuccessMessage('Email verified! Completing registration...');
+        await finalizeRegistration();
       } else {
-        setErrorMessage(data.error || 'Verification failed. Please check the OTP.');
+        const data = await response.json();
+        setErrorMessage(data.error || 'Invalid verification code.');
       }
     } catch (error) {
-      setErrorMessage('Network error. Please try again.');
+      setErrorMessage('Network error during verification.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendOtp = async () => {
-    if (resendTimer > 0) return;
-
-    setLoading(true);
-    setErrorMessage('');
-    setSuccessMessage('');
-
+  const finalizeRegistration = async () => {
     try {
       const response = await apiRequest(
-        API_ENDPOINTS.RESEND_OTP,
+        API_ENDPOINTS.REGISTER,
         {
           method: 'POST',
-          body: JSON.stringify({ email: registeredEmail })
+          body: JSON.stringify(formData)
         },
         csrfToken
       );
 
-      const data = await response.json();
+      const result = await response.json();
 
       if (response.ok) {
-        setSuccessMessage('A new OTP has been sent to your terminal!');
-        setResendTimer(60); // 60 seconds cooldown
+        setStep('success');
+        setTimeout(() => navigate(ROUTES.LOGIN), 2000);
       } else {
-        setErrorMessage(data.error || 'Failed to resend OTP.');
+        setErrorMessage(result.error || 'Final registration failed.');
+        setStep('form'); // Go back to fix issues
       }
     } catch (error) {
-      setErrorMessage('Network error. Please try again.');
-    } finally {
-      setLoading(false);
+      setErrorMessage('Network error during final registration.');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Join StaySpot as Owner or Tenant
-          </p>
-        </div>
-        {step === 'form' ? (
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            {errorMessage && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {errorMessage}
-              </div>
-            )}
-            {successMessage && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                {successMessage}
-              </div>
-            )}
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          {step === 'form' ? 'Create your account' : step === 'email_otp' ? 'Verify your email' : 'Registration Complete!'}
+        </h2>
+      </div>
 
-            <div className="space-y-4">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {errorMessage && (
+            <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+              {errorMessage}
+            </div>
+          )}
+          {successMessage && step !== 'success' && (
+            <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded text-sm">
+              {successMessage}
+            </div>
+          )}
+
+          {step === 'form' && (
+            <form className="space-y-6" onSubmit={handleRequestOtp}>
               <div>
-                <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
-                  Full Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Full Name</label>
                 <input
-                  id="full_name"
                   name="full_name"
                   type="text"
+                  required
                   value={formData.full_name}
                   onChange={handleChange}
-                  className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.full_name ? 'border-red-500' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your full name"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
-                {errors.full_name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.full_name}</p>
-                )}
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Email address</label>
                 <input
-                  id="email"
                   name="email"
                   type="email"
+                  required
                   value={formData.email}
                   onChange={handleChange}
-                  className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.email ? 'border-red-500' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your email"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                )}
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  Phone
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Phone Number</label>
                 <input
-                  id="phone"
                   name="phone"
                   type="tel"
+                  required
                   value={formData.phone}
                   onChange={handleChange}
-                  className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your phone number"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
-                {errors.phone && (
-                  <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-                )}
               </div>
 
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                  Role
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Role</label>
                 <select
-                  id="role"
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
-                  <option value="Owner">Owner</option>
                   <option value="Tenant">Tenant</option>
+                  <option value="Owner">Owner</option>
                 </select>
               </div>
 
-
-
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Password</label>
                 <input
-                  id="password"
                   name="password"
                   type="password"
+                  required
                   value={formData.password}
                   onChange={handleChange}
-                  className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.password ? 'border-red-500' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your password"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-                )}
               </div>
 
               <div>
-                <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700">
-                  Confirm Password
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
                 <input
-                  id="confirm_password"
                   name="confirm_password"
                   type="password"
+                  required
                   value={formData.confirm_password}
                   onChange={handleChange}
-                  className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.confirm_password ? 'border-red-500' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Confirm your password"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
-                {errors.confirm_password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.confirm_password}</p>
-                )}
               </div>
-            </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Registering...' : 'Register'}
-              </button>
-            </div>
-
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <Link to={ROUTES.LOGIN} className="font-medium text-blue-600 hover:text-blue-500">
-                  Login
-                </Link>
-              </p>
-            </div>
-          </form>
-        ) : (
-          <form className="mt-8 space-y-6" onSubmit={handleOtpSubmit}>
-            {errorMessage && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-center">
-                {errorMessage}
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {loading ? 'Sending Code...' : 'Register'}
+                </button>
               </div>
-            )}
-            {successMessage && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded text-center">
-                {successMessage}
-              </div>
-            )}
 
-            <div className="space-y-4">
               <div className="text-center">
                 <p className="text-sm text-gray-600">
-                  Verification code sent to your phone number.
-                </p>
-                <p className="text-xs text-blue-600 font-semibold mt-1">
-                  (Check your Django Backend Terminal for the code)
+                  Already have an account?{' '}
+                  <Link to={ROUTES.LOGIN} className="font-medium text-blue-600 hover:text-blue-500">
+                    Login
+                  </Link>
                 </p>
               </div>
+            </form>
+          )}
 
-              <div className="flex justify-center">
-                <input
-                  id="otp"
-                  name="otp"
-                  type="text"
-                  maxLength="6"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  className="mt-1 block w-48 px-3 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center tracking-widest text-3xl font-bold shadow-sm"
-                  placeholder="000000"
-                  autoFocus
-                />
+          {step === 'email_otp' && (
+            <form className="space-y-6" onSubmit={handleVerifyOtp}>
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Enter the verification code sent to your email.</p>
+                <div className="mt-4 flex justify-center">
+                  <input
+                    type="text"
+                    maxLength="6"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    className="block w-48 px-3 py-3 border border-gray-300 rounded-lg text-center tracking-widest text-3xl font-bold focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="000000"
+                    autoFocus
+                  />
+                </div>
+                <p className="mt-2 text-xs text-blue-600 font-semibold">(Check Terminal for code)</p>
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <button
-                type="submit"
-                disabled={loading || otp.length !== 6}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {loading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Verifying...
-                  </span>
-                ) : 'Verify & Activate'}
-              </button>
-
-              <div className="flex flex-col items-center space-y-2">
+              <div className="space-y-3">
                 <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={resendTimer > 0 || loading}
-                  className={`text-sm font-medium ${resendTimer > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-500'}`}
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Didn\'t receive the code? Resend'}
+                  {loading ? 'Verifying...' : 'Verify & Register'}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setStep('form')}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                  Edit phone number / Back
-                </button>
+                <div className="flex flex-col items-center space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleRequestOtp}
+                    disabled={resendTimer > 0 || loading}
+                    className={`text-sm font-medium ${resendTimer > 0 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-500'}`}
+                  >
+                    {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep('form')}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Back to form
+                  </button>
+                </div>
               </div>
+            </form>
+          )}
+
+          {step === 'success' && (
+            <div className="text-center py-6">
+              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-gray-600">Verification successful! Redirecting to login...</p>
             </div>
-          </form>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
