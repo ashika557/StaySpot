@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from './sidebar';
+import OwnerSidebar from '../components/OwnerSidebar';
 import { Home, Users, TrendingUp, Eye, Search, Filter, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin, Star, Calendar, DollarSign, LayoutGrid } from 'lucide-react';
 import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
@@ -19,11 +19,15 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
   const [selectedImages, setSelectedImages] = React.useState([]);
   const [showMapSelector, setShowMapSelector] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    title: '', location: '', price: '', roomNumber: '', roomType: 'Single Room',
-    floor: '', size: '', status: 'Available', wifi: false, ac: false, tv: false,
-    parking: false, waterSupply: false, attachedBathroom: false, cctv: false,
-    kitchen: false, furniture: false,
-    genderPreference: 'Any', latitude: '', longitude: ''
+    title: '', location: '', price: '', deposit: '', roomType: 'Single Room',
+    floor: '', size: '', status: 'Pending Verification',
+    preferredTenant: 'Any', genderPreference: 'Any',
+    toiletType: 'Shared', kitchenAccess: false, furnished: false,
+    wifi: false, parking: false, waterSupply: false,
+    electricityBackup: 'None', availableFrom: '',
+    cookingAllowed: false, smokingAllowed: false, drinkingAllowed: false,
+    petsAllowed: false, visitorAllowed: false,
+    latitude: '', longitude: ''
   });
 
   // Fetch rooms on component mount
@@ -63,21 +67,26 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
       title: room.title,
       location: room.location,
       price: room.price,
-      roomNumber: room.room_number || '',
+      deposit: room.deposit || '',
       roomType: room.room_type,
       floor: room.floor || '',
       size: room.size || '',
       status: room.status,
+      preferredTenant: room.preferred_tenant || 'Any',
+      genderPreference: room.gender_preference || 'Any',
+      toiletType: room.toilet_type || 'Shared',
+      kitchenAccess: room.kitchen_access,
+      furnished: room.furnished,
       wifi: room.wifi,
-      ac: room.ac,
-      tv: room.tv,
       parking: room.parking,
       waterSupply: room.water_supply,
-      attachedBathroom: room.attached_bathroom,
-      cctv: room.cctv,
-      kitchen: room.kitchen,
-      furniture: room.furniture,
-      genderPreference: room.gender_preference || 'Any',
+      electricityBackup: room.electricity_backup || 'None',
+      availableFrom: room.available_from || '',
+      cookingAllowed: room.cooking_allowed,
+      smokingAllowed: room.smoking_allowed,
+      drinkingAllowed: room.drinking_allowed,
+      petsAllowed: room.pets_allowed,
+      visitorAllowed: room.visitor_allowed,
       latitude: room.latitude || '',
       longitude: room.longitude || ''
     });
@@ -102,11 +111,8 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
   };
 
   const handleSubmit = async () => {
-    if (!user?.is_identity_verified && user?.role !== 'Admin') {
-      const errorMsg = user?.identity_document
-        ? 'Your identity document is pending verification by an administrator.'
-        : 'You must provide an identity document (Citizenship/ID) in your Profile before adding a room.';
-      alert(errorMsg);
+    if (!user?.identity_document && user?.role !== 'Admin') {
+      alert('You must provide an identity document (Citizenship/ID) in your Profile before adding a room.');
       setShowModal(null);
       navigate(ROUTES.PROFILE);
       return;
@@ -134,12 +140,15 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
       setShowModal(null);
       setSelectedImages([]);
       setFormData({
-        title: '', location: '', price: '', roomNumber: '', roomType: 'Single Room',
-        floor: '', size: '', status: 'Available',
-        wifi: false, ac: false, tv: false,
-        parking: false, waterSupply: false, attachedBathroom: false,
-        cctv: false, kitchen: false, furniture: false,
-        genderPreference: 'Any', latitude: '', longitude: ''
+        title: '', location: '', price: '', deposit: '', roomType: 'Single Room',
+        floor: '', size: '', status: 'Pending Verification',
+        preferredTenant: 'Any', genderPreference: 'Any',
+        toiletType: 'Shared', kitchenAccess: false, furnished: false,
+        wifi: false, parking: false, waterSupply: false,
+        electricityBackup: 'None', availableFrom: '',
+        cookingAllowed: false, smokingAllowed: false, drinkingAllowed: false,
+        petsAllowed: false, visitorAllowed: false,
+        latitude: '', longitude: ''
       });
     } catch (error) {
       console.error('Error saving room:', error);
@@ -153,7 +162,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
 
   const statusCounts = {
     all: rooms.length,
-    available: rooms.filter(r => r.status === 'Available').length,
+    available: rooms.filter(r => r.status === 'Available' || r.status === 'Pending Verification').length,
     occupied: rooms.filter(r => r.status === 'Occupied').length,
     disabled: rooms.filter(r => r.status === 'Disabled').length
   };
@@ -174,7 +183,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar user={user} />
+      <OwnerSidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -243,9 +252,8 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
               </div>
               <button
                 onClick={() => {
-                  if (!user?.is_identity_verified && user?.role !== 'Admin') {
-                    alert(user?.identity_document ? 'Verification Pending: You will be redirected to your profile.' : 'Unverified: You must upload your ID in your profile first.');
-                    navigate(ROUTES.PROFILE);
+                  if (!user?.identity_document && user?.role !== 'Admin') {
+                    setShowModal('verify');
                   } else {
                     setShowModal('add');
                   }
@@ -279,9 +287,8 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
               <p className="text-gray-500 mb-8">Start by adding your first property listing</p>
               <button
                 onClick={() => {
-                  if (!user?.is_identity_verified && user?.role !== 'Admin') {
-                    alert(user?.identity_document ? 'Verification Pending: You will be redirected to your profile.' : 'Unverified: You must upload your ID in your profile first.');
-                    navigate(ROUTES.PROFILE);
+                  if (!user?.identity_document && user?.role !== 'Admin') {
+                    setShowModal('verify');
                   } else {
                     setShowModal('add');
                   }
@@ -303,16 +310,16 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                       className="w-full h-52 object-cover rounded-t-xl"
                       alt={room.title}
                     />
-                    <span className={`absolute top - 3 left - 3 px - 3 py - 1 rounded - full text - xs font - semibold ${room.status === 'Available' ? 'bg-green-500 text-white' :
-                      room.status === 'Occupied' ? 'bg-orange-500 text-white' : 'bg-blue-500 text-white'
-                      } `}>{room.status === 'Occupied' ? 'Rented' : room.status}</span>
-                    <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/70 text-white text-xs rounded">
+                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase shadow-sm ${(room.status === 'Available' || room.status === 'Pending Verification') ? 'bg-green-500 text-white' :
+                      room.status === 'Rented' ? 'bg-orange-500 text-white' : 'bg-blue-500 text-white'
+                      } `}>{(room.status === 'Available' || room.status === 'Pending Verification') ? 'Available' : (room.status === 'Rented' ? 'Rented' : room.status)}</span>
+                    <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/70 text-white text-[10px] rounded font-bold">
                       <Eye className="w-3 h-3 inline mr-1" />{room.views}
                     </div>
                   </div>
                   <div className="p-5">
-                    <h3 className="font-bold text-lg mb-2">{room.title}</h3>
-                    <p className="text-sm text-gray-500 mb-1"><MapPin className="w-4 h-4 inline mr-1" />{room.location}</p>
+                    <h3 className="font-bold text-lg mb-2 truncate">{room.title}</h3>
+                    <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" />{room.location}</p>
                     <div className="flex items-center gap-1 mb-3">
                       <div className="flex gap-0.5">
                         {[1, 2, 3, 4, 5].map(i => (
@@ -323,15 +330,14 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                         {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0})
                       </span>
                     </div>
-                    <div className="flex gap-2 mb-4 text-xs flex-wrap">
-                      {room.wifi && <span className="px-2 py-1 bg-gray-100 rounded">Wi-Fi</span>}
-                      {room.ac && <span className="px-2 py-1 bg-gray-100 rounded">AC</span>}
-                      {room.tv && <span className="px-2 py-1 bg-gray-100 rounded">TV</span>}
-                      {room.gender_preference && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">{room.gender_preference}</span>}
+                    <div className="flex gap-2 mb-4 text-[10px] font-bold flex-wrap">
+                      {room.wifi && <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded">Wi-Fi</span>}
+                      {room.kitchen_access && <span className="px-2 py-1 bg-green-50 text-green-600 rounded">Kitchen</span>}
+                      {room.furnished && <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded">Furnished</span>}
                     </div>
                     <div className="mb-4">
-                      <span className="text-2xl font-bold text-blue-600">₹{parseFloat(room.price).toLocaleString()}</span>
-                      <span className="text-sm text-gray-500">/month</span>
+                      <span className="text-xl font-bold text-blue-600">NPR {parseFloat(room.price).toLocaleString()}</span>
+                      <span className="text-xs text-gray-500 ml-1">/month</span>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => handleEdit(room)} className="flex-1 py-2 border-2 border-blue-600 text-blue-600 rounded-lg flex items-center justify-center gap-1">
@@ -351,168 +357,290 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
           )}
         </div>
 
-        {/* Add/Edit Modal */}
-        {showModal && showModal !== 'view' && (
+
+        {/* Verification Modal */}
+        {showModal === 'verify' && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b flex justify-between sticky top-0 bg-white z-10">
-                <h2 className="text-2xl font-bold">{showModal === 'add' ? 'Add New Room' : 'Edit Room'}</h2>
-                <button onClick={() => setShowModal(null)}><X className="w-6 h-6" /></button>
+            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative">
+              <button
+                onClick={() => setShowModal(null)}
+                className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-full transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Identity Verification Required</h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  To ensure safety and trust on StaySpot, all owners must verify their identity before listing rooms.
+                </p>
               </div>
-              <div className="p-6">
-                <h3 className="font-semibold text-lg mb-4">Basic Information</h3>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Room Number</label>
-                    <input type="text" value={formData.roomNumber} onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5" placeholder="101" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Room Type</label>
-                    <select value={formData.roomType} onChange={(e) => setFormData({ ...formData, roomType: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5">
-                      <option>Single Room</option>
-                      <option>Double Room</option>
-                      <option>Suite</option>
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Title *</label>
-                    <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5" placeholder="Luxury Apartment" required />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Location *</label>
-                    <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5" placeholder="Itahari, Tarahara" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Floor</label>
-                    <input type="text" value={formData.floor} onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5" placeholder="1" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Size (sq ft)</label>
-                    <input type="text" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5" placeholder="280" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Price/month *</label>
-                    <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5" placeholder="12000" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Status</label>
-                    <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5">
-                      <option>Available</option>
-                      <option>Occupied</option>
-                      <option>Disabled</option>
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Gender Preference</label>
-                    <select value={formData.genderPreference} onChange={(e) => setFormData({ ...formData, genderPreference: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-2.5">
-                      <option>Any</option>
-                      <option>Male</option>
-                      <option>Female</option>
-                    </select>
-                  </div>
-                </div>
 
-                <h3 className="font-semibold text-lg mb-4">Location on Map</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const file = e.target.identity_document.files[0];
+                if (!file) return alert('Please select a file');
+
+                const formData = new FormData();
+                formData.append('identity_document', file);
+
+                try {
+                  const { apiRequest } = await import('../utils/api');
+                  const { API_ENDPOINTS } = await import('../constants/api');
+
+                  // Get CSRF token first if needed, though apiRequest handles headers usually
+                  // Just need to make sure we're using the right endpoint
+                  const response = await apiRequest(API_ENDPOINTS.UPDATE_PROFILE, {
+                    method: 'POST',
+                    body: formData
+                  });
+
+                  if (response.ok) {
+                    alert('Identity document uploaded successfully! Admin verification is pending.');
+                    if (refreshUser) await refreshUser();
+                    setShowModal(null);
+                  } else {
+                    const data = await response.json();
+                    alert(data.error || 'Upload failed');
+                  }
+                } catch (err) {
+                  console.error(err);
+                  alert('Upload failed: ' + err.message);
+                }
+              }}>
                 <div className="mb-6">
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center bg-gray-50">
-                    <MapPin className="w-10 h-10 text-blue-600 mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-4">Select the exact location of your room on map</p>
-                    <button
-                      type="button"
-                      onClick={handleMapClick}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                    >
-                      Open Map Selector
-                    </button>
-                    {(formData.latitude && formData.longitude) && (
-                      <div className="mt-4">
-                        <MapPicker
-                          readOnly={true}
-                          initialLocation={{ lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) }}
-                          onLocationSelect={() => { }}
-                        />
-                        <p className="text-xs text-green-600 mt-2">
-                          ✓ Location set: {formData.latitude}, {formData.longitude}
-                        </p>
-                      </div>
-                    )}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Citizenship or Valid ID Photo
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:bg-gray-50 transition cursor-pointer text-center">
+                    <input
+                      type="file"
+                      name="identity_document"
+                      accept="image/*"
+                      required
+                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <p className="text-xs text-gray-400 mt-2">Supported formats: JPG, PNG</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    This helps tenants find your room easily and see nearby amenities
-                  </p>
-                </div>
-
-                <h3 className="font-semibold text-lg mb-4">Photo Upload</h3>
-                <div className="border-2 border-dashed rounded-lg p-8 text-center mb-6">
-                  <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600 mb-2">Click to upload photos</p>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="w-full"
-                  />
-                  {selectedImages.length > 0 && (
-                    <p className="text-sm text-green-600 mt-2">{selectedImages.length} image(s) selected</p>
-                  )}
-                </div>
-
-                <h3 className="font-semibold text-lg mb-4">Amenities</h3>
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.wifi} onChange={(e) => setFormData({ ...formData, wifi: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">Wi-Fi</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.ac} onChange={(e) => setFormData({ ...formData, ac: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">AC</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.tv} onChange={(e) => setFormData({ ...formData, tv: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">TV</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.parking} onChange={(e) => setFormData({ ...formData, parking: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">Parking</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.waterSupply} onChange={(e) => setFormData({ ...formData, waterSupply: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">Water Supply</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.attachedBathroom} onChange={(e) => setFormData({ ...formData, attachedBathroom: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">Attached Bath</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.cctv} onChange={(e) => setFormData({ ...formData, cctv: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">CCTV</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.kitchen} onChange={(e) => setFormData({ ...formData, kitchen: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">Kitchen</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={formData.furniture} onChange={(e) => setFormData({ ...formData, furniture: e.target.checked })} className="w-5 h-5" />
-                    <span className="text-sm">Furniture</span>
-                  </label>
                 </div>
 
                 <div className="flex gap-3">
-                  <button onClick={handleSubmit} className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium">
-                    {showModal === 'add' ? 'Add Room' : 'Save Changes'}
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(null)}
+                    className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition"
+                  >
+                    Cancel
                   </button>
-                  <button onClick={() => setShowModal(null)} className="px-6 py-3 border rounded-lg">Cancel</button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200"
+                  >
+                    Upload & Verify
+                  </button>
                 </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Modal */}
+        {showModal && showModal !== 'view' && showModal !== 'verify' && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+              <div className="p-6 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{showModal === 'add' ? 'Add New Listing' : 'Edit Room Details'}</h2>
+                  <p className="text-sm text-gray-500">Aligning with house-renting standards for better visibility.</p>
+                </div>
+                <button onClick={() => setShowModal(null)} className="p-2 hover:bg-gray-100 rounded-full transition">
+                  <X className="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 bg-gray-50/50">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-10">
+
+                  {/* Section 1: Basic Information */}
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-[10px]">1</div>
+                      Basic Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Property Title *</label>
+                        <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                          placeholder="e.g. Spacious 2 BHK Apartment" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Exact Location *</label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                          <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                            className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                            placeholder="Street, City, Area" required />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Monthly Rent *</label>
+                          <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                            placeholder="NPR" required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Security Deposit *</label>
+                          <input type="number" value={formData.deposit} onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                            placeholder="NPR" required />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Room Details */}
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-[10px]">2</div>
+                      Room Specifications
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Room Type</label>
+                        <select value={formData.roomType} onChange={(e) => setFormData({ ...formData, roomType: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 bg-white outline-none transition">
+                          <option>Single Room</option>
+                          <option>Double Room</option>
+                          <option>Shared Room</option>
+                          <option>Family Room</option>
+                          <option>Apartment</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Toilet Type</label>
+                        <select value={formData.toiletType} onChange={(e) => setFormData({ ...formData, toiletType: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 bg-white outline-none transition">
+                          <option value="Attached">Attached</option>
+                          <option value="Shared">Shared</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Floor Level</label>
+                        <input type="text" value={formData.floor} onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 outline-none transition" placeholder="e.g. 1st, 2nd" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Room Size</label>
+                        <input type="text" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 outline-none transition" placeholder="e.g. Medium" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Amenities & Preferences */}
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-[10px]">3</div>
+                      Amenities & Preferences
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Preferred Tenant</label>
+                          <select value={formData.preferredTenant} onChange={(e) => setFormData({ ...formData, preferredTenant: e.target.value })}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 bg-white outline-none transition">
+                            <option>Any</option>
+                            <option>Students</option>
+                            <option>Working Professionals</option>
+                            <option>Family</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Gender</label>
+                          <select value={formData.genderPreference} onChange={(e) => setFormData({ ...formData, genderPreference: e.target.value })}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 bg-white outline-none transition">
+                            <option>Any</option>
+                            <option>Male</option>
+                            <option>Female</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <label className={`flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition ${formData.wifi ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-500'}`}>
+                          <input type="checkbox" checked={formData.wifi} onChange={(e) => setFormData({ ...formData, wifi: e.target.checked })} className="hidden" />
+                          <span className="text-[10px] font-bold uppercase">Wi-Fi</span>
+                        </label>
+                        <label className={`flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition ${formData.kitchenAccess ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-500'}`}>
+                          <input type="checkbox" checked={formData.kitchenAccess} onChange={(e) => setFormData({ ...formData, kitchenAccess: e.target.checked })} className="hidden" />
+                          <span className="text-[10px] font-bold uppercase">Kitchen</span>
+                        </label>
+                        <label className={`flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition ${formData.furnished ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-500'}`}>
+                          <input type="checkbox" checked={formData.furnished} onChange={(e) => setFormData({ ...formData, furnished: e.target.checked })} className="hidden" />
+                          <span className="text-[10px] font-bold uppercase">Furnished</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4: House Rules */}
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-[10px]">4</div>
+                      House Rules
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <RuleCheckbox label="Cooking" checked={formData.cookingAllowed} onChange={(val) => setFormData({ ...formData, cookingAllowed: val })} />
+                      <RuleCheckbox label="Smoking" checked={formData.smokingAllowed} onChange={(val) => setFormData({ ...formData, smokingAllowed: val })} />
+                      <RuleCheckbox label="Drinking" checked={formData.drinkingAllowed} onChange={(val) => setFormData({ ...formData, drinkingAllowed: val })} />
+                      <RuleCheckbox label="Pets" checked={formData.petsAllowed} onChange={(val) => setFormData({ ...formData, petsAllowed: val })} />
+                      <RuleCheckbox label="Visitors" checked={formData.visitorAllowed} onChange={(val) => setFormData({ ...formData, visitorAllowed: val })} />
+                    </div>
+                  </div>
+
+                  {/* Section 5: Media & Location */}
+                  <div className="col-span-2 grid grid-cols-2 gap-8 pt-6 border-t border-gray-100">
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Photos & Visuals</h3>
+                      <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-white transition cursor-pointer relative">
+                        <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-xs text-gray-500">Pick clear photos of the room</p>
+                        <input type="file" multiple accept="image/*" onChange={handleImageSelect}
+                          className="absolute inset-0 opacity-0 cursor-pointer" />
+                        {selectedImages.length > 0 && (
+                          <p className="text-xs text-blue-600 mt-2 font-bold">{selectedImages.length} images selected</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Map Placement</h3>
+                      <button type="button" onClick={handleMapClick}
+                        className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-2xl hover:border-blue-400 transition group">
+                        <div className="flex items-center gap-3">
+                          <MapPin className="text-blue-500" size={20} />
+                          <div className="text-left">
+                            <p className="text-sm font-bold text-gray-700">Set Map Location</p>
+                            <p className="text-[10px] text-gray-500">Current: {formData.latitude ? `${parseFloat(formData.latitude).toFixed(4)}, ${parseFloat(formData.longitude).toFixed(4)}` : 'Not Set'}</p>
+                          </div>
+                        </div>
+                        <Plus size={16} className="text-gray-300 group-hover:text-blue-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t bg-white flex gap-3 sticky bottom-0">
+                <button onClick={() => setShowModal(null)} className="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition">
+                  Discard Changes
+                </button>
+                <button onClick={handleSubmit} className="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition">
+                  {showModal === 'add' ? 'Publish Listing' : 'Update Room Info'}
+                </button>
               </div>
             </div>
           </div>
@@ -558,42 +686,88 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                 <button onClick={() => setShowModal(null)}><X className="w-5 h-5" /></button>
               </div>
               <div className="p-6">
-                {selectedRoom.images && selectedRoom.images.length > 0 ? (
-                  <img src={getMediaUrl(selectedRoom.images[0].image)} className="w-full h-64 object-cover rounded-lg mb-6" alt={selectedRoom.title} />
-                ) : (
-                  <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500" className="w-full h-64 object-cover rounded-lg mb-6" alt="Room" />
-                )}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Left: Images & Location */}
                   <div>
-                    <h3 className="font-semibold mb-3">Information</h3>
-                    <div className="space-y-2 text-sm">
-                      <p><span className="text-gray-500">Title:</span> <span className="font-medium">{selectedRoom.title}</span></p>
-                      <p><span className="text-gray-500">Location:</span> <span className="font-medium">{selectedRoom.location}</span></p>
-                      <p><span className="text-gray-500">Price:</span> <span className="font-medium">₹{parseFloat(selectedRoom.price).toLocaleString()}/month</span></p>
-                      <p><span className="text-gray-500">Room Type:</span> <span className="font-medium">{selectedRoom.room_type}</span></p>
-                      {selectedRoom.gender_preference && (
-                        <p><span className="text-gray-500">Gender Preference:</span> <span className="font-medium">{selectedRoom.gender_preference}</span></p>
+                    <div className="aspect-video rounded-xl overflow-hidden mb-4 border border-gray-100">
+                      <img
+                        src={selectedRoom.images && selectedRoom.images.length > 0
+                          ? getMediaUrl(selectedRoom.images[0].image)
+                          : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500'}
+                        className="w-full h-full object-cover"
+                        alt={selectedRoom.title}
+                      />
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                      <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
+                        <MapPin size={16} className="text-blue-600" /> Location Details
+                      </h3>
+                      <p className="text-xs text-gray-600 mb-4">{selectedRoom.location}</p>
+                      {selectedRoom.latitude && (
+                        <div className="h-32 rounded-lg overflow-hidden border">
+                          <MapPicker
+                            readOnly={true}
+                            initialLocation={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
+                            onLocationSelect={() => { }}
+                          />
+                        </div>
                       )}
                     </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-3">Status</h3>
-                    <span className={`px - 3 py - 1 rounded - full text - sm font - semibold ${selectedRoom.status === 'Available' ? 'bg-green-100 text-green-700' :
-                      selectedRoom.status === 'Occupied' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
-                      } `}>{selectedRoom.status === 'Occupied' ? 'Rented' : selectedRoom.status}</span>
-                    {(selectedRoom.latitude && selectedRoom.longitude) && (
-                      <div className="mt-4">
-                        <h3 className="font-semibold mb-2 text-sm">Map Location</h3>
-                        <MapPicker
-                          readOnly={true}
-                          initialLocation={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
-                          onLocationSelect={() => { }}
-                        />
-                        <p className="text-xs text-gray-500 mt-2">
-                          Lat: {selectedRoom.latitude}, Lng: {selectedRoom.longitude}
-                        </p>
+
+                  {/* Right: Info Sections */}
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <h2 className="text-xl font-bold text-gray-900">{selectedRoom.title}</h2>
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${selectedRoom.status === 'Available' ? 'bg-green-100 text-green-700' :
+                          selectedRoom.status === 'Rented' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                          {selectedRoom.status === 'Rented' ? 'Rented' : selectedRoom.status}
+                        </span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className="text-xs text-gray-400 font-bold uppercase">Monthly Rent</p>
+                          <p className="text-lg font-bold text-blue-600">NPR {parseFloat(selectedRoom.price).toLocaleString()}</p>
+                        </div>
+                        <div className="border-l pl-4">
+                          <p className="text-xs text-gray-400 font-bold uppercase">Security Deposit</p>
+                          <p className="text-lg font-bold text-gray-700">NPR {parseFloat(selectedRoom.deposit || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Room Specifications</p>
+                        <div className="space-y-1 text-xs">
+                          <p className="flex justify-between"><span>Type:</span> <span className="font-bold">{selectedRoom.room_type}</span></p>
+                          <p className="flex justify-between"><span>Floor:</span> <span className="font-bold">{selectedRoom.floor || 'G'}</span></p>
+                          <p className="flex justify-between"><span>Size:</span> <span className="font-bold">{selectedRoom.size || 'N/A'}</span></p>
+                          <p className="flex justify-between"><span>Toilet:</span> <span className="font-bold text-blue-600">{selectedRoom.toilet_type}</span></p>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Tenant Preferences</p>
+                        <div className="space-y-1 text-xs">
+                          <p className="flex justify-between"><span>Preferred:</span> <span className="font-bold text-green-600">{selectedRoom.preferred_tenant}</span></p>
+                          <p className="flex justify-between"><span>Gender:</span> <span className="font-bold">{selectedRoom.gender_preference}</span></p>
+                          <p className="flex justify-between"><span>Available:</span> <span className="font-bold">{selectedRoom.available_from || 'Now'}</span></p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-gray-900 mb-3 text-sm">House Rules</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        <RuleStatus label="Cooking" allowed={selectedRoom.cooking_allowed} />
+                        <RuleStatus label="Smoking" allowed={selectedRoom.smoking_allowed} />
+                        <RuleStatus label="Drinking" allowed={selectedRoom.drinking_allowed} />
+                        <RuleStatus label="Pets" allowed={selectedRoom.pets_allowed} />
+                        <RuleStatus label="Visitors" allowed={selectedRoom.visitor_allowed} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -604,3 +778,19 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
     </div>
   );
 }
+
+const RuleStatus = ({ label, allowed }) => (
+  <div className="flex items-center justify-between text-[10px] font-bold py-1 border-b border-gray-50 last:border-0 uppercase">
+    <span className="text-gray-500">{label}</span>
+    <span className={allowed ? 'text-green-600' : 'text-red-500'}>
+      {allowed ? 'Allowed' : 'Not Allowed'}
+    </span>
+  </div>
+);
+
+const RuleCheckbox = ({ label, checked, onChange }) => (
+  <label className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${checked ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+    <span className={`text-[10px] font-bold uppercase ${checked ? 'text-blue-700' : 'text-gray-500'}`}>{label}</span>
+    <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300" />
+  </label>
+);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from './sidebar';
+import OwnerSidebar from '../components/OwnerSidebar';
 import OwnerHeader from '../components/OwnerHeader';
 import {
     Calendar,
@@ -98,7 +98,7 @@ export default function OwnerVisitRequests({ user, onLogout }) {
 
     return (
         <div className="flex h-screen bg-gray-50">
-            <Sidebar />
+            <OwnerSidebar />
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <OwnerHeader

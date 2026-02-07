@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, Calendar, Clock, ChevronDown } from 'lucide-react';
-import Sidebar from './sidebar';
+import OwnerSidebar from '../components/OwnerSidebar';
 import { bookingService } from '../services/bookingService';
 import { getMediaUrl } from '../constants/api';
 import OwnerHeader from '../components/OwnerHeader';
@@ -56,7 +56,7 @@ const OwnerBookings = ({ user, onLogout }) => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
-            <Sidebar user={user} />
+            <OwnerSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-auto">
 

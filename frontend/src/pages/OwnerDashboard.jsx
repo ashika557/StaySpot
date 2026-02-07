@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from './sidebar';
+import OwnerSidebar from '../components/OwnerSidebar';
 import { Home, Calendar, DollarSign, Bell, MessageSquare } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';
@@ -83,7 +83,7 @@ export default function OwnerDashboard({ user, onLogout }) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar user={user} />
+      <OwnerSidebar user={user} />
 
       <div className="flex-1 overflow-auto">
         <div className="p-8">

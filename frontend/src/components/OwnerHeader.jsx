@@ -11,12 +11,12 @@ const OwnerHeader = ({ user, title, subtitle, showIdentityWarning = false, onLog
             </div>
 
             {showIdentityWarning && (!user?.is_identity_verified && user?.role !== 'Admin') && (
-                <div className={`flex-1 max-w-md mx-6 border-l-4 p-3 flex items-center gap-3 ${user?.identity_document ? 'bg-blue-50 border-blue-500' : 'bg-yellow-100 border-yellow-500'}`}>
-                    <Bell className={`w-5 h-5 ${user?.identity_document ? 'text-blue-600' : 'text-yellow-600'}`} />
-                    <p className={`text-xs font-medium ${user?.identity_document ? 'text-blue-700' : 'text-yellow-700'}`}>
+                <div className={`flex-1 max-w-md mx-6 border-l-4 p-3 flex items-center gap-3 ${user?.identity_document ? 'bg-green-50 border-green-500' : 'bg-yellow-100 border-yellow-500'}`}>
+                    <Bell className={`w-5 h-5 ${user?.identity_document ? 'text-green-600' : 'text-yellow-600'}`} />
+                    <p className={`text-xs font-medium ${user?.identity_document ? 'text-green-700' : 'text-yellow-700'}`}>
                         {user?.identity_document
-                            ? 'Identity document uploaded. Pending administrator approval.'
-                            : 'Identity document missing. Please upload your Citizenship/ID in the Profile to list rooms.'}
+                            ? 'Identity document uploaded. You can now list rooms! Admin verification is pending.'
+                            : 'Identity document missing. Please upload your Citizenship/ID in the Profile to start listing rooms.'}
                     </p>
                 </div>
             )}
