@@ -37,54 +37,80 @@ const MapPicker = ({ onLocationSelect, initialLocation, readOnly = false }) => {
     const findNearbyColleges = React.useCallback(async () => {
         if (!window.google || !map || !marker) return;
 
-        setIsSearching(true);
-        const service = new window.google.maps.places.PlacesService(map);
+        try {
+            setIsSearching(true);
+            const service = new window.google.maps.places.PlacesService(map);
 
-        const request = {
-            location: marker,
-            radius: 5000, // 5km radius
-            type: ['university']
-        };
+            const request = {
+                location: marker,
+                radius: 5000, // 5km radius
+                type: ['university']
+            };
 
-        service.nearbySearch(request, (results, status) => {
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-                setNearbyPlaces(results);
-                calculateDistances(marker, results);
-            }
+            service.nearbySearch(request, (results, status) => {
+                try {
+                    if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+                        setNearbyPlaces(results);
+                        calculateDistances(marker, results);
+                    } else if (status === 'ZERO_RESULTS') {
+                        setNearbyPlaces([]);
+                        alert('No colleges found nearby.');
+                    } else {
+                        throw new Error(`Places Search failed with status: ${status}`);
+                    }
+                } catch (innerErr) {
+                    console.error("Error processing nearby results:", innerErr);
+                } finally {
+                    setIsSearching(false);
+                }
+            });
+        } catch (err) {
+            console.error("Nearby Search initiation failed:", err);
             setIsSearching(false);
-        });
+            alert("Could not start nearby search. Please try again.");
+        }
     }, [map, marker]);
 
     const calculateDistances = (origin, destinations) => {
         if (!window.google || !destinations.length) return;
 
-        const service = new window.google.maps.DistanceMatrixService();
-        const destCoords = destinations.map(p => ({
-            lat: p.geometry.location.lat(),
-            lng: p.geometry.location.lng()
-        }));
+        try {
+            const service = new window.google.maps.DistanceMatrixService();
+            const destCoords = destinations
+                .filter(p => p.geometry && p.geometry.location)
+                .map(p => ({
+                    lat: p.geometry.location.lat(),
+                    lng: p.geometry.location.lng()
+                }));
 
-        service.getDistanceMatrix(
-            {
-                origins: [origin],
-                destinations: destCoords,
-                travelMode: window.google.maps.TravelMode.DRIVING,
-            },
-            (response, status) => {
-                if (status === 'OK') {
-                    const results = {};
-                    response.rows[0].elements.forEach((element, index) => {
-                        if (element.status === 'OK') {
-                            results[destinations[index].place_id] = {
-                                distance: element.distance.text,
-                                duration: element.duration.text
-                            };
-                        }
-                    });
-                    setDistances(results);
+            if (destCoords.length === 0) return;
+
+            service.getDistanceMatrix(
+                {
+                    origins: [origin],
+                    destinations: destCoords,
+                    travelMode: window.google.maps.TravelMode.DRIVING,
+                },
+                (response, status) => {
+                    if (status === 'OK' && response) {
+                        const results = {};
+                        response.rows[0].elements.forEach((element, index) => {
+                            if (element && element.status === 'OK') {
+                                results[destinations[index].place_id] = {
+                                    distance: element.distance.text,
+                                    duration: element.duration.text
+                                };
+                            }
+                        });
+                        setDistances(results);
+                    } else {
+                        console.warn("Distance Matrix failed:", status);
+                    }
                 }
-            }
-        );
+            );
+        } catch (err) {
+            console.error("Distance calculation failed:", err);
+        }
     };
 
     const onMapClick = React.useCallback((e) => {
