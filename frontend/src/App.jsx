@@ -35,14 +35,14 @@ function App() {
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
-      setShowLanding(false);
       refreshUser();
     }
   }, []);
 
   const refreshUser = async () => {
     try {
-      const response = await apiRequest(API_ENDPOINTS.GET_USER);
+      // Add timestamp to prevent caching
+      const response = await apiRequest(`${API_ENDPOINTS.GET_USER}?t=${new Date().getTime()}`);
       if (response.ok) {
         const data = await response.json();
         const updatedUser = data.user;
@@ -85,6 +85,7 @@ function App() {
                 <StaySpotLanding
                   onGetStarted={() => setShowLanding(false)}
                   onSignIn={() => setShowLanding(false)}
+                  user={user}
                 />
               ) : user ? (
                 <Navigate
