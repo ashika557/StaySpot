@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import TenantSidebar from './TenantNavbar';
+import TenantSidebar from '../components/TenantSidebar';
 import { Calendar, MapPin, DollarSign, MessageCircle, Star, ChevronRight, MessageSquare } from 'lucide-react';
 import { dashboardService } from '../services/tenantService';
 import { roomService } from '../services/roomService';
@@ -129,8 +129,13 @@ function UpcomingVisitCard({ visit }) {
         <div className="flex gap-2">
           <button
             onClick={async () => {
-              await chatService.startConversation(visit.owner.id);
-              window.location.href = ROUTES.CHAT;
+              try {
+                await chatService.startConversation(visit.owner.id);
+                navigate(ROUTES.CHAT);
+              } catch (err) {
+                console.error("Failed to start chat:", err);
+                alert("Could not start chat. Please try again.");
+              }
             }}
             className="p-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition"
             title="Chat with Owner"
@@ -188,8 +193,13 @@ function CurrentBookingCard({ booking }) {
             {(booking.status === 'Active' || booking.status === 'Approved') && booking.room?.owner?.id && (
               <button
                 onClick={async () => {
-                  await chatService.startConversation(booking.room.owner.id);
-                  window.location.href = ROUTES.CHAT;
+                  try {
+                    await chatService.startConversation(booking.room.owner.id);
+                    navigate(ROUTES.CHAT);
+                  } catch (err) {
+                    console.error("Failed to start chat:", err);
+                    alert("Could not start chat. Please try again.");
+                  }
                 }}
                 className="flex items-center gap-2 text-sm text-blue-600 font-bold hover:underline"
               >

@@ -5,7 +5,7 @@ import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
 import complaintService from '../services/complaintService';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
-import TenantNavbar from './TenantNavbar';
+import TenantSidebar from '../components/TenantSidebar';
 
 export default function ComplaintsReviews({ user }) {
     const [complaints, setComplaints] = useState([]);
@@ -178,7 +178,7 @@ export default function ComplaintsReviews({ user }) {
     if (loading) {
         return (
             <div className="flex h-screen bg-gray-50">
-                <TenantNavbar />
+                <TenantSidebar />
                 <div className="flex-1 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                 </div>
@@ -188,7 +188,7 @@ export default function ComplaintsReviews({ user }) {
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            <TenantNavbar />
+            <TenantSidebar />
 
             <main className="flex-1 p-8 overflow-y-auto">
                 <div className="max-w-6xl mx-auto">

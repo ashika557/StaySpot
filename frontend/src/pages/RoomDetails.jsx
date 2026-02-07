@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader } from 'lucide-react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
-import TenantSidebar from './TenantNavbar';
+import TenantSidebar from '../components/TenantSidebar';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
 import { chatService } from '../services/chatService';
@@ -207,25 +207,77 @@ const RoomDetails = ({ user }) => {
 
                             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                                 <h2 className="text-2xl font-bold text-gray-900">{room.title}</h2>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <div className="flex gap-0.5">
-                                        {[1, 2, 3, 4, 5].map(i => (
-                                            <Star key={i} size={16} fill={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "none"} color={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "#D1D5DB"} />
-                                        ))}
+                                <div className="flex items-center justify-between mt-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex gap-0.5">
+                                            {[1, 2, 3, 4, 5].map(i => (
+                                                <Star key={i} size={16} fill={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "none"} color={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "#D1D5DB"} />
+                                            ))}
+                                        </div>
+                                        <span className="text-sm text-gray-500 font-bold">
+                                            {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0} reviews)
+                                        </span>
                                     </div>
-                                    <span className="text-sm text-gray-500 font-bold">
-                                        {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0} reviews)
-                                    </span>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-black text-blue-600">NPR {parseFloat(room.price).toLocaleString()}</div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Per Month</div>
+                                    </div>
                                 </div>
-                                {room.status === 'Occupied' && (
-                                    <div className="inline-flex items-center gap-1 bg-red-50 text-red-600 px-2 py-1 rounded-md text-xs font-bold mt-2">
-                                        Occupied
+                                <div className="flex items-center gap-2 mt-4">
+                                    {room.status === 'Rented' ? (
+                                        <div className="inline-flex items-center gap-1 bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                            Rented
+                                        </div>
+                                    ) : (
+                                        <div className="inline-flex items-center gap-1 bg-green-50 text-green-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                            Available
+                                        </div>
+                                    )}
+
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mt-8">
+                                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                        <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-3">Property Specs</h3>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">Type</span> <span className="font-bold">{room.room_type}</span></div>
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">Toilet</span> <span className="font-bold text-blue-600">{room.toilet_type}</span></div>
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">Floor</span> <span className="font-bold">{room.floor || 'Ground'}</span></div>
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">Deposit</span> <span className="font-bold text-green-600">NPR {parseFloat(room.deposit || 0).toLocaleString()}</span></div>
+                                        </div>
                                     </div>
-                                )}
-                                {/* ... Other details ... */}
-                                <p className="text-gray-600 leading-relaxed mb-6 mt-4">
-                                    {room.description || `A comfortable ${room.room_type.toLowerCase()} located in ${room.location}.`}
-                                </p>
+                                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                        <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-3">Matching Prefs</h3>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">For</span> <span className="font-bold text-blue-600">{room.preferred_tenant}</span></div>
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">Gender</span> <span className="font-bold">{room.gender_preference}</span></div>
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">Electricity</span> <span className="font-bold">{room.electricity_backup || 'None'}</span></div>
+                                            <div className="flex justify-between text-sm"><span className="text-gray-500">Available</span> <span className="font-bold">{room.available_from || 'Now'}</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8">
+                                    <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-4">House Rules</h3>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <RuleItem label="Cooking" allowed={room.cooking_allowed} />
+                                        <RuleItem label="Smoking" allowed={room.smoking_allowed} />
+                                        <RuleItem label="Drinking" allowed={room.drinking_allowed} />
+                                        <RuleItem label="Pets" allowed={room.pets_allowed} />
+                                        <RuleItem label="Visitors" allowed={room.visitor_allowed} />
+                                    </div>
+                                </div>
+
+                                <div className="mt-8">
+                                    <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-4">Amenities</h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {room.wifi && <Amenity icon={Wifi} label="WiFi" />}
+                                        {room.parking && <Amenity icon={User} label="Parking" />}
+                                        {room.water_supply && <Amenity icon={ShieldCheck} label="Water Supply" />}
+                                        {room.kitchen_access && <Amenity icon={ShieldCheck} label="Kitchen" />}
+                                        {room.furnished && <Amenity icon={ShieldCheck} label="Furnished" />}
+                                    </div>
+                                </div>
 
                                 {/* Reviews Section */}
                                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-6">
@@ -384,7 +436,7 @@ const RoomDetails = ({ user }) => {
                                                 Schedule a Visit
                                             </button>
                                             <p className="text-xs text-center text-gray-400 mt-2">
-                                                Current Status: <span className="font-semibold text-gray-600">{room.status}</span>
+                                                Current Status: <span className="font-semibold text-gray-600">{room.status === 'Pending Verification' ? 'Available' : room.status}</span>
                                             </p>
                                         </>
                                     )}
@@ -468,6 +520,13 @@ const Amenity = ({ icon: Icon, label }) => (
     <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl text-sm font-medium text-gray-700">
         <Icon size={18} className="text-blue-500" />
         {label}
+    </div>
+);
+
+const RuleItem = ({ label, allowed }) => (
+    <div className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase flex items-center justify-between border ${allowed ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-500'}`}>
+        <span>{label}</span>
+        <span>{allowed ? 'Yes' : 'No'}</span>
     </div>
 );
 

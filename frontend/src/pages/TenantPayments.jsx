@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import TenantSidebar from './TenantNavbar';
+import TenantSidebar from '../components/TenantSidebar';
 import {
     Search,
     ChevronDown,

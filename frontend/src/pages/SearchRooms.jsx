@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
-import TenantSidebar from './TenantNavbar';
+import TenantSidebar from '../components/TenantSidebar';
 import { roomService } from '../services/roomService';
 import { GOOGLE_MAPS_API_KEY, CONFIG } from '../constants/config';
 import { getMediaUrl } from '../constants/api';
@@ -29,8 +29,8 @@ const SearchRooms = ({ user }) => {
         room_type: '',
         distance: '',
         facilities: {
-            wifi: false, parking: false, ac: false, water_supply: false,
-            attached_bathroom: false, cctv: false, kitchen: false, furniture: false,
+            wifi: false, parking: false, water_supply: false,
+            kitchen_access: false, furnished: false,
         }
     });
 
@@ -127,8 +127,8 @@ const SearchRooms = ({ user }) => {
             room_type: '',
             distance: '',
             facilities: {
-                wifi: false, parking: false, ac: false, water_supply: false,
-                attached_bathroom: false, cctv: false, kitchen: false, furniture: false,
+                wifi: false, parking: false, water_supply: false,
+                kitchen_access: false, furnished: false,
             }
         });
         setSearchCoords(null);
@@ -268,9 +268,9 @@ const SearchRooms = ({ user }) => {
                             <label className="block text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">Facilities</label>
                             <div className="flex flex-wrap gap-x-6 gap-y-3">
                                 {Object.entries({
-                                    wifi: 'WiFi', parking: 'Parking', ac: 'AC',
-                                    water_supply: 'Water Supply', attached_bathroom: 'Attached Bathroom',
-                                    cctv: 'CCTV', kitchen: 'Kitchen', furniture: 'Furniture'
+                                    wifi: 'WiFi', parking: 'Parking',
+                                    water_supply: 'Water Supply',
+                                    kitchen_access: 'Kitchen Access', furnished: 'Furnished'
                                 }).map(([key, label]) => (
                                     <label key={key} className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
                                         <input
@@ -290,10 +290,10 @@ const SearchRooms = ({ user }) => {
                                 <div className="">
                                     <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">Room Type</label>
                                     <div className="flex gap-2">
-                                        {['Single', 'Flat', 'Hostel', 'Sharing'].map(type => (
+                                        {['Single Room', 'Double Room', 'Shared Room', 'Family Room', 'Apartment'].map(type => (
                                             <button
                                                 key={type}
-                                                className={`px-4 py-1.5 rounded-full text-sm font-bold border transition ${filters.room_type === type
+                                                className={`px-4 py-1.5 rounded-full text-[10px] uppercase font-bold border transition ${filters.room_type === type
                                                     ? 'bg-blue-50 border-blue-200 text-blue-600'
                                                     : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100'
                                                     }`}
@@ -366,11 +366,12 @@ const SearchRooms = ({ user }) => {
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex flex-col">
                                                             <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">{room.title}</h3>
-                                                            {room.status === 'Occupied' && (
-                                                                <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded w-fit">OCCUPIED</span>
+                                                            {room.status === 'Rented' && (
+                                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded w-fit uppercase">RENTED</span>
                                                             )}
+
                                                         </div>
-                                                        <div className="text-blue-600 font-bold text-sm">Rs. {parseFloat(room.price).toLocaleString()}/m</div>
+                                                        <div className="text-blue-600 font-bold text-sm">NPR {parseFloat(room.price).toLocaleString()}/m</div>
                                                     </div>
                                                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                                                         <MapPin size={12} className="shrink-0" />
