@@ -101,9 +101,10 @@ export const roomService = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        // Bubble up the first field error if present
-        const fieldError = Object.values(errorData)[0];
-        const errorMessage = Array.isArray(fieldError) ? fieldError[0] : (errorData.detail || 'Failed to create room');
+        // Prefer 'error' or 'detail' keys directly
+        const errorMessage = errorData.error || errorData.detail ||
+          (Object.values(errorData)[0] && Array.isArray(Object.values(errorData)[0]) ? Object.values(errorData)[0][0] : Object.values(errorData)[0]) ||
+          'Failed to create room';
         throw new Error(errorMessage);
       }
 

@@ -6,6 +6,7 @@ import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
 import { ROUTES, getMediaUrl } from '../constants/api';
 import OwnerHeader from '../components/OwnerHeader';
+import Footer from '../components/Footer';
 
 export default function OwnerRooms({ user, refreshUser, onLogout }) {
   const navigate = useNavigate();
@@ -111,10 +112,14 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
   };
 
   const handleSubmit = async () => {
-    if (!user?.identity_document && user?.role !== 'Admin') {
-      alert('You must provide an identity document (Citizenship/ID) in your Profile before adding a room.');
-      setShowModal(null);
-      navigate(ROUTES.PROFILE);
+    if (!user?.is_identity_verified && user?.role !== 'Admin') {
+      if (user?.identity_document) {
+        alert('Verification Pending: Your identity document is under review by an administrator. You cannot publish until approved.');
+      } else {
+        if (window.confirm('Identity Verification Required. You must upload a document before listing a room. Upload now?')) {
+          setShowModal('verify');
+        }
+      }
       return;
     }
 
@@ -152,9 +157,9 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
       });
     } catch (error) {
       console.error('Error saving room:', error);
-      alert('Failed to save room. Please try again.');
+      alert(error.message || 'Failed to save room. Please try again.');
     }
-  };
+  }
 
   const filteredRooms = rooms
     .filter(r => filterStatus === 'all' || r.status.toLowerCase() === filterStatus)
@@ -170,12 +175,13 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
   if (loading) {
     return (
       <div className="flex h-screen bg-gray-50">
-        <Sidebar />
+        <OwnerSidebar user={user} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Loading rooms...</p>
           </div>
+          <Footer user={user} />
         </div>
       </div>
     );
@@ -270,7 +276,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
             <div className="flex gap-3 mb-6">
               {['all', 'available', 'occupied', 'disabled'].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)}
-                  className={`px - 4 py - 2 rounded - lg capitalize ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'} `}>
+                  className={`px-4 py-2 rounded-lg capitalize ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'} `}>
                   {s} ({statusCounts[s]})
                 </button>
               ))}
@@ -774,6 +780,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
             </div>
           </div>
         )}
+        <Footer user={user} />
       </div>
     </div>
   );
