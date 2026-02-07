@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { Home, Map, Calendar, MessageSquare, Star, CreditCard, MapPin, Shield, Zap, Twitter, Facebook, Linkedin } from 'lucide-react';
 
-export default function StaySpotLanding() {
-     const navigate = useNavigate();
+export default function StaySpotLanding({ onGetStarted, onSignIn, user }) {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -23,18 +23,38 @@ export default function StaySpotLanding() {
             <a href="#" className="text-gray-600">Contact</a>
           </nav>
           <div className="flex gap-3">
-          <button
-        className="px-4 py-2 text-blue-600"
-        onClick={() => navigate('/login')}
-      >
-        Sign In
-      </button>
-            <button
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-        onClick={() => navigate('/register')}
-      >
-        Get Started
-      </button>
+            {!user ? (
+              <>
+                <button
+                  className="px-4 py-2 text-blue-600"
+                  onClick={() => {
+                    if (onSignIn) onSignIn();
+                    navigate('/login');
+                  }}
+                >
+                  Sign In
+                </button>
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  onClick={() => {
+                    if (onGetStarted) onGetStarted();
+                    navigate('/register');
+                  }}
+                >
+                  Get Started
+                </button>
+              </>
+            ) : (
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold"
+                onClick={() => {
+                  if (onGetStarted) onGetStarted();
+                  navigate(user.role === 'Owner' ? '/owner/dashboard' : '/tenant/dashboard');
+                }}
+              >
+                Go to Dashboard
+              </button>
+            )}
           </div>
         </div>
       </header>

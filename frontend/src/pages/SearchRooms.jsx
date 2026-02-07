@@ -3,6 +3,7 @@ import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRi
 import { Link } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
 import TenantSidebar from '../components/TenantSidebar';
+import Footer from '../components/Footer';
 import { roomService } from '../services/roomService';
 import { GOOGLE_MAPS_API_KEY, CONFIG } from '../constants/config';
 import { getMediaUrl } from '../constants/api';
@@ -420,8 +421,9 @@ const SearchRooms = ({ user }) => {
                                                     position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
                                                     onClick={() => setSelectedRoom(room)}
                                                     icon={{
-                                                        url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                                                        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
                                                     }}
+                                                    animation={window.google?.maps.Animation.DROP}
                                                 />
                                             )
                                         ))}
@@ -431,10 +433,15 @@ const SearchRooms = ({ user }) => {
                                                 position={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
                                                 onCloseClick={() => setSelectedRoom(null)}
                                             >
-                                                <div className="p-2 min-w-[150px]">
-                                                    <h4 className="font-bold text-sm text-gray-900">{selectedRoom.title}</h4>
-                                                    <p className="text-blue-600 font-bold text-xs mt-1">₹{parseFloat(selectedRoom.price).toLocaleString()}</p>
-                                                    <Link to={`/room/${selectedRoom.id}`} className="block mt-2 text-center py-1 bg-blue-600 text-white text-[10px] font-bold rounded hover:bg-blue-700 transition">
+                                                <div className="p-2 min-w-[200px]">
+                                                    <img
+                                                        src={selectedRoom.images?.[0]?.image ? getMediaUrl(selectedRoom.images[0].image) : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=200'}
+                                                        className="w-full h-24 object-cover rounded-lg mb-2"
+                                                        alt=""
+                                                    />
+                                                    <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{selectedRoom.title}</h4>
+                                                    <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
+                                                    <Link to={`/room/${selectedRoom.id}`} className="block mt-3 text-center py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100">
                                                         View Details
                                                     </Link>
                                                 </div>
@@ -450,6 +457,7 @@ const SearchRooms = ({ user }) => {
                             </div>
                         </div>
                     </div>
+                    <Footer />
                 </div>
             </div>
         </div>
