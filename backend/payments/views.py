@@ -45,13 +45,13 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
         params = {
             "amount": amount_str,
-            "failure_url": f"{settings.FRONTEND_URL}/tenant/payments?status=failure",
+            "failure_url": f"{settings.FRONTEND_URL}/tenant/payments",
             "product_delivery_charge": "0",
             "product_service_charge": "0",
             "product_code": settings.ESEWA_PRODUCT_CODE,
             "signature": signature_base64,
             "signed_field_names": "total_amount,transaction_uuid,product_code",
-            "success_url": f"{settings.FRONTEND_URL}/tenant/payments?status=success&payment_id={payment.id}&method=esewa",
+            "success_url": f"{settings.FRONTEND_URL}/tenant/payments",
             "tax_amount": "0",
             "total_amount": amount_str,
             "transaction_uuid": transaction_uuid,
@@ -75,24 +75,34 @@ class PaymentViewSet(viewsets.ModelViewSet):
             response_data = json.loads(decoded_str)
             
             # Verify signature in response
+            # eSewa v2 sends 'data' as a base64 encoded JSON string
+            
             resp_sig = response_data.get('signature')
             resp_fields = response_data.get('signed_field_names', '').split(',')
             
-            message = []
+            # Reconstruct the message string for verification based on EXACT fields sent by eSewa
+            message_parts = []
             for field in resp_fields:
-                message.append(f"{field}={response_data.get(field)}")
-            message_str = ",".join(message)
+                message_parts.append(f"{field}={response_data.get(field)}")
+            message_str = ",".join(message_parts)
+            
+            print(f"DEBUG: Verifying message: {message_str}")
             
             secret_key = settings.ESEWA_SECRET_KEY
             expected_sig = base64.b64encode(
                 hmac.new(secret_key.encode(), message_str.encode(), hashlib.sha256).digest()
             ).decode()
             
+            print(f"DEBUG: Expected signature: {expected_sig}")
+            print(f"DEBUG: Received signature: {resp_sig}")
+            
             if resp_sig != expected_sig:
-                 return Response({'error': 'Invalid signature'}, status=status.HTTP_400_BAD_REQUEST)
+                 print(f"DEBUG: Sig mismatch!")
+                 return Response({'error': 'Invalid signature verification failed'}, status=status.HTTP_400_BAD_REQUEST)
 
             if response_data.get('status') != 'COMPLETE':
-                 return Response({'error': 'Payment not complete'}, status=status.HTTP_400_BAD_REQUEST)
+                 print(f"DEBUG: Status is {response_data.get('status')}, not COMPLETE")
+                 return Response({'error': 'Payment status is not COMPLETE'}, status=status.HTTP_400_BAD_REQUEST)
 
             transaction_id = response_data.get('transaction_code')
             

@@ -3,6 +3,7 @@ import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRi
 import { Link } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
 import TenantSidebar from '../components/TenantSidebar';
+import TenantHeader from '../components/TenantHeader';
 import Footer from '../components/Footer';
 import { roomService } from '../services/roomService';
 import { GOOGLE_MAPS_API_KEY, CONFIG } from '../constants/config';
@@ -160,7 +161,15 @@ const SearchRooms = ({ user }) => {
             <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
-
+                <TenantHeader
+                    user={user}
+                    title="Search Rooms"
+                    subtitle="Find your perfect stay spot"
+                    onLogout={() => {
+                        localStorage.removeItem('user');
+                        window.location.href = '/';
+                    }}
+                />
                 {/* Main Content area */}
                 <div className="flex-1 overflow-auto p-8">
                     {/* Filters Section */}

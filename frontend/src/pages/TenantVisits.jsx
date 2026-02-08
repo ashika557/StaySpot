@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import TenantSidebar from '../components/TenantSidebar';
+import TenantHeader from '../components/TenantHeader';
 import Footer from '../components/Footer';
 import {
     Calendar,
@@ -68,18 +69,19 @@ export default function TenantVisits({ user }) {
     });
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-gray-50 overflow-hidden">
             <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
-                <div className="bg-white border-b px-8 py-4 sticky top-0 z-10 flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-gray-800">My Visits</h1>
-                    <div className="text-sm text-gray-500">
-                        Manage your room viewings
-                    </div>
-                </div>
-
+                <TenantHeader
+                    user={user}
+                    title="My Visits"
+                    subtitle="Manage your room viewings"
+                    onLogout={() => {
+                        localStorage.removeItem('user');
+                        window.location.href = '/';
+                    }}
+                />
                 <div className="flex-1 overflow-auto p-8">
                     <div className="max-w-5xl mx-auto">
 

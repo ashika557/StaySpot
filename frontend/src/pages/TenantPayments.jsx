@@ -14,7 +14,7 @@ import {
     Filter
 } from 'lucide-react';
 import { paymentService } from '../services/tenantService';
-import NotificationBell from '../components/NotificationBell';
+import TenantHeader from '../components/TenantHeader';
 
 export default function TenantPayments({ user }) {
     const [payments, setPayments] = useState([]);
@@ -42,24 +42,33 @@ export default function TenantPayments({ user }) {
 
     const handlePaymentCallback = async () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const status = urlParams.get('status');
-        const paymentId = urlParams.get('payment_id');
-        const method = urlParams.get('method');
         const encodedData = urlParams.get('data');
 
-        if (status === 'success' && paymentId && method === 'esewa' && encodedData) {
+        if (encodedData) {
             try {
-                await paymentService.verifyEsewaPayment(paymentId, encodedData);
-                alert("eSewa payment verified successfully!");
-                fetchPayments();
+                // Decode eSewa data to find our payment ID
+                const decodedString = atob(encodedData);
+                const responseData = JSON.parse(decodedString);
+
+                // transaction_uuid format is "PAY-{id}-{timestamp}"
+                const transactionUuid = responseData.transaction_uuid;
+                const paymentId = transactionUuid.split('-')[1];
+
+                if (responseData.status === 'COMPLETE') {
+                    await paymentService.verifyEsewaPayment(paymentId, encodedData);
+                    alert("eSewa payment verified successfully!");
+                    fetchPayments();
+                } else {
+                    alert("Payment was not completed.");
+                }
+
+                // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             } catch (err) {
-                console.error(err);
-                alert("eSewa payment verification failed.");
+                console.error('Callback error:', err);
+                // Only alert if we actually have eSewa data but verification failed
+                if (encodedData) alert("eSewa payment verification failed.");
             }
-        } else if (status === 'failure') {
-            alert("Payment failed.");
-            window.history.replaceState({}, document.title, window.location.pathname);
         }
     };
 
@@ -179,28 +188,19 @@ export default function TenantPayments({ user }) {
     const pendingCount = payments.filter(p => p.status === 'Pending' || p.status === 'Overdue').length;
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC]">
+        <div className="flex h-screen bg-gray-50 overflow-hidden">
             <TenantSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
-                <header className="bg-white border-b px-8 py-4 flex items-center justify-between sticky top-0 z-20">
-                    <h1 className="text-2xl font-bold text-slate-800">Payments</h1>
-                    <div className="flex items-center gap-4">
-                        <NotificationBell user={user} isDark={true} />
-                        <div className="flex items-center gap-3">
-                            <div className="text-right">
-                                <p className="text-sm font-bold text-slate-900 leading-none">{user?.full_name}</p>
-                                <p className="text-xs text-slate-500 mt-1">{user?.role}</p>
-                            </div>
-                            <img
-                                src={`https://ui-avatars.com/api/?name=${user?.full_name}&background=random`}
-                                className="w-10 h-10 rounded-full border-2 border-slate-100"
-                                alt="Profile"
-                            />
-                        </div>
-                    </div>
-                </header>
+                <TenantHeader
+                    user={user}
+                    title="Payments"
+                    subtitle="Manage your rent and viewing fees"
+                    onLogout={() => {
+                        localStorage.removeItem('user');
+                        window.location.href = '/';
+                    }}
+                />
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-auto p-8">

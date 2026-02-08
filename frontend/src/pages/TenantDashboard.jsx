@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
+import TenantHeader from '../components/TenantHeader';
 import Footer from '../components/Footer';
 import { Calendar, MapPin, DollarSign, MessageCircle, Star, ChevronRight, MessageSquare } from 'lucide-react';
 import { dashboardService } from '../services/tenantService';
@@ -53,12 +54,21 @@ export default function TenantDashboard({ user }) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       <TenantSidebar user={user} />
 
       {/* Main Area */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <TenantHeader
+          user={user}
+          title="Tenant Dashboard"
+          subtitle={`Welcome back, ${user?.full_name || 'User'}`}
+          onLogout={() => {
+            localStorage.removeItem('user');
+            window.location.href = '/';
+          }}
+        />
+        <div className="flex-1 overflow-auto p-8">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-3 gap-6">
             {/* Left Column - 2/3 width */}
