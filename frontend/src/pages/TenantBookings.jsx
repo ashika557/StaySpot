@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, ArrowRight, XCircle } from 'lucide-react';
 import TenantSidebar from '../components/TenantSidebar';
+import TenantHeader from '../components/TenantHeader';
 import Footer from '../components/Footer';
 import { bookingService } from '../services/bookingService';
 import { chatService } from '../services/chatService';
@@ -52,8 +53,17 @@ const TenantBookings = ({ user }) => {
         <div className="flex h-screen bg-gray-50 overflow-hidden">
             <TenantSidebar user={user} />
 
-            <div className="flex-1 flex flex-col overflow-auto">
-                <div className="p-8">
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <TenantHeader
+                    user={user}
+                    title="My Bookings"
+                    subtitle="Track your room requests and history"
+                    onLogout={() => {
+                        localStorage.removeItem('user');
+                        window.location.href = '/';
+                    }}
+                />
+                <div className="flex-1 overflow-auto p-8">
                     {/* Tabs */}
                     <div className="flex gap-2 mb-8">
                         {['All', 'Upcoming', 'Completed', 'Cancelled'].map(tab => (

@@ -3,6 +3,7 @@ import { apiRequest, getCsrfToken } from '../utils/api';
 import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
 import OwnerSidebar from '../components/OwnerSidebar';
 import TenantSidebar from '../components/TenantSidebar';
+import TenantHeader from '../components/TenantHeader';
 
 function Profile({ user, onUpdateUser, refreshUser }) {
     const [formData, setFormData] = useState({
@@ -76,13 +77,21 @@ function Profile({ user, onUpdateUser, refreshUser }) {
     const SidebarComponent = isOwner ? OwnerSidebar : TenantSidebar;
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-gray-50 overflow-hidden">
             <SidebarComponent user={user} />
 
-            <div className="flex-1 overflow-auto">
-                <div className="p-8 pt-12">
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <TenantHeader
+                    user={user}
+                    title="Account Settings"
+                    subtitle="Update your profile and identity verification"
+                    onLogout={() => {
+                        localStorage.removeItem('user');
+                        window.location.href = '/';
+                    }}
+                />
+                <div className="flex-1 overflow-auto p-8">
                     <div className="max-w-4xl mx-auto">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
 
                         {message.text && (
                             <div className={`p-4 mb-6 rounded-xl border font-bold text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
