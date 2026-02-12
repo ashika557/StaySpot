@@ -18,6 +18,8 @@ import TenantVisits from './pages/TenantVisits';
 import TenantPayments from './pages/TenantPayments';
 import ComplaintsReviews from './pages/ComplaintsReviews';
 import OwnerBookings from './pages/OwnerBookings';
+import OwnerTenants from './pages/OwnerTenants';
+import OwnerPayments from './pages/OwnerPayments';
 import OwnerVisitRequests from './pages/OwnerVisitRequests';
 import Profile from './pages/Profile';
 import VerificationRequest from './pages/VerificationRequest';
@@ -168,6 +170,14 @@ function App() {
           <Route
             path="/owner/visits"
             element={user && user.role === 'Owner' ? <OwnerVisitRequests user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.OWNER_TENANTS}
+            element={user && user.role === 'Owner' ? <OwnerTenants user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.OWNER_PAYMENTS}
+            element={user && user.role === 'Owner' ? <OwnerPayments user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
           />
 
           <Route
