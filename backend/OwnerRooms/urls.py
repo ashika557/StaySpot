@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     RoomViewSet, BookingViewSet, VisitViewSet, 
     RoomReviewViewSet, ComplaintViewSet, 
-    tenant_dashboard, debug_user_info
+    tenant_dashboard, debug_user_info, owner_tenant_management
 )
 
 router = DefaultRouter()
@@ -16,5 +16,6 @@ router.register(r'complaints', ComplaintViewSet, basename='complaint')
 urlpatterns = [
     path('debug/user/', debug_user_info, name='debug-user-info'),
     path('tenant/dashboard/', tenant_dashboard, name='tenant-dashboard'),
+    path('owner/tenants/', owner_tenant_management, name='owner-tenant-management'),
     path('', include(router.urls)),
 ]

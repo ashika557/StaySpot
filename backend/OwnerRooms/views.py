@@ -525,6 +525,77 @@ def tenant_dashboard(request):
         'suggested_rooms': RoomSerializer(suggested_rooms, many=True, context={'request': request}).data,
     })
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def owner_tenant_management(request):
+    """
+    Endpoint for owner's tenant management dashboard.
+    Returns: stats and tenant directory.
+    """
+    user = request.user
+    if user.role != 'Owner':
+        return Response({'error': 'Only owners can access this endpoint'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Get all active/confirmed bookings for the owner's rooms
+    active_bookings = Booking.objects.filter(
+        room__owner=user,
+        status__in=['Active', 'Confirmed']
+    ).select_related('tenant', 'room')
+
+    # Calculate Stats
+    total_tenants = active_bookings.values('tenant').distinct().count()
+    active_leases = active_bookings.count()
+    
+    # Pending Rent: Count of payments with 'Pending' status for owner's bookings
+    pending_rent_count = Payment.objects.filter(
+        booking__room__owner=user,
+        status='Pending'
+    ).count()
+
+    # Maintenance Requests: Complaints for owner's rooms that are maintenance and pending
+    maintenance_requests_count = Complaint.objects.filter(
+        owner=user,
+        complaint_type='Maintenance',
+        status='Pending'
+    ).count()
+
+    # Prepare Tenant Directory
+    tenant_directory = []
+    for booking in active_bookings:
+        # Get the latest payment status for this booking
+        latest_payment = Payment.objects.filter(booking=booking).order_by('-due_date').first()
+        rent_status = latest_payment.status if latest_payment else 'Paid' # Default to Paid if no payment record found
+        
+        # Calculate Lease Status (Simulated for mockup consistency)
+        lease_status = booking.status
+        # If end_date is within 30 days, mark as 'Expiring Soon'
+        if booking.end_date and (booking.end_date - timezone.now().date()).days <= 30:
+            lease_status = 'Expiring Soon'
+
+        tenant_directory.append({
+            'id': booking.id,
+            'tenant': {
+                'id': booking.tenant.id,
+                'full_name': booking.tenant.full_name,
+                'email': booking.tenant.email,
+                'profile_photo': request.build_absolute_uri(booking.tenant.profile_photo.url) if booking.tenant.profile_photo else None
+            },
+            'property': f"{booking.room.location}, {booking.room.title}",
+            'lease_status': lease_status,
+            'rent_status': rent_status,
+            'move_in_date': booking.start_date.strftime('%b %d, %Y'),
+        })
+
+    return Response({
+        'stats': {
+            'total_tenants': total_tenants,
+            'active_leases': active_leases,
+            'pending_rent': pending_rent_count,
+            'maintenance_requests': maintenance_requests_count
+        },
+        'tenants': tenant_directory
+    })
+
 class RoomReviewViewSet(viewsets.ModelViewSet):
     serializer_class = RoomReviewSerializer
     permission_classes = [IsAuthenticated]
