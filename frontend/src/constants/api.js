@@ -25,6 +25,8 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: '/notifications/',
   REVIEWS: '/reviews/',
   COMPLAINTS: '/complaints/',
+  OWNER_TENANTS: '/owner/tenants/',
+  OWNER_FINANCIALS: '/owner/financial/dashboard/',
 };
 
 export const ROUTES = {
@@ -39,6 +41,8 @@ export const ROUTES = {
   OWNER_DASHBOARD: '/owner/dashboard',
   OWNER_ROOMS: '/owner/rooms',
   OWNER_BOOKINGS: '/owner/bookings',
+  OWNER_TENANTS: '/owner/tenants',
+  OWNER_PAYMENTS: '/owner/payments',
   TENANT_DASHBOARD: '/tenant/dashboard',
   TENANT_SEARCH: '/tenant/search',
   TENANT_BOOKINGS: '/tenant/bookings',
