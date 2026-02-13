@@ -5,7 +5,7 @@ import json
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Payment
@@ -171,3 +171,102 @@ class PaymentViewSet(viewsets.ModelViewSet):
         except Exception as e:
              print(f"Khalti Verification Error: {e}")
              return Response({'error': 'Verification error'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def owner_financial_dashboard(request):
+    """
+    Endpoint for owner's earnings and payments dashboard.
+    Calculates stats (This Month, Last Month, All-Time) and returns payment logs.
+    """
+    user = request.user
+    if user.role != 'Owner':
+        return Response({'error': 'Only owners can access this endpoint'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Filter params
+    month = request.query_params.get('month') # '1' to '12' or 'All Months'
+    year = request.query_params.get('year') # e.g., '2025'
+    room_id = request.query_params.get('room_id') # 'All Rooms' or ID
+
+    # Base queryset for owner's payments
+    owner_payments = Payment.objects.filter(booking__room__owner=user)
+    paid_payments = owner_payments.filter(status='Paid')
+
+    # Current Month Stats
+    now = timezone.now()
+    current_month_paid = paid_payments.filter(paid_date__month=now.month, paid_date__year=now.year)
+    this_month_earnings = sum(p.amount for p in current_month_paid)
+    this_month_count = current_month_paid.count()
+
+    # Last Month Stats
+    last_month_val = now.month - 1 if now.month > 1 else 12
+    last_month_year = now.year if now.month > 1 else now.year - 1
+    last_month_paid = paid_payments.filter(paid_date__month=last_month_val, paid_date__year=last_month_year)
+    last_month_earnings = sum(p.amount for p in last_month_paid)
+    last_month_count = last_month_paid.count()
+
+    # All-Time Earnings
+    all_time_earnings = sum(p.amount for p in paid_payments)
+
+    # Percentage changes (simplified)
+    this_month_change = 0
+    if last_month_earnings > 0:
+        this_month_change = ((this_month_earnings - last_month_earnings) / last_month_earnings) * 100
+
+    # Apply Filters to Logs
+    logs_queryset = owner_payments.select_related('booking__tenant', 'booking__room').order_by('-created_at')
+    
+    if year and year != 'All' and year.isdigit():
+        logs_queryset = logs_queryset.filter(created_at__year=int(year))
+    
+    if month and month != 'All Months' and month.isdigit():
+        logs_queryset = logs_queryset.filter(created_at__month=int(month))
+        
+    if room_id and room_id != 'All Rooms' and room_id.isdigit():
+        logs_queryset = logs_queryset.filter(booking__room_id=int(room_id))
+
+    # Prepare logs data
+    logs_data = []
+    for p in logs_queryset:
+        logs_data.append({
+            'id': p.id,
+            'date': p.paid_date.strftime('%b %d, %Y') if p.paid_date else p.created_at.strftime('%b %d, %Y'),
+            'tenant': {
+                'id': p.booking.tenant.id,
+                'full_name': p.booking.tenant.full_name,
+                'email': p.booking.tenant.email,
+                'profile_photo': request.build_absolute_uri(p.booking.tenant.profile_photo.url) if p.booking.tenant.profile_photo else None
+            },
+            'room': p.booking.room.title,
+            'payment_method': p.payment_method or 'Pending',
+            'amount': p.amount,
+            'status': p.status,
+            'payment_type': p.payment_type
+        })
+
+    # Get unique rooms for the filter dropdown
+    from OwnerRooms.models import Room
+    owner_rooms = Room.objects.filter(owner=user).values('id', 'title')
+
+    return Response({
+        'stats': {
+            'this_month': {
+                'earnings': this_month_earnings,
+                'transactions': this_month_count,
+                'change': round(this_month_change, 1)
+            },
+            'last_month': {
+                'earnings': last_month_earnings,
+                'transactions': last_month_count,
+                'change': 0
+            },
+            'all_time': {
+                'earnings': all_time_earnings,
+                'since': user.date_joined.strftime('%B %Y')
+            }
+        },
+        'logs': logs_data,
+        'filters': {
+            'rooms': list(owner_rooms)
+        }
+    })
