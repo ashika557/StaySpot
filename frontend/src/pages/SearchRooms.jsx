@@ -418,7 +418,7 @@ const SearchRooms = ({ user }) => {
                                     <GoogleMap
                                         mapContainerStyle={mapContainerStyle}
                                         center={center}
-                                        zoom={13}
+                                        zoom={15}
                                         onLoad={onLoad}
                                         onUnmount={onUnmount}
                                         options={mapOptions}
@@ -450,6 +450,10 @@ const SearchRooms = ({ user }) => {
                                                     />
                                                     <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{selectedRoom.title}</h4>
                                                     <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
+                                                    <p className="text-gray-500 text-[10px] mt-1 flex items-center gap-1">
+                                                        <MapPin className="w-3 h-3" />
+                                                        {selectedRoom.location}
+                                                    </p>
                                                     <Link to={`/room/${selectedRoom.id}`} className="block mt-3 text-center py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100">
                                                         View Details
                                                     </Link>
