@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Star, MapPin, Navigation, School, Hospital, Utensils, ShoppingBag, Shield, Check, Info, Clock, ChevronRight, MessageSquare, Phone, Mail, Link as LinkIcon, Facebook, Instagram, Twitter, Wifi, Wind, Tv, User, Calendar, ShieldCheck, ArrowLeft, Loader } from 'lucide-react';
-import { GoogleMap, Marker } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import Sidebar from './sidebar';
 import TenantSidebar from '../components/TenantSidebar';
 import TenantHeader from '../components/TenantHeader';
@@ -29,6 +29,8 @@ const RoomDetails = ({ user }) => {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [nearbyPlaces, setNearbyPlaces] = useState([]);
     const [map, setMap] = useState(null);
+    const [showInfoWindow, setShowInfoWindow] = useState(false);
+    const [selectedNearby, setSelectedNearby] = useState(null);
 
     // Visit Modal State
     const [showVisitModal, setShowVisitModal] = useState(false);
@@ -121,22 +123,26 @@ const RoomDetails = ({ user }) => {
         const service = new window.google.maps.places.PlacesService(map);
         const location = new window.google.maps.LatLng(parseFloat(room.latitude), parseFloat(room.longitude));
 
-        const types = ['restaurant', 'hospital', 'shopping_mall', 'school', 'university'];
+        const types = ['university', 'hospital', 'shopping_mall', 'store', 'point_of_interest'];
 
         service.nearbySearch(
             {
                 location: location,
-                radius: 2000,
+                radius: 1500,
                 type: types
             },
             (results, status) => {
                 if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-                    const formattedPlaces = results.slice(0, 8).map(place => ({
+                    const formattedPlaces = results.slice(0, 10).map(place => ({
                         id: place.place_id,
                         name: place.name,
                         type: place.types[0],
                         rating: place.rating,
-                        address: place.vicinity
+                        address: place.vicinity,
+                        location: {
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng()
+                        }
                     }));
                     setNearbyPlaces(formattedPlaces);
                 }
@@ -508,20 +514,65 @@ const RoomDetails = ({ user }) => {
                                                     <GoogleMap
                                                         mapContainerStyle={{ width: '100%', height: '100%' }}
                                                         center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                                        zoom={15}
+                                                        zoom={18}
                                                         onLoad={(mapInstance) => setMap(mapInstance)}
                                                         options={{
                                                             disableDefaultUI: false,
                                                             mapTypeControl: false,
-                                                            streetViewControl: false,
-                                                            styles: [{ "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "on" }] }]
+                                                            streetViewControl: true,
+                                                            styles: [{ "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "off" }] }]
                                                         }}
                                                     >
                                                         <Marker
                                                             position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
                                                             animation={window.google?.maps.Animation.DROP}
-                                                            icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' }}
+                                                            onClick={() => setShowInfoWindow(true)}
+                                                            icon={{
+                                                                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                                                            }}
                                                         />
+
+                                                        {showInfoWindow && (
+                                                            <InfoWindow
+                                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                                onCloseClick={() => setShowInfoWindow(false)}
+                                                            >
+                                                                <div className="p-2 max-w-[200px]">
+                                                                    <h4 className="font-bold text-gray-900 text-sm truncate">{room.title}</h4>
+                                                                    <p className="text-blue-600 font-bold text-xs mt-0.5">NPR {parseFloat(room.price).toLocaleString()}/month</p>
+                                                                    <p className="text-gray-500 text-[10px] mt-1 flex items-start gap-1">
+                                                                        <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
+                                                                        {room.location}
+                                                                    </p>
+                                                                </div>
+                                                            </InfoWindow>
+                                                        )}
+
+                                                        {/* Nearby Places Markers */}
+                                                        {nearbyPlaces.map(place => (
+                                                            <Marker
+                                                                key={place.id}
+                                                                position={place.location}
+                                                                icon={{
+                                                                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                                                                }}
+                                                                onClick={() => setSelectedNearby(place)}
+                                                            />
+                                                        ))}
+
+                                                        {selectedNearby && (
+                                                            <InfoWindow
+                                                                position={selectedNearby.location}
+                                                                onCloseClick={() => setSelectedNearby(null)}
+                                                            >
+                                                                <div className="p-2 min-w-[150px]">
+                                                                    <h5 className="font-bold text-gray-900 text-xs">{selectedNearby.name}</h5>
+                                                                    <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-wider">
+                                                                        {selectedNearby.type.replace(/_/g, ' ')}
+                                                                    </p>
+                                                                </div>
+                                                            </InfoWindow>
+                                                        )}
                                                     </GoogleMap>
                                                 </div>
 
