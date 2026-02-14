@@ -23,7 +23,7 @@ export const bookingService = {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || 'Failed to create booking');
+                throw new Error(errorData.error || errorData.detail || 'Failed to create booking');
             }
 
             return await response.json();

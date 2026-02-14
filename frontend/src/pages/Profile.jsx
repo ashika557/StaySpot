@@ -11,6 +11,7 @@ function Profile({ user, onUpdateUser, refreshUser }) {
         phone: user?.phone || '',
     });
     const [profilePhotoFile, setProfilePhotoFile] = useState(null);
+    const [identityDocFile, setIdentityDocFile] = useState(null);
     const [profilePreview, setProfilePreview] = useState(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -34,6 +35,13 @@ function Profile({ user, onUpdateUser, refreshUser }) {
         }
     };
 
+    const handleIdentityDocChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setIdentityDocFile(file);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -44,6 +52,9 @@ function Profile({ user, onUpdateUser, refreshUser }) {
         data.append('phone', formData.phone);
         if (profilePhotoFile) {
             data.append('profile_photo', profilePhotoFile);
+        }
+        if (identityDocFile) {
+            data.append('identity_document', identityDocFile);
         }
 
         try {
@@ -168,6 +179,59 @@ function Profile({ user, onUpdateUser, refreshUser }) {
                                         </svg>
                                         Email cannot be changed for security reasons.
                                     </p>
+                                </div>
+
+                                {/* Identity Verification Section */}
+                                <div className="pt-6 border-t border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Identity Verification</h3>
+                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">
+                                        <div className="flex items-start gap-4">
+                                            <div className={`p-3 rounded-full ${user?.is_identity_verified ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-gray-900">
+                                                    {user?.is_identity_verified ? 'Identity Verified' : 'Identity Verification Required'}
+                                                </h4>
+                                                <p className="text-sm text-gray-600 mt-1">
+                                                    {user?.is_identity_verified
+                                                        ? 'Your identity has been verified. You can now book rooms and schedule visits.'
+                                                        : 'Please upload a valid government-issued ID (Citizenship, License, or Passport) to verify your identity.'}
+                                                </p>
+
+                                                {!user?.is_identity_verified && (
+                                                    <div className="mt-4">
+                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Document</label>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*,.pdf"
+                                                            onChange={handleIdentityDocChange}
+                                                            className="block w-full text-sm text-gray-500
+                                                                file:mr-4 file:py-2 file:px-4
+                                                                file:rounded-full file:border-0
+                                                                file:text-sm file:font-semibold
+                                                                file:bg-blue-50 file:text-blue-700
+                                                                hover:file:bg-blue-100
+                                                                cursor-pointer"
+                                                        />
+                                                        {user?.identity_document && (
+                                                            <p className="mt-2 text-xs text-orange-600 font-medium">
+                                                                Update pending review. You can upload a new document to replace the current one.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {user?.is_identity_verified && (
+                                                    <p className="mt-2 text-xs text-green-600 font-bold">
+                                                        Verified on {new Date().toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="flex justify-end pt-6 border-t border-gray-200">

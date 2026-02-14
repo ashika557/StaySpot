@@ -133,9 +133,12 @@ def register(request):
 def login_view(request):
     """Login API for Owner and Tenant."""
     data = request.data
+    email = data.get('email', '').strip()
     
+    print(f"DEBUG: Login attempt - Email: '{email}', Role: '{data.get('role')}'")
+
     # Validate required fields
-    if not data.get('email'):
+    if not email:
         return Response(
             {'error': 'Email is required.'},
             status=status.HTTP_400_BAD_REQUEST
@@ -162,8 +165,10 @@ def login_view(request):
     
     # Authenticate user
     try:
-        user = User.objects.get(email=data['email'])
+        user = User.objects.get(email=email)
+        print(f"DEBUG: Found user by email: {user.username}")
     except User.DoesNotExist:
+        print(f"DEBUG: User not found for email: '{email}'")
         return Response(
             {'error': 'Invalid credentials.'},
             status=status.HTTP_401_UNAUTHORIZED
@@ -171,6 +176,8 @@ def login_view(request):
     
     # Verify password
     user_auth = authenticate(username=user.username, password=data['password'])
+    print(f"DEBUG: Authenticate result for {user.username}: {'Success' if user_auth else 'Failure'}")
+    
     if not user_auth:
         return Response(
             {'error': 'Invalid credentials.'},
