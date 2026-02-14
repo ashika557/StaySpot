@@ -184,3 +184,9 @@ FRONTEND_URL = 'http://localhost:3000'
 ESEWA_SECRET_KEY = '8gBm/:&EnhH.1/q'
 ESEWA_PRODUCT_CODE = 'EPAYTEST'
 ESEWA_GATEWAY_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
+
+# Khalti Configuration (Sandbox)
+KHALTI_PUBLIC_KEY = '659ab205adad43409b2c562a15a4fa5f'
+KHALTI_SECRET_KEY = '5f1831135f634d0fb608d7eb64dae94b'
+KHALTI_GATEWAY_URL = 'https://dev.khalti.com/api/v2/epayment/initiate/'
+KHALTI_LOOKUP_URL = 'https://dev.khalti.com/api/v2/epayment/lookup/'

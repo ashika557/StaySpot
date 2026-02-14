@@ -3,7 +3,7 @@
  */
 
 // Replace 'YOUR_GOOGLE_MAPS_API_KEY_HERE' with your actual key from Google Cloud Console
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyDe3svGbw3QnyZrNQ4dnh8QXqCU7bCxGig';
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyDgIY5ncwLaBL4oskFCMybJGqyk1KeG2Ko';
 export const GOOGLE_MAPS_LIBRARIES = ['places'];
 
 export const CONFIG = {

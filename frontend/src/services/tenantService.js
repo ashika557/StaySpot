@@ -47,7 +47,10 @@ export const bookingService = {
                 method: 'POST',
                 body: JSON.stringify(bookingData),
             });
-            if (!response.ok) throw new Error('Failed to create booking');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.detail || 'Failed to create booking');
+            }
             return await response.json();
         } catch (error) {
             console.error('Error creating booking:', error);
@@ -92,7 +95,10 @@ export const visitService = {
                 method: 'POST',
                 body: JSON.stringify(visitData),
             });
-            if (!response.ok) throw new Error('Failed to create visit');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.detail || 'Failed to create visit');
+            }
             return await response.json();
         } catch (error) {
             console.error('Error creating visit:', error);
@@ -171,12 +177,29 @@ export const paymentService = {
         }
     },
 
-    // Verify Khalti payment
-    verifyKhaltiPayment: async (paymentId, token, amount) => {
+    // Initiate Khalti payment V2
+    initiateKhaltiPayment: async (paymentId) => {
+        try {
+            const response = await apiRequest(`/payments/${paymentId}/initiate_khalti/`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    return_url: window.location.origin + '/tenant/payments'
+                }),
+            });
+            if (!response.ok) throw new Error('Failed to initiate Khalti payment');
+            return await response.json();
+        } catch (error) {
+            console.error('Error initiating Khalti payment:', error);
+            throw error;
+        }
+    },
+
+    // Verify Khalti payment (v2 lookup)
+    verifyKhaltiPayment: async (paymentId, pidx) => {
         try {
             const response = await apiRequest(`/payments/${paymentId}/verify_khalti/`, {
                 method: 'POST',
-                body: JSON.stringify({ token, amount }),
+                body: JSON.stringify({ pidx }),
             });
             if (!response.ok) throw new Error('Failed to verify Khalti payment');
             return await response.json();

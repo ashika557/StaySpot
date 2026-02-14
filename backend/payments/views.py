@@ -1,16 +1,20 @@
 import hmac
 import hashlib
+import requests
 import base64
 import json
 from django.conf import settings
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Payment
 from .serializers import PaymentSerializer
 from notifications.utils import send_notification
+from .utils import trigger_rent_reminders
 
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
@@ -59,6 +63,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         }
         return Response(params)
 
+    @method_decorator(csrf_exempt)
     @action(detail=True, methods=['post'])
     def verify_esewa(self, request, pk=None):
         """Action to verify eSewa v2 payment."""
@@ -86,22 +91,15 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 message_parts.append(f"{field}={response_data.get(field)}")
             message_str = ",".join(message_parts)
             
-            print(f"DEBUG: Verifying message: {message_str}")
-            
             secret_key = settings.ESEWA_SECRET_KEY
             expected_sig = base64.b64encode(
                 hmac.new(secret_key.encode(), message_str.encode(), hashlib.sha256).digest()
             ).decode()
             
-            print(f"DEBUG: Expected signature: {expected_sig}")
-            print(f"DEBUG: Received signature: {resp_sig}")
-            
             if resp_sig != expected_sig:
-                 print(f"DEBUG: Sig mismatch!")
                  return Response({'error': 'Invalid signature verification failed'}, status=status.HTTP_400_BAD_REQUEST)
 
             if response_data.get('status') != 'COMPLETE':
-                 print(f"DEBUG: Status is {response_data.get('status')}, not COMPLETE")
                  return Response({'error': 'Payment status is not COMPLETE'}, status=status.HTTP_400_BAD_REQUEST)
 
             transaction_id = response_data.get('transaction_code')
@@ -128,49 +126,99 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
 
     @action(detail=True, methods=['post'])
-    def verify_khalti(self, request, pk=None):
-        """Action to verify Khalti payment."""
+    def initiate_khalti(self, request, pk=None):
+        """Action to initiate Khalti payment (KPG-2)."""
         payment = self.get_object()
-        token = request.data.get('token')
-        amount = request.data.get('amount') # in paisa
         
-        if not token:
-            return Response({'error': 'Khalti token is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        import requests
-        url = "https://khalti.com/api/v2/payment/verify/"
-        payload = {
-            "token": token,
-            "amount": amount
-        }
-        # TODO: Move Secret Key to environment variables
+        # Use Gateway URL from settings
+        url = settings.KHALTI_GATEWAY_URL
+        # This will be the URL Khalti redirects back to
+        return_url = request.data.get('return_url') or request.build_absolute_uri('/payments/khalti_callback/')
+        
+        payload = json.dumps({
+            "return_url": return_url,
+            "website_url": settings.FRONTEND_URL,
+            "amount": int(float(payment.amount) * 100),
+            "purchase_order_id": f"PAY-{payment.id}-{int(timezone.now().timestamp())}",
+            "purchase_order_name": f"Payment for {payment.payment_type}",
+            "customer_info": {
+                "name": payment.booking.tenant.full_name,
+                "email": payment.booking.tenant.email,
+                "phone": "9800000000"
+            }
+        })
+        
+        # Using the secret key from settings
         headers = {
-            "Authorization": "Key test_secret_key_f59e8b7d18b4499ca40f68195a8a7e9b" 
+            'Authorization': f'Key {settings.KHALTI_SECRET_KEY}',
+            'Content-Type': 'application/json',
         }
 
         try:
-            response = requests.post(url, payload, headers=headers)
+            response = requests.post(url, headers=headers, data=payload)
             if response.status_code == 200:
-                payment.status = 'Paid'
-                payment.paid_date = timezone.now().date()
-                payment.payment_method = 'Khalti'
-                payment.transaction_id = token
+                data = response.json()
+                payment.transaction_id = data.get('pidx')
                 payment.save()
-
-                # Notify Owner
-                send_notification(
-                    recipient=payment.booking.room.owner,
-                    actor=payment.booking.tenant,
-                    notification_type='payment_received',
-                    text=f"Payment of ₹{payment.amount} received via Khalti for {payment.booking.room.title}.",
-                    related_id=payment.id
-                )
-                return Response({'status': 'Payment verified successfully'})
+                return Response(data)
             else:
-                 return Response({'error': 'Khalti verification failed'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(response.json(), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-             print(f"Khalti Verification Error: {e}")
-             return Response({'error': 'Verification error'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=True, methods=['post'])
+    def verify_khalti(self, request, pk=None):
+        """Action to verify Khalti payment (v2 lookup)."""
+        payment = self.get_object()
+        pidx = request.data.get('pidx') or payment.transaction_id
+        
+        if not pidx:
+            return Response({'error': 'pidx is required. Please initiate payment or contact support.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        print(f"DEBUG: Verifying Khalti Payment ID: {payment.id} with pidx: {pidx}")
+        url = settings.KHALTI_LOOKUP_URL
+        payload = json.dumps({"pidx": pidx})
+        headers = {
+            'Authorization': f'Key {settings.KHALTI_SECRET_KEY}',
+            'Content-Type': 'application/json',
+        }
+
+        try:
+            response = requests.post(url, headers=headers, data=payload)
+            print(f"DEBUG: Khalti Lookup Status Code: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                print(f"DEBUG: Khalti Lookup Data: {data}")
+                # Use case-insensitive check and include 'success' as a fallback
+                khalti_state = data.get('status', '').lower()
+                if khalti_state in ['completed', 'success']:
+                    payment.status = 'Paid'
+                    payment.paid_date = timezone.now().date()
+                    payment.payment_method = 'Khalti'
+                    payment.transaction_id = pidx # Update transaction ID with the verified pidx
+                    payment.save()
+
+                    try:
+                        # Notify Owner
+                        send_notification(
+                            recipient=payment.booking.room.owner,
+                            actor=payment.booking.tenant,
+                            notification_type='payment_received',
+                            text=f"Payment of NPR {payment.amount} received via Khalti for {payment.booking.room.title}.",
+                            related_id=payment.id
+                        )
+                    except Exception as ne:
+                        print(f"DEBUG: Owner notification failed but payment was saved: {ne}")
+
+                    return Response({'status': 'Payment verified successfully'})
+                return Response({'status': data.get('status'), 'message': 'Payment state is not Completed'})
+            else:
+                print(f"DEBUG: Khalti Lookup Failed! Content: {response.text}")
+                return Response(response.json(), status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"DEBUG: Request Exception: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -269,4 +317,19 @@ def owner_financial_dashboard(request):
         'filters': {
             'rooms': list(owner_rooms)
         }
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_reminders(request):
+    """
+    API endpoint to manually/automatically trigger rent reminders.
+    Can be called by frontend on app load or login.
+    """
+    count, skipped = trigger_rent_reminders()
+    return Response({
+        'status': 'success',
+        'reminders_sent': count,
+        'reminders_skipped': skipped,
+        'message': f"Processed rent reminders. Sent: {count}, Skipped: {skipped}"
     })

@@ -22,11 +22,7 @@ export default function TenantPayments({ user }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [timeFilter, setTimeFilter] = useState('All Time');
-
-    useEffect(() => {
-        fetchPayments();
-        handlePaymentCallback();
-    }, []);
+    const [verificationMessage, setVerificationMessage] = useState(null);
 
     const fetchPayments = async () => {
         try {
@@ -40,17 +36,73 @@ export default function TenantPayments({ user }) {
         }
     };
 
-    const handlePaymentCallback = async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const encodedData = urlParams.get('data');
+    useEffect(() => {
+        fetchPayments();
+    }, []);
 
+    // handlePaymentCallback defined below
+
+    const handlePaymentCallback = React.useCallback(async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pidx = urlParams.get('pidx');
+        const purchaseOrderId = urlParams.get('purchase_order_id');
+
+        if (pidx) {
+            try {
+                setVerificationMessage("Verifying your Khalti payment... Please wait.");
+                let paymentId = purchaseOrderId?.split('-')[1];
+
+                // FALLBACK: If purchase_order_id is missing from URL, try to find a pending Khalti payment in current list
+                if (!paymentId && payments.length > 0) {
+                    const pendingKhalti = payments.find(p => p.status === 'Pending' || p.status === 'Overdue');
+                    if (pendingKhalti) {
+                        paymentId = pendingKhalti.id;
+                        console.log(`DEBUG: purchase_order_id missing, using fallback payment ID: ${paymentId}`);
+                    }
+                }
+
+                if (paymentId) {
+                    console.log(`DEBUG: Found pidx ${pidx} for payment ${paymentId}. Verifying...`);
+                    try {
+                        const verifyResult = await paymentService.verifyKhaltiPayment(paymentId, pidx);
+
+                        if (verifyResult.error || verifyResult.detail) {
+                            setVerificationMessage(`Verification Error: ${verifyResult.error || verifyResult.detail}`);
+                        } else if (verifyResult.status === 'Payment verified successfully') {
+                            setVerificationMessage("Payment Verified! Your status is now PAID.");
+                            alert("Success! Your Khalti payment has been verified.");
+                        } else {
+                            setVerificationMessage(`Status: ${verifyResult.status || 'Checking...'}`);
+                        }
+                    } catch (err) {
+                        setVerificationMessage(`Network Error: ${err.message}`);
+                    }
+                    fetchPayments();
+                } else if (payments.length > 0) {
+                    setVerificationMessage("Could not identify payment automatically. Refreshing...");
+                    fetchPayments();
+                }
+
+                // Clean URL parameters only after a slight delay
+                if (pidx && paymentId) {
+                    setTimeout(() => {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        setVerificationMessage(null);
+                    }, 5000);
+                }
+            } catch (err) {
+                console.error('Khalti callback logic error:', err);
+                setVerificationMessage(`App logic error: ${err.message}`);
+            }
+        }
+
+        // eSewa v2 Callback
+        const encodedData = urlParams.get('data');
         if (encodedData) {
             try {
                 // Decode eSewa data to find our payment ID
                 const decodedString = atob(encodedData);
                 const responseData = JSON.parse(decodedString);
-
-                // transaction_uuid format is "PAY-{id}-{timestamp}"
                 const transactionUuid = responseData.transaction_uuid;
                 const paymentId = transactionUuid.split('-')[1];
 
@@ -61,16 +113,17 @@ export default function TenantPayments({ user }) {
                 } else {
                     alert("Payment was not completed.");
                 }
-
-                // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             } catch (err) {
                 console.error('Callback error:', err);
-                // Only alert if we actually have eSewa data but verification failed
                 if (encodedData) alert("eSewa payment verification failed.");
             }
         }
-    };
+    }, [payments]);
+
+    useEffect(() => {
+        handlePaymentCallback();
+    }, [handlePaymentCallback]);
 
     const handleEsewaPayment = async (payment) => {
         try {
@@ -113,48 +166,39 @@ export default function TenantPayments({ user }) {
         }
     };
 
-    const handleKhaltiPayment = (payment) => {
-        const config = {
-            publicKey: "test_public_key_dc74e544b251410f90ad459956f3475d",
-            productIdentity: `PAY-${payment.id}`,
-            productName: payment.payment_type,
-            productUrl: window.location.href,
-            eventHandler: {
-                onSuccess(payload) {
-                    // Convert amount to paisa
-                    const amountInPaisa = Math.round(parseFloat(payment.amount) * 100);
-                    paymentService.verifyKhaltiPayment(payment.id, payload.token, amountInPaisa)
-                        .then(() => {
-                            alert("Payment successful!");
-                            fetchPayments();
-                        })
-                        .catch((err) => {
-                            console.error(err);
-                            alert("Payment verification failed.");
-                        });
-                },
-                onError(error) {
-                    console.log(error);
-                    alert("Payment failed.");
-                },
-                onClose() {
-                    console.log('widget is closing');
-                }
-            },
-            paymentPreference: ["KHALTI", "EBANKING", "MOBILE_BANKING", "CONNECT_IPS", "SCT"],
-        };
+    const handleKhaltiPayment = async (payment) => {
+        try {
+            // Call backend to initiate KPG-2 payment
+            const response = await paymentService.initiateKhaltiPayment(payment.id);
+            if (response.payment_url) {
+                // Redirect user to Khalti payment portal
+                window.location.href = response.payment_url;
+            } else {
+                throw new Error("Payment URL not received");
+            }
+        } catch (error) {
+            console.error('Error initiating Khalti payment:', error);
+            alert('Failed to initiate Khalti payment. Please try again.');
+        }
+    };
 
-        if (window.KhaltiCheckout) {
-            const checkout = new window.KhaltiCheckout(config);
-            checkout.show({ amount: parseFloat(payment.amount) * 100 });
-        } else {
-            const script = document.createElement('script');
-            script.src = "https://khalti.s3.ap-south-1.amazonaws.com/KPG/dist/2020.12.17.0.0.0/khalti-checkout.iffe.js";
-            script.onload = () => {
-                const checkout = new window.KhaltiCheckout(config);
-                checkout.show({ amount: parseFloat(payment.amount) * 100 });
-            };
-            document.body.appendChild(script);
+    const handleCheckStatus = async (payment) => {
+        try {
+            setVerificationMessage(`Verifying status for ${payment.payment_type}...`);
+            const verifyResult = await paymentService.verifyKhaltiPayment(payment.id, payment.transaction_id);
+
+            if (verifyResult.error || verifyResult.detail) {
+                setVerificationMessage(`Status: ${verifyResult.error || verifyResult.detail}`);
+            } else if (verifyResult.status === 'Payment verified successfully') {
+                setVerificationMessage("Payment Verified! Your status is now PAID.");
+                alert("Success! Your payment has been verified. Status: PAID.");
+            } else {
+                setVerificationMessage(`Khalti Status: ${verifyResult.status || 'Checking...'}`);
+            }
+            fetchPayments();
+        } catch (err) {
+            console.error('Check status error:', err);
+            setVerificationMessage(`Error: ${err.message}`);
         }
     };
 
@@ -204,6 +248,20 @@ export default function TenantPayments({ user }) {
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-auto p-8">
+                    {verificationMessage && (
+                        <div className="max-w-6xl mx-auto mb-6 bg-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse">
+                            <div className="flex items-center gap-3">
+                                <Clock className="animate-spin w-5 h-5 text-blue-100" />
+                                <span className="font-bold">{verificationMessage}</span>
+                            </div>
+                            <button
+                                onClick={() => setVerificationMessage(null)}
+                                className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    )}
                     <div className="max-w-6xl mx-auto flex gap-8">
 
                         {/* Main Column */}
@@ -333,6 +391,16 @@ export default function TenantPayments({ user }) {
                                                         >
                                                             Pay with Khalti
                                                         </button>
+                                                        {payment.transaction_id && (
+                                                            <button
+                                                                onClick={() => handleCheckStatus(payment)}
+                                                                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors flex items-center gap-2"
+                                                                title="Check if you have already paid on Khalti"
+                                                            >
+                                                                <Clock className="w-3 h-3" />
+                                                                Check Status
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
