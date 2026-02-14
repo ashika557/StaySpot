@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, LayoutDashboard, Search, Calendar, AlertTriangle, MessageSquare, DollarSign, User } from 'lucide-react';
+import { Home, LayoutDashboard, Search, Calendar, AlertTriangle, MessageSquare, DollarSign, User, Eye } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { getMediaUrl } from '../constants/api';
 
@@ -11,6 +11,7 @@ export default function TenantSidebar({ user }) {
     const menuItems = [
         { path: '/tenant/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/tenant/search', icon: Search, label: 'Search Rooms' },
+        { path: '/tenant/visits', icon: Eye, label: 'My Visits' },
         { path: '/tenant/bookings', icon: Calendar, label: 'Bookings' },
         { path: '/tenant/complaints', icon: AlertTriangle, label: 'Complaints & Reviews' },
         { path: '/chat', icon: MessageSquare, label: 'Chat' },

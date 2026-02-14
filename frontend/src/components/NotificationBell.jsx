@@ -97,6 +97,8 @@ const NotificationBell = ({ user, isDark = false }) => {
             } else {
                 navigate('/owner/visits');
             }
+        } else if (notification.notification_type === 'rent_reminder') {
+            navigate(ROUTES.TENANT_PAYMENTS);
         }
         setIsOpen(false);
     };
@@ -114,6 +116,7 @@ const NotificationBell = ({ user, isDark = false }) => {
             case 'visit_rejected':
             case 'booking_cancelled':
             case 'visit_cancelled': return <Trash2 className="w-4 h-4 text-red-500" />;
+            case 'rent_reminder': return <Calendar className="w-4 h-4 text-purple-500" />;
             default: return <Bell className="w-4 h-4 text-gray-500" />;
         }
     };

@@ -101,6 +101,7 @@ export default function TenantDashboard({ user }) {
 
 // Upcoming Visit Card Component
 function UpcomingVisitCard({ visit }) {
+  const navigate = useNavigate();
   if (!visit) {
     return (
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
@@ -162,6 +163,7 @@ function UpcomingVisitCard({ visit }) {
 
 // Current Booking Card Component
 function CurrentBookingCard({ booking }) {
+  const navigate = useNavigate();
   if (!booking) {
     return (
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
@@ -240,7 +242,61 @@ function CurrentBookingCard({ booking }) {
 }
 
 // Payment Reminders Card Component
-function PaymentRemindersCard({ payments }) {
+function PaymentRemindersCard({ payments, onPaymentSuccess }) {
+  const handleEsewaPayment = (payment) => {
+    const esewaUrl = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+    const transaction_uuid = `PAY-${payment.id}-${Date.now()}`;
+
+    import('../services/tenantService').then(({ paymentService }) => {
+      paymentService.getEsewaParams(payment.id)
+        .then(params => {
+          const form = document.createElement('form');
+          form.setAttribute('method', 'POST');
+          form.setAttribute('action', esewaUrl);
+
+          const formFields = {
+            amount: params.amount,
+            tax_amount: params.tax_amount,
+            total_amount: params.total_amount,
+            transaction_uuid: params.transaction_uuid,
+            product_code: params.product_code,
+            product_service_charge: params.product_service_charge,
+            product_delivery_charge: params.product_delivery_charge,
+            success_url: params.success_url,
+            failure_url: params.failure_url,
+            signed_field_names: params.signed_field_names,
+            signature: params.signature
+          };
+
+          for (const key in formFields) {
+            const hiddenField = document.createElement('input');
+            hiddenField.setAttribute('type', 'hidden');
+            hiddenField.setAttribute('name', key);
+            hiddenField.setAttribute('value', formFields[key]);
+            form.appendChild(hiddenField);
+          }
+
+          document.body.appendChild(form);
+          form.submit();
+        });
+    });
+  };
+
+  const handleKhaltiPayment = async (payment) => {
+    try {
+      const { paymentService } = await import('../services/tenantService');
+      const response = await paymentService.initiateKhaltiPayment(payment.id);
+      if (response.payment_url) {
+        window.location.href = response.payment_url;
+      } else {
+        throw new Error("Payment URL not received");
+      }
+    } catch (error) {
+      console.error('Error initiating Khalti payment:', error);
+      alert('Failed to initiate Khalti payment. Please try again.');
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
       <h3 className="font-bold text-gray-800 mb-4">Payment Reminders</h3>
@@ -268,10 +324,24 @@ function PaymentRemindersCard({ payments }) {
                     <p className="text-xs text-gray-500 mt-1">
                       {payment.room_number ? `Room ${payment.room_number}` : payment.tenant_name}
                     </p>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={() => handleEsewaPayment(payment)}
+                        className="text-[10px] bg-green-600 text-white px-2 py-1 rounded font-bold hover:bg-green-700 transition"
+                      >
+                        eSewa
+                      </button>
+                      <button
+                        onClick={() => handleKhaltiPayment(payment)}
+                        className="text-[10px] bg-purple-600 text-white px-2 py-1 rounded font-bold hover:bg-purple-700 transition"
+                      >
+                        Khalti
+                      </button>
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className={`font-bold text-sm ${isOverdue ? 'text-red-600' : 'text-yellow-600'}`}>
-                      ₹{parseFloat(payment.amount).toLocaleString()}
+                      NPR {parseFloat(payment.amount).toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">Due {dueDate}</div>
                   </div>

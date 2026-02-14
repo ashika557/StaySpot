@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { MapProvider } from './context/MapContext';
 import Navigation from './components/Navigation';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -25,7 +26,6 @@ import Profile from './pages/Profile';
 import VerificationRequest from './pages/VerificationRequest';
 import { ROUTES, API_ENDPOINTS } from './constants/api';
 import { apiRequest } from './utils/api';
-import { MapProvider } from './context/MapContext';
 
 function App() {
   const [user, setUser] = React.useState(null);
@@ -38,6 +38,8 @@ function App() {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
       refreshUser();
+      // Process rent reminders automatically on load
+      triggerRentReminders();
     }
   }, []);
 
@@ -54,6 +56,17 @@ function App() {
       }
     } catch (error) {
       console.error("Failed to refresh user profile", error);
+    }
+  };
+
+  const triggerRentReminders = async () => {
+    try {
+      await apiRequest(API_ENDPOINTS.TRIGGER_REMINDERS, {
+        method: 'POST'
+      });
+      console.log("Rent reminders processed successfully");
+    } catch (error) {
+      console.error("Failed to trigger rent reminders:", error);
     }
   };
 
@@ -74,8 +87,8 @@ function App() {
   };
 
   return (
-    <Router>
-      <MapProvider>
+    <MapProvider>
+      <Router>
         <Navigation user={user} onLogout={handleLogout} showLanding={showLanding} />
 
         <Routes>
@@ -139,11 +152,16 @@ function App() {
             element={user && user.role === 'Tenant' ? <TenantBookings user={user} /> : <Navigate to={ROUTES.LOGIN} />}
           />
           <Route
-            path="/tenant/visits"
+            path={ROUTES.TENANT_VISITS}
             element={user && user.role === 'Tenant' ? <TenantVisits user={user} /> : <Navigate to={ROUTES.LOGIN} />}
           />
           <Route
             path={ROUTES.TENANT_PAYMENTS}
+            element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          {/* Fallback for Khalti Redirection */}
+          <Route
+            path="/payments/khalti_callback/"
             element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
           />
           <Route
@@ -200,8 +218,8 @@ function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to={ROUTES.HOME} />} />
         </Routes>
-      </MapProvider>
-    </Router>
+      </Router>
+    </MapProvider>
   );
 }
 
