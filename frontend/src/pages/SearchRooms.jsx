@@ -1,22 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRight, Loader } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
+import { useMapContext } from '../context/MapContext';
 import TenantSidebar from '../components/TenantSidebar';
 import TenantHeader from '../components/TenantHeader';
 import Footer from '../components/Footer';
 import { roomService } from '../services/roomService';
-import { GOOGLE_MAPS_API_KEY, CONFIG } from '../constants/config';
+import { CONFIG } from '../constants/config';
 import { getMediaUrl } from '../constants/api';
-import { useMapContext } from '../context/MapContext';
-
-const mapContainerStyle = {
-    width: '100%',
-    height: '100%',
-    borderRadius: '16px',
-};
 
 const SearchRooms = ({ user }) => {
+    const { isLoaded } = useMapContext();
+    const mapRef = useRef(null);
+    const [autocomplete, setAutocomplete] = useState(null);
+
     const center = CONFIG.DEFAULT_CENTER;
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -36,29 +34,37 @@ const SearchRooms = ({ user }) => {
         }
     });
 
-
-    const mapOptions = React.useMemo(() => ({
-        restriction: CONFIG.MAP_BOUNDS ? {
-            latLngBounds: CONFIG.MAP_BOUNDS,
-            strictBounds: false,
-        } : undefined,
-        styles: [
-            {
-                "featureType": "all",
-                "elementType": "labels.text.fill",
-                "stylers": [{ "color": "#7c93a3" }]
-            },
-        ],
-        streetViewControl: false,
-        mapTypeControl: false,
-    }), []);
-
     const [searchCoords, setSearchCoords] = useState(null);
-    const autocompleteRef = React.useRef(null);
-    const [map, setMap] = useState(null);
+    const [searchInputValue, setSearchInputValue] = useState('');
     const [selectedRoom, setSelectedRoom] = useState(null);
 
-    const { isLoaded } = useMapContext();
+    const onMapLoad = useCallback((map) => {
+        mapRef.current = map;
+    }, []);
+
+    const onAutocompleteLoad = (autocompleteInstance) => {
+        setAutocomplete(autocompleteInstance);
+    };
+
+    const onPlaceChanged = () => {
+        if (autocomplete !== null) {
+            const place = autocomplete.getPlace();
+            if (place.geometry && place.geometry.location) {
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
+
+                setSearchCoords({ lat, lng });
+                const locationName = place.formatted_address || place.name;
+                setSearchInputValue(locationName);
+                setFilters(prev => ({ ...prev, location: locationName }));
+
+                if (mapRef.current) {
+                    mapRef.current.panTo({ lat, lng });
+                    mapRef.current.setZoom(14);
+                }
+            }
+        }
+    };
 
     const fetchRooms = useCallback(async () => {
         try {
@@ -90,9 +96,8 @@ const SearchRooms = ({ user }) => {
             setError(null);
 
             // Center map on search coordinates if available
-            if (searchCoords && map) {
-                map.panTo(searchCoords);
-                map.setZoom(14);
+            if (searchCoords && mapRef.current) {
+                mapRef.current.panTo({ lat: searchCoords.lat, lng: searchCoords.lng });
             }
         } catch (err) {
             setError('Failed to load rooms. Please try again.');
@@ -100,7 +105,7 @@ const SearchRooms = ({ user }) => {
         } finally {
             setLoading(false);
         }
-    }, [filters, searchCoords, map]);
+    }, [filters, searchCoords]);
 
     useEffect(() => {
         fetchRooms();
@@ -134,27 +139,16 @@ const SearchRooms = ({ user }) => {
             }
         });
         setSearchCoords(null);
+        setSearchInputValue('');
     };
 
-    const onPlaceChanged = () => {
-        if (autocompleteRef.current !== null) {
-            const place = autocompleteRef.current.getPlace();
-            if (place && place.geometry) {
-                const lat = place.geometry.location.lat();
-                const lng = place.geometry.location.lng();
-                setSearchCoords({ lat, lng });
-                setFilters(prev => ({ ...prev, location: place.formatted_address || place.name }));
-            }
-        }
-    };
-
-    const onLoad = useCallback(function callback(map) {
-        setMap(map);
-    }, []);
-
-    const onUnmount = useCallback(function callback(map) {
-        setMap(null);
-    }, []);
+    if (!isLoaded) {
+        return (
+            <div className="flex justify-center items-center h-screen bg-gray-50">
+                <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -170,6 +164,7 @@ const SearchRooms = ({ user }) => {
                         window.location.href = '/';
                     }}
                 />
+
                 {/* Main Content area */}
                 <div className="flex-1 overflow-auto p-8">
                     {/* Filters Section */}
@@ -177,38 +172,25 @@ const SearchRooms = ({ user }) => {
                         <div className="filters-title">Search Filters</div>
 
                         <div className="filters-grid">
-                            {/* Location */}
+                            {/* Location - Google Autocomplete */}
                             <div className="filter-group">
                                 <label>Location</label>
                                 <div className="relative">
-                                    <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
-                                    {isLoaded ? (
-                                        <Autocomplete
-                                            onLoad={ref => autocompleteRef.current = ref}
-                                            onPlaceChanged={onPlaceChanged}
-                                            options={CONFIG.MAP_BOUNDS ? {
-                                                bounds: CONFIG.MAP_BOUNDS,
-                                                componentRestrictions: { country: 'np' },
-                                                fields: ['geometry', 'formatted_address', 'name']
-                                            } : { componentRestrictions: { country: 'np' } }}
-                                        >
+                                    <Autocomplete
+                                        onLoad={onAutocompleteLoad}
+                                        onPlaceChanged={onPlaceChanged}
+                                    >
+                                        <div className="relative">
+                                            <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
                                             <input
                                                 type="text"
                                                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition"
-                                                placeholder="Search in Dharan or Itahari..."
-                                                value={filters.location}
-                                                onChange={(e) => handleFilterChange('location', e.target.value)}
+                                                placeholder="Search location..."
+                                                value={searchInputValue}
+                                                onChange={(e) => setSearchInputValue(e.target.value)}
                                             />
-                                        </Autocomplete>
-                                    ) : (
-                                        <input
-                                            type="text"
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition"
-                                            placeholder="Enter location..."
-                                            value={filters.location}
-                                            onChange={(e) => handleFilterChange('location', e.target.value)}
-                                        />
-                                    )}
+                                        </div>
+                                    </Autocomplete>
                                 </div>
                             </div>
 
@@ -352,7 +334,7 @@ const SearchRooms = ({ user }) => {
                                 Search Results <span className="text-blue-600 text-sm font-bold ml-2">({rooms.length} rooms found)</span>
                             </h2>
 
-                            <div className="flex-1 overflow-auto pr-2 space-y-4">
+                            <div className="flex-1 overflow-auto pr-2 space-y-4 rooms-list">
                                 {loading ? (
                                     <div className="flex items-center justify-center h-full">
                                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -379,7 +361,6 @@ const SearchRooms = ({ user }) => {
                                                             {room.status === 'Rented' && (
                                                                 <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded w-fit uppercase">RENTED</span>
                                                             )}
-
                                                         </div>
                                                         <div className="text-blue-600 font-bold text-sm">NPR {parseFloat(room.price).toLocaleString()}/m</div>
                                                     </div>
@@ -413,86 +394,66 @@ const SearchRooms = ({ user }) => {
 
                         <div className="flex flex-col overflow-hidden">
                             <h2 className="text-xl font-bold text-gray-800 mb-4">Map View</h2>
-                            <div className="flex-1 rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-200">
-                                {isLoaded ? (
-                                    <GoogleMap
-                                        mapContainerStyle={mapContainerStyle}
-                                        center={center}
-                                        zoom={15}
-                                        onLoad={onLoad}
-                                        onUnmount={onUnmount}
-                                        options={mapOptions}
-                                    >
-                                        {rooms.map(room => (
-                                            (room.latitude && room.longitude) && (
-                                                <Marker
-                                                    key={room.id}
-                                                    position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                                    onClick={() => setSelectedRoom(room)}
-                                                    icon={{
-                                                        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                                                    }}
-                                                    animation={window.google?.maps.Animation.DROP}
-                                                />
-                                            )
-                                        ))}
+                            <div className="flex-1 rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-200 relative">
+                                <GoogleMap
+                                    mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '16px' }}
+                                    center={center}
+                                    zoom={14}
+                                    onLoad={onMapLoad}
+                                    options={{
+                                        disableDefaultUI: true,
+                                        zoomControl: true,
+                                        fullscreenControl: false,
+                                        streetViewControl: false,
+                                        mapTypeControl: false
+                                    }}
+                                >
+                                    {rooms.map(room => (
+                                        (room.latitude && room.longitude) && (
+                                            <Marker
+                                                key={room.id}
+                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                onClick={() => setSelectedRoom(room)}
+                                            />
+                                        )
+                                    ))}
 
-                                        {selectedRoom && (
-                                            <InfoWindow
-                                                position={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
-                                                onCloseClick={() => setSelectedRoom(null)}
-                                            >
-                                                <div className="p-2 min-w-[200px]">
-                                                    <img
-                                                        src={selectedRoom.images?.[0]?.image ? getMediaUrl(selectedRoom.images[0].image) : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=200'}
-                                                        className="w-full h-24 object-cover rounded-lg mb-2"
-                                                        alt=""
-                                                    />
-                                                    <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{selectedRoom.title}</h4>
-                                                    <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
-                                                    <p className="text-gray-500 text-[10px] mt-1 flex items-center gap-1">
-                                                        <MapPin className="w-3 h-3" />
-                                                        {selectedRoom.location}
-                                                    </p>
-                                                    <Link to={`/room/${selectedRoom.id}`} className="block mt-3 text-center py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100">
-                                                        View Details
-                                                    </Link>
-                                                </div>
-                                            </InfoWindow>
-                                        )}
-                                    </GoogleMap>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                        <Search size={48} className="mb-4 opacity-20" />
-                                        <p className="text-sm font-medium">Google Maps loading...</p>
-                                    </div>
-                                )}
+                                    {selectedRoom && (
+                                        <InfoWindow
+                                            position={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
+                                            onCloseClick={() => setSelectedRoom(null)}
+                                        >
+                                            <div className="p-2 min-w-[200px]">
+                                                <img
+                                                    src={selectedRoom.images?.[0]?.image ? getMediaUrl(selectedRoom.images[0].image) : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=200'}
+                                                    className="w-full h-24 object-cover rounded-lg mb-2"
+                                                    alt=""
+                                                />
+                                                <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{selectedRoom.title}</h4>
+                                                <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
+                                                <p className="text-gray-500 text-[10px] mt-1 flex items-center gap-1">
+                                                    <MapPin className="w-3 h-3" />
+                                                    {selectedRoom.location}
+                                                </p>
+                                                <Link to={`/room/${selectedRoom.id}`} className="block mt-3 text-center py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100">
+                                                    View Details
+                                                </Link>
+                                            </div>
+                                        </InfoWindow>
+                                    )}
+                                </GoogleMap>
                             </div>
                         </div>
                     </div>
-                    <Footer />
                 </div>
+                <Footer />
             </div>
         </div>
     );
 };
 
+// Styles for custom elements like filters
 const styles = `
-.search-rooms-container {
-  padding: 0;
-  background-color: #f8fafc;
-  min-height: 100vh;
-  color: #1e293b;
-}
-
-.search-rooms-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-/* Filters Card */
 .search-filters-card {
   background: white;
   border-radius: 20px;
@@ -500,26 +461,22 @@ const styles = `
   border: 1px solid #f1f5f9;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
-
 .filters-title {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 20px;
   color: #1e293b;
 }
-
 .filters-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
-
 .filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
-
 .filter-group label {
   font-size: 12px;
   font-bold: 700;
@@ -527,13 +484,10 @@ const styles = `
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-
-/* Price Slider */
 .price-slider-container {
   display: flex;
   flex-direction: column;
 }
-
 .price-slider {
   width: 100%;
   height: 6px;
@@ -543,7 +497,6 @@ const styles = `
   cursor: pointer;
   margin-top: 8px;
 }
-
 .price-slider::-webkit-slider-thumb {
   appearance: none;
   width: 18px;
@@ -553,30 +506,23 @@ const styles = `
   border: 3px solid white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
-/* Results and Map Grid */
 .rooms-list::-webkit-scrollbar {
   width: 6px;
 }
-
 .rooms-list::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .rooms-list::-webkit-scrollbar-thumb {
   background: #e2e8f0;
   border-radius: 10px;
 }
-
 .rooms-list::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }
-
 .gm-style-iw {
   border-radius: 12px !important;
   padding: 0 !important;
 }
-
 .gm-style-iw-d {
   overflow: hidden !important;
 }

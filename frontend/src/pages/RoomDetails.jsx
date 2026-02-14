@@ -1,92 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, MapPin, Navigation, School, Hospital, Utensils, ShoppingBag, Shield, Check, Info, Clock, ChevronRight, MessageSquare, Phone, Mail, Link as LinkIcon, Facebook, Instagram, Twitter, Wifi, Wind, Tv, User, Calendar, ShieldCheck, ArrowLeft, Loader } from 'lucide-react';
-import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
+import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation } from 'lucide-react';
+import { GoogleMap, Marker, Circle } from '@react-google-maps/api';
+import { useMapContext } from '../context/MapContext';
 import Sidebar from './sidebar';
-import TenantSidebar from '../components/TenantSidebar';
+import TenantSidebar from './TenantNavbar';
 import TenantHeader from '../components/TenantHeader';
-import Footer from '../components/Footer';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
-import { chatService } from '../services/chatService';
-import { visitService } from '../services/tenantService'; // Added import
+import { visitService } from '../services/tenantService';
 import { getMediaUrl, ROUTES } from '../constants/api';
-import { CONFIG, GOOGLE_MAPS_API_KEY } from '../constants/config';
-import { useMapContext } from '../context/MapContext';
+import { CONFIG } from '../constants/config';
 
-const mapContainerStyle = {
-    width: '100%',
-    height: '250px',
-    borderRadius: '16px',
-};
+// Icons will be defined inside component or safely updated
+const ICON_BASE_URL = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/';
 
 const RoomDetails = ({ user }) => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { isLoaded } = useMapContext();
+
     const [room, setRoom] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [bookingDate, setBookingDate] = useState('');
+    const [bookingEndDate, setBookingEndDate] = useState('');
     const [nearbyPlaces, setNearbyPlaces] = useState([]);
-    const [map, setMap] = useState(null);
-    const [showInfoWindow, setShowInfoWindow] = useState(false);
-    const [selectedNearby, setSelectedNearby] = useState(null);
 
-    // Visit Modal State
+    // Visit Request State
     const [showVisitModal, setShowVisitModal] = useState(false);
-    const [visitLoading, setVisitLoading] = useState(false);
-    const [visitData, setVisitData] = useState({ date: '', time: '', purpose: 'Room viewing' });
+    const [visitDate, setVisitDate] = useState('');
+    const [visitTime, setVisitTime] = useState('');
+    const [visitNote, setVisitNote] = useState('');
 
-    // Booking Form State
-    const [bookingDates, setBookingDates] = useState({
-        startDate: '',
-        endDate: '',
-    });
-    const [bookingLoading, setBookingLoading] = useState(false);
-
-    const [userBooking, setUserBooking] = useState(null);
-    const [reviews, setReviews] = useState([]);
-    const [reviewLoading, setReviewLoading] = useState(false);
-    const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
-    const { isLoaded } = useMapContext();
-
-    const fetchRoomReviews = async () => {
+    const fetchCurrentlyNearbyPlaces = async (lat, lng) => {
+        // Use Overpass API to get nearby amenities
+        const query = `
+            [out:json];
+            (
+              node["amenity"="restaurant"](around:2000, ${lat}, ${lng});
+              node["amenity"="cafe"](around:2000, ${lat}, ${lng});
+              node["amenity"="hospital"](around:2000, ${lat}, ${lng});
+              node["amenity"="school"](around:2000, ${lat}, ${lng});
+              node["shop"="supermarket"](around:2000, ${lat}, ${lng});
+              node["shop"="mall"](around:2000, ${lat}, ${lng});
+            );
+            out body 20;
+        `;
         try {
-            const data = await roomService.getRoomReviews(id);
-            setReviews(data);
-        } catch (err) {
-            console.error("Failed to fetch reviews", err);
-        }
-    };
-
-    const handleReviewSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            setReviewLoading(true);
-            await roomService.addRoomReview({
-                room: parseInt(id),
-                rating: newReview.rating,
-                comment: newReview.comment
-            });
-            setNewReview({ rating: 5, comment: '' });
-            fetchRoomReviews();
-            fetchRoomDetails(); // Refresh room to get updated average rating
-            alert('Review posted successfully!');
-        } catch (err) {
-            console.error(err);
-            alert('Failed to post review: ' + err.message);
-        } finally {
-            setReviewLoading(false);
-        }
-    };
-
-    const fetchUserBooking = async () => {
-        try {
-            const bookings = await bookingService.getAllBookings();
-            const currentBooking = bookings.find(b => b.room.id === parseInt(id));
-            setUserBooking(currentBooking);
-        } catch (err) {
-            console.error("Failed to fetch user booking status", err);
+            const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            const places = data.elements.map(element => ({
+                id: element.id,
+                name: element.tags.name || 'Unknown Place',
+                lat: element.lat,
+                lon: element.lon,
+                type: element.tags.amenity || element.tags.shop || 'unknown',
+                address: element.tags['addr:street'] ? `${element.tags['addr:street']}, ${element.tags['addr:city'] || ''}` : 'Nearby',
+                rating: (Math.random() * 2 + 3).toFixed(1) // Mock rating
+            }));
+            setNearbyPlaces(places);
+        } catch (error) {
+            console.error("Error fetching nearby places:", error);
         }
     };
 
@@ -95,6 +72,9 @@ const RoomDetails = ({ user }) => {
             setLoading(true);
             const data = await roomService.getRoomById(id);
             setRoom(data);
+            if (data.latitude && data.longitude) {
+                fetchCurrentlyNearbyPlaces(data.latitude, data.longitude);
+            }
         } catch (err) {
             console.error(err);
             setError("Failed to load room details.");
@@ -105,616 +85,508 @@ const RoomDetails = ({ user }) => {
 
     useEffect(() => {
         fetchRoomDetails();
-        fetchRoomReviews();
-        if (user && user.role === 'Tenant') {
-            fetchUserBooking();
-        }
-    }, [id, user]);
+    }, [id]);
 
-    useEffect(() => {
-        if (room && isLoaded && map) {
-            fetchNearbyPlaces();
-        }
-    }, [room, isLoaded, map]);
-
-    const fetchNearbyPlaces = () => {
-        if (!window.google || !room.latitude || !room.longitude || !map) return;
-
-        const service = new window.google.maps.places.PlacesService(map);
-        const location = new window.google.maps.LatLng(parseFloat(room.latitude), parseFloat(room.longitude));
-
-        const types = ['university', 'hospital', 'shopping_mall', 'store', 'point_of_interest'];
-
-        service.nearbySearch(
-            {
-                location: location,
-                radius: 1500,
-                type: types
-            },
-            (results, status) => {
-                if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-                    const formattedPlaces = results.slice(0, 10).map(place => ({
-                        id: place.place_id,
-                        name: place.name,
-                        type: place.types[0],
-                        rating: place.rating,
-                        address: place.vicinity,
-                        location: {
-                            lat: place.geometry.location.lat(),
-                            lng: place.geometry.location.lng()
-                        }
-                    }));
-                    setNearbyPlaces(formattedPlaces);
-                }
-            }
-        );
-    };
-
-    const handleBookingRequest = async (e) => {
+    const handleBooking = async (e) => {
         e.preventDefault();
         try {
-            setBookingLoading(true);
-
-            // Calculate rent roughly? Or backend handles it. 
-            // We need to send monthly_rent. Usually same as room price.
-            // But if it is partial month? For now, we assume monthly_rent = room.price
-
             await bookingService.createBooking({
                 room_id: room.id,
-                start_date: bookingDates.startDate,
-                end_date: bookingDates.endDate,
+                start_date: bookingDate,
+                end_date: bookingEndDate,
                 monthly_rent: room.price
             });
-
-            alert('Booking requested successfully! Waiting for owner approval.');
+            alert("Booking request sent successfully!");
             setShowBookingModal(false);
-            navigate(ROUTES.TENANT_BOOKINGS); // Redirect to bookings page
-
         } catch (err) {
             console.error(err);
-            alert('Failed to request booking: ' + err.message);
-        } finally {
-            setBookingLoading(false);
+            const errorMessage = err.message || "Failed to book room";
+            if (errorMessage.toLowerCase().includes('verification') || errorMessage.toLowerCase().includes('identity')) {
+                if (window.confirm(`${errorMessage}\n\nWould you like to verify your identity now?`)) {
+                    navigate(ROUTES.VERIFICATION_REQUEST);
+                }
+            } else {
+                alert(errorMessage);
+            }
         }
     };
-
-    if (loading) return (
-        <div className="flex h-screen items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-    );
-
-    if (!room) return (
-        <div className="flex h-screen items-center justify-center">
-            <p>Room not found.</p>
-        </div>
-    );
-
-    const mainImage = room.images && room.images.length > 0
-        ? getMediaUrl(room.images[0].image)
-        : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop';
 
     const handleVisitRequest = async (e) => {
         e.preventDefault();
         try {
-            setVisitLoading(true);
             await visitService.createVisit({
                 room_id: room.id,
-                owner_id: room.owner.id, // Mandatory field fix
-                visit_date: visitData.date,
-                visit_time: visitData.time,
-                purpose: visitData.purpose
+                owner_id: room.owner.id,
+                visit_date: visitDate,
+                visit_time: visitTime,
+                purpose: 'Room Viewing',
+                notes: visitNote
             });
-            alert('Visit requested successfully! Waiting for owner approval.');
+            alert("Visit request scheduled successfully!");
             setShowVisitModal(false);
-            navigate(ROUTES.TENANT_VISITS || '/tenant/visits');
+            setVisitDate('');
+            setVisitTime('');
+            setVisitNote('');
         } catch (err) {
             console.error(err);
-            alert('Failed to request visit: ' + err.message);
-        } finally {
-            setVisitLoading(false);
+            const errorMessage = err.message || "Failed to schedule visit";
+            if (errorMessage.toLowerCase().includes('verification') || errorMessage.toLowerCase().includes('identity')) {
+                if (window.confirm(`${errorMessage}\n\nWould you like to verify your identity now?`)) {
+                    navigate(ROUTES.VERIFICATION_REQUEST);
+                }
+            } else {
+                alert(errorMessage);
+            }
         }
     };
 
-    const isOwner = user?.role === 'Owner' || user?.role === 'owner';
-    const SidebarComponent = isOwner ? Sidebar : TenantSidebar;
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
+
+    if (error || !room) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+                <p className="text-red-500 font-bold">{error || "Room not found"}</p>
+                <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline">
+                    Go Back
+                </button>
+            </div>
+        );
+    }
+
+    const amenitiesList = room.amenities ? room.amenities.split(',') : [];
+
+    // Helper to get custom SVG marker with white icon inside colored pin
+    const getIcon = (type) => {
+        if (!window.google) return null;
+
+        let color = '#3B82F6'; // Default Blue
+        let labelIcon = '•';
+
+        // Define colors and icons based on type
+        if (type.includes('restaurant') || type.includes('food') || type.includes('cafe')) {
+            color = '#F97316'; // Orange
+            labelIcon = '🍽️';
+        } else if (type.includes('hospital') || type.includes('health')) {
+            color = '#EF4444'; // Red
+            labelIcon = '🏥';
+        } else if (type.includes('school') || type.includes('education') || type.includes('university')) {
+            color = '#10B981'; // Green
+            labelIcon = '🎓';
+        } else if (type.includes('shopping') || type.includes('mall') || type.includes('supermarket')) {
+            color = '#8B5CF6'; // Purple
+            labelIcon = '🛍️';
+        } else if (type === 'main') {
+            color = '#DC2626'; // Dark Red for Room
+            labelIcon = '🏠';
+        }
+
+        // SVG Path for a Pin
+        const pinPath = "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z";
+
+        return {
+            path: pinPath,
+            fillColor: color,
+            fillOpacity: 1,
+            strokeWeight: 1,
+            strokeColor: '#FFFFFF',
+            scale: 2, // Bigger scale to fit the label
+            labelOrigin: new window.google.maps.Point(12, 10), // Center label in the pin head
+            anchor: new window.google.maps.Point(12, 22)
+        };
+    };
+
+    // Helper to get Label for the icon
+    const getLabel = (type) => {
+        if (!window.google) return null;
+
+        let labelIcon = '•';
+        if (type.includes('restaurant') || type.includes('food') || type.includes('cafe')) labelIcon = '🍽️';
+        else if (type.includes('hospital') || type.includes('health')) labelIcon = '🏥';
+        else if (type.includes('school') || type.includes('university')) labelIcon = '🎓';
+        else if (type.includes('shopping') || type.includes('mall') || type.includes('supermarket')) labelIcon = '🛍️';
+        else if (type === 'main') labelIcon = '🏠';
+
+        return {
+            text: labelIcon,
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: '14px', // Adjust size to fit in the pin
+        };
+    };
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
-            <SidebarComponent user={user} />
-
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TenantHeader
-                    user={user}
-                    title="Room Details"
-                    subtitle={room?.title || 'Listing Details'}
-                    onLogout={() => {
-                        localStorage.removeItem('user');
-                        window.location.href = '/';
-                    }}
-                />
-                <div className="flex-1 overflow-auto p-8">
-                    {/* Header */}
-                    <div className="bg-white border-b px-8 py-4 sticky top-0 z-10 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition">
-                                <ArrowLeft size={20} />
-                            </button>
-                            <h1 className="text-xl font-bold text-gray-800">Room Details</h1>
-                        </div>
-                        {(!user?.is_identity_verified && user?.role !== 'Admin') && (
-                            <div className={`flex-1 max-w-md mx-6 border-l-4 p-2 flex items-center gap-2 ${user?.identity_document ? 'bg-blue-50 border-blue-500' : 'bg-yellow-100 border-yellow-500'}`}>
-                                <ShieldCheck className={`w-4 h-4 ${user?.identity_document ? 'text-blue-600' : 'text-yellow-600'}`} />
-                                <p className={`text-[10px] font-medium ${user?.identity_document ? 'text-blue-700' : 'text-yellow-700'}`}>
-                                    {user?.identity_document
-                                        ? 'Identity document pending admin approval. You can book once verified.'
-                                        : 'Identity document missing. Please upload your Citizenship/ID in the Profile to book.'}
-                                </p>
+        <div className="min-h-screen bg-gray-50 font-sans">
+            {/* Dynamic Sidebar/Navbar based on role */}
+            {user?.role === 'Tenant' ? (
+                <>
+                    <TenantHeader user={user} />
+                    <div className="flex">
+                        <TenantSidebar user={user} />
+                        <main className="flex-1 p-8 ml-64 mt-16">
+                            {renderContent()}
+                        </main>
+                    </div>
+                </>
+            ) : (
+                <div className="flex">
+                    <Sidebar user={user} />
+                    <main className="flex-1 p-8 ml-64">
+                        {renderContent()}
+                    </main>
+                </div>
+            )}
+            {/* Modals */}
+            {showBookingModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                    <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md m-4">
+                        <h3 className="text-xl font-bold mb-4 text-gray-900">Book {room.title}</h3>
+                        <form onSubmit={handleBooking} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Move-in Date</label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={bookingDate}
+                                    onChange={(e) => setBookingDate(e.target.value)}
+                                />
                             </div>
-                        )}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Move-out Date</label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={bookingEndDate}
+                                    onChange={(e) => setBookingEndDate(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBookingModal(false)}
+                                    className="flex-1 px-4 py-2.5 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                                >
+                                    Confirm Booking
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showVisitModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                    <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md m-4">
+                        <h3 className="text-xl font-bold mb-4 text-gray-900">Schedule a Visit</h3>
+                        <form onSubmit={handleVisitRequest} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={visitDate}
+                                    onChange={(e) => setVisitDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                <input
+                                    type="time"
+                                    required
+                                    className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={visitTime}
+                                    onChange={(e) => setVisitTime(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Note (Optional)</label>
+                                <textarea
+                                    className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                                    value={visitNote}
+                                    onChange={(e) => setVisitNote(e.target.value)}
+                                    placeholder="Any specific questions or preferences..."
+                                />
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowVisitModal(false)}
+                                    className="flex-1 px-4 py-2.5 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                                >
+                                    Schedule Visit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    function renderContent() {
+        return (
+            <div className="max-w-6xl mx-auto">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 font-medium transition-colors w-fit px-4 py-2 hover:bg-white rounded-lg"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                    Back to Listings
+                </button>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column - Images & Main Info */}
+                    <div className="lg:col-span-2 space-y-8">
+                        {/* Image Gallery */}
+                        <div className="bg-white rounded-3xl p-2 shadow-sm border border-gray-100 dark:border-gray-800">
+                            <div className="aspect-video w-full rounded-2xl overflow-hidden bg-gray-100 relative group">
+                                <img
+                                    src={getMediaUrl(room.images[activeImageIndex]?.image)}
+                                    alt={room.title}
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = 'https://via.placeholder.com/800x600?text=Room+Image';
+                                    }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+
+                            {room.images && room.images.length > 1 && (
+                                <div className="grid grid-cols-5 gap-2 mt-2 px-2 pb-2">
+                                    {room.images.map((img, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setActiveImageIndex(index)}
+                                            className={`aspect-video rounded-lg overflow-hidden border-2 transition-all ${activeImageIndex === index
+                                                ? 'border-blue-600 ring-2 ring-blue-100'
+                                                : 'border-transparent opacity-70 hover:opacity-100'
+                                                }`}
+                                        >
+                                            <img
+                                                src={getMediaUrl(img.image)}
+                                                alt={`View ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Title & Price Header */}
+                        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider rounded-full">
+                                            Available Now
+                                        </span>
+                                        <div className="flex items-center gap-1 text-yellow-500">
+                                            <Star className="w-4 h-4 fill-current" />
+                                            <span className="text-sm font-bold text-gray-900">4.8</span>
+                                            <span className="text-gray-400 text-xs">(24 reviews)</span>
+                                        </div>
+                                    </div>
+                                    <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">{room.title}</h1>
+                                    <p className="flex items-center gap-2 text-gray-500 font-medium">
+                                        <MapPin className="w-4 h-4 text-blue-500" />
+                                        {room.location}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-3xl font-black text-blue-600">
+                                        NPR {parseFloat(room.price).toLocaleString()}
+                                    </div>
+                                    <p className="text-gray-400 text-sm font-medium">per month</p>
+                                </div>
+                            </div>
+
+                            <hr className="my-8 border-gray-100" />
+
+                            {/* Amenities */}
+                            <div className="mb-8">
+                                <h3 className="font-bold text-gray-900 mb-4 px-2">Amenities</h3>
+                                <div className="flex flex-wrap gap-3">
+                                    {amenitiesList.map((amenity, index) => (
+                                        <div key={index} className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-xl text-gray-700 font-bold text-sm border border-gray-100">
+                                            {amenity.toLowerCase().includes('wifi') && <Wifi className="w-4 h-4 text-blue-500" />}
+                                            {amenity.toLowerCase().includes('tv') && <Tv className="w-4 h-4 text-blue-500" />}
+                                            {amenity.toLowerCase().includes('ac') && <Wind className="w-4 h-4 text-blue-500" />}
+                                            <span>{amenity.trim()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                            <h3 className="font-bold text-gray-900 mb-4">Description</h3>
+                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                                {room.description}
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="p-8 max-w-7xl mx-auto w-full pb-24">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* Left Column: Images & Info */}
-                            <div className="lg:col-span-2 space-y-6">
-                                {/* Images & Details (unchanged) */}
-                                {/* ... (Keep existing image/details structure) ... */}
-                                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-                                    <img src={mainImage} alt={room.title} className="w-full h-80 object-cover" />
+                    {/* Right Column - Booking & Map */}
+                    <div className="space-y-6">
+                        {/* Action Card */}
+                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
+                            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold text-gray-400">
+                                    {room.owner_name ? room.owner_name[0] : <User className="w-6 h-6" />}
                                 </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Listed by</p>
+                                    <p className="font-bold text-gray-900">{room.owner_name || 'Owner'}</p>
+                                </div>
+                            </div>
 
-                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                                    <h2 className="text-2xl font-bold text-gray-900">{room.title}</h2>
-                                    <div className="flex items-center justify-between mt-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex gap-0.5">
-                                                {[1, 2, 3, 4, 5].map(i => (
-                                                    <Star key={i} size={16} fill={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "none"} color={i <= Math.round(room.average_rating || 0) ? "#FBBF24" : "#D1D5DB"} />
-                                                ))}
-                                            </div>
-                                            <span className="text-sm text-gray-500 font-bold">
-                                                {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0} reviews)
-                                            </span>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-2xl font-black text-blue-600">NPR {parseFloat(room.price).toLocaleString()}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Per Month</div>
-                                        </div>
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => setShowBookingModal(true)}
+                                    className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] flex items-center justify-center gap-2"
+                                >
+                                    <Calendar className="w-5 h-5" />
+                                    Request to Book
+                                </button>
+                                <button
+                                    onClick={() => setShowVisitModal(true)}
+                                    className="w-full py-4 bg-white text-gray-900 border-2 border-gray-100 font-bold rounded-2xl hover:bg-gray-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                >
+                                    <ShieldCheck className="w-5 h-5 text-gray-400" />
+                                    Schedule Visit
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Map Configuration */}
+                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                            <h3 className="font-bold text-gray-900 mb-4 px-2 tracking-tight">Location & Surroundings</h3>
+                            {room.latitude && isLoaded ? (
+                                <div className="space-y-4">
+                                    <div className="h-80 rounded-xl overflow-hidden border border-gray-100 relative z-0">
+                                        <GoogleMap
+                                            mapContainerStyle={{ width: '100%', height: '100%' }}
+                                            center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                            zoom={14}
+                                            options={{
+                                                disableDefaultUI: true,
+                                                zoomControl: true,
+                                                scrollwheel: false
+                                            }}
+                                        >
+                                            {/* Room Marker */}
+                                            <Marker
+                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                icon={getIcon('main')}
+                                                label={getLabel('main')}
+                                                zIndex={100}
+                                            />
+
+                                            {/* Radius Circle */}
+                                            <Circle
+                                                center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                radius={2000}
+                                                options={{
+                                                    fillColor: '#3B82F6',
+                                                    fillOpacity: 0.08,
+                                                    strokeColor: '#3B82F6',
+                                                    strokeOpacity: 0.3,
+                                                    strokeWeight: 1,
+                                                    clickable: false
+                                                }}
+                                            />
+
+                                            {/* Nearby Places Markers */}
+                                            {nearbyPlaces.map(place => (
+                                                <Marker
+                                                    key={place.id}
+                                                    position={{ lat: place.lat, lng: place.lon }}
+                                                    icon={getIcon(place.type)}
+                                                    label={getLabel(place.type)}
+                                                    title={place.name}
+                                                />
+                                            ))}
+                                        </GoogleMap>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-4">
-                                        {room.status === 'Rented' ? (
-                                            <div className="inline-flex items-center gap-1 bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                                Rented
-                                            </div>
-                                        ) : (
-                                            <div className="inline-flex items-center gap-1 bg-green-50 text-green-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                                Available
-                                            </div>
-                                        )}
 
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 mt-8">
-                                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                            <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-3">Property Specs</h3>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">Type</span> <span className="font-bold">{room.room_type}</span></div>
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">Toilet</span> <span className="font-bold text-blue-600">{room.toilet_type}</span></div>
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">Floor</span> <span className="font-bold">{room.floor || 'Ground'}</span></div>
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">Deposit</span> <span className="font-bold text-green-600">NPR {parseFloat(room.deposit || 0).toLocaleString()}</span></div>
-                                            </div>
-                                        </div>
-                                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                            <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-3">Matching Prefs</h3>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">For</span> <span className="font-bold text-blue-600">{room.preferred_tenant}</span></div>
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">Gender</span> <span className="font-bold">{room.gender_preference}</span></div>
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">Electricity</span> <span className="font-bold">{room.electricity_backup || 'None'}</span></div>
-                                                <div className="flex justify-between text-sm"><span className="text-gray-500">Available</span> <span className="font-bold">{room.available_from || 'Now'}</span></div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-8">
-                                        <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-4">House Rules</h3>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <RuleItem label="Cooking" allowed={room.cooking_allowed} />
-                                            <RuleItem label="Smoking" allowed={room.smoking_allowed} />
-                                            <RuleItem label="Drinking" allowed={room.drinking_allowed} />
-                                            <RuleItem label="Pets" allowed={room.pets_allowed} />
-                                            <RuleItem label="Visitors" allowed={room.visitor_allowed} />
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-8">
-                                        <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-4">Amenities</h3>
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                            {room.wifi && <Amenity icon={Wifi} label="WiFi" />}
-                                            {room.parking && <Amenity icon={User} label="Parking" />}
-                                            {room.water_supply && <Amenity icon={ShieldCheck} label="Water Supply" />}
-                                            {room.kitchen_access && <Amenity icon={ShieldCheck} label="Kitchen" />}
-                                            {room.furnished && <Amenity icon={ShieldCheck} label="Furnished" />}
-                                        </div>
-                                    </div>
-
-                                    {/* Reviews Section */}
-                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-6">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-xl font-bold text-gray-900">Reviews ({reviews.length})</h3>
-                                        </div>
-
-                                        {user?.role === 'Tenant' && userBooking && (userBooking.status === 'Confirmed' || userBooking.status === 'Completed' || userBooking.status === 'Active') && !reviews.some(r => r.tenant?.id === user?.id) && (
-                                            <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                                <h4 className="font-bold text-gray-900 mb-2">Write a Review</h4>
-                                                <form onSubmit={handleReviewSubmit} className="space-y-4">
-                                                    <div className="flex gap-2">
-                                                        {[1, 2, 3, 4, 5].map(star => (
-                                                            <button
-                                                                key={star}
-                                                                type="button"
-                                                                onClick={() => setNewReview({ ...newReview, rating: star })}
-                                                                className={`${newReview.rating >= star ? 'text-yellow-500' : 'text-gray-300'} transition-colors`}
-                                                            >
-                                                                <Star size={24} fill={newReview.rating >= star ? 'currentColor' : 'none'} />
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                    <textarea
-                                                        required
-                                                        className="w-full p-3 border rounded-xl bg-white text-sm"
-                                                        placeholder="Share your experience..."
-                                                        value={newReview.comment}
-                                                        onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                                                        rows="3"
-                                                    ></textarea>
-                                                    <button
-                                                        type="submit"
-                                                        disabled={reviewLoading}
-                                                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition disabled:opacity-50"
-                                                    >
-                                                        {reviewLoading ? 'Posting...' : 'Submit Review'}
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-6">
-                                            {reviews.length > 0 ? (
-                                                reviews.map(review => (
-                                                    <div key={review.id} className="pb-6 border-b last:border-0 last:pb-0">
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                                                    {review.tenant?.full_name?.[0] || 'T'}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-bold text-sm text-gray-900">{review.tenant?.full_name || 'Tenant'}</p>
-                                                                    <p className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex gap-0.5">
-                                                                {[...Array(5)].map((_, i) => (
-                                                                    <Star
-                                                                        key={i}
-                                                                        size={14}
-                                                                        className={i < review.rating ? 'text-yellow-500' : 'text-gray-300'}
-                                                                        fill={i < review.rating ? 'currentColor' : 'none'}
-                                                                    />
-                                                                ))}
-                                                            </div>
+                                    {/* Nearby Places List */}
+                                    <div className="mt-6 pt-6 border-t border-gray-50">
+                                        <h4 className="text-[10px] font-black text-gray-400 mb-4 uppercase tracking-widest flex items-center gap-2">
+                                            <Navigation className="w-3.5 h-3.5 text-blue-500" />
+                                            Surroundings (Within 2KM)
+                                        </h4>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {nearbyPlaces.length > 0 ? (
+                                                nearbyPlaces.map(place => (
+                                                    <div key={place.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-md transition-all duration-300 group">
+                                                        <div className="w-9 h-9 rounded-lg bg-white shadow-sm border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:border-blue-100 transition-colors">
+                                                            {place.type.includes('restaurant') || place.type.includes('food') ? <Utensils className="w-4 h-4 text-orange-500" /> :
+                                                                place.type.includes('hospital') || place.type.includes('health') ? <Hospital className="w-4 h-4 text-red-500" /> :
+                                                                    place.type.includes('shopping') ? <ShoppingBag className="w-4 h-4 text-blue-500" /> :
+                                                                        place.type.includes('school') || place.type.includes('university') ? <School className="w-4 h-4 text-indigo-500" /> :
+                                                                            <MapPin className="w-4 h-4 text-gray-400" />}
                                                         </div>
-                                                        <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex justify-between items-start">
+                                                                <h5 className="font-bold text-gray-900 text-xs truncate">{place.name}</h5>
+                                                                {place.rating && (
+                                                                    <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                                                        <Star className="w-2.5 h-2.5 fill-current" />
+                                                                        {place.rating}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-500 truncate mt-0.5">{place.address}</p>
+                                                            <span className="text-[8px] font-black text-gray-300 uppercase tracking-tighter mt-1 block">
+                                                                {place.type.replace(/_/g, ' ')}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 ))
                                             ) : (
-                                                <p className="text-gray-500 text-center py-4 text-sm">No reviews yet. Be the first to review!</p>
+                                                <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic animate-pulse">Scanning area...</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Right Column: Owner & Booking */}
-                            <div className="space-y-6">
-                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                                    <h3 className="font-bold text-gray-900 mb-4">Landlord</h3>
-                                    {/* Owner Info */}
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg overflow-hidden">
-                                            {room.owner?.profile_photo ? (
-                                                <img src={getMediaUrl(room.owner.profile_photo)} alt={room.owner.full_name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                room.owner?.full_name?.[0] || 'O'
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-gray-900">{room.owner?.full_name || 'Landlord'}</div>
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        await chatService.startConversation(room.owner.id);
-                                                        navigate(ROUTES.CHAT);
-                                                    } catch (err) {
-                                                        console.error(err);
-                                                        alert('Failed to start chat');
-                                                    }
-                                                }}
-                                                className="text-sm text-blue-600 font-bold hover:underline"
-                                            >
-                                                Message Landlord
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col gap-3">
-                                        {/* Debug: {console.log('Room Status:', room.status)} */}
-                                        {(room.status === 'Occupied' || room.status?.toLowerCase() === 'occupied') ? (
-                                            <div className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-bold text-center border border-red-100 flex items-center justify-center gap-2">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                                </svg>
-                                                This room is currently occupied
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <button
-                                                    onClick={() => {
-                                                        if (!user?.is_identity_verified && user?.role !== 'Admin') {
-                                                            const errorMsg = user?.identity_document
-                                                                ? 'Your identity document is pending verification by an administrator.'
-                                                                : 'You must provide an identity document (Citizenship/ID) before requesting a booking.';
-
-                                                            if (confirm(errorMsg + "\n\nClick OK to upload/view your document.")) {
-                                                                navigate(ROUTES.VERIFICATION_REQUEST);
-                                                            }
-                                                            return;
-                                                        }
-                                                        setShowBookingModal(true);
-                                                    }}
-                                                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition"
-                                                >
-                                                    Request to Book
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        if (!user?.is_identity_verified && user?.role !== 'Admin') {
-                                                            const errorMsg = user?.identity_document
-                                                                ? 'Your identity document is pending verification by an administrator.'
-                                                                : 'You must provide an identity document (Citizenship/ID) before scheduling a visit.';
-
-                                                            if (confirm(errorMsg + "\n\nClick OK to upload/view your document.")) {
-                                                                navigate(ROUTES.VERIFICATION_REQUEST);
-                                                            }
-                                                            return;
-                                                        }
-                                                        setShowVisitModal(true);
-                                                    }}
-                                                    className="w-full bg-white text-blue-600 border border-blue-200 py-3 rounded-xl font-bold hover:bg-blue-50 transition"
-                                                >
-                                                    Schedule a Visit
-                                                </button>
-                                                <p className="text-xs text-center text-gray-400 mt-2">
-                                                    Current Status: <span className="font-semibold text-gray-600">{room.status === 'Pending Verification' ? 'Available' : room.status}</span>
-                                                </p>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* Location Map & Nearby Surroundings */}
-                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                                        <h3 className="font-bold text-gray-900 mb-4 tracking-tight flex items-center gap-2">
-                                            <MapPin className="w-5 h-5 text-blue-600" />
-                                            Location & Surroundings
-                                        </h3>
-
-                                        {isLoaded && room.latitude ? (
-                                            <div className="space-y-4">
-                                                <div className="h-64 rounded-xl overflow-hidden border border-gray-100">
-                                                    <GoogleMap
-                                                        mapContainerStyle={{ width: '100%', height: '100%' }}
-                                                        center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                                        zoom={18}
-                                                        onLoad={(mapInstance) => setMap(mapInstance)}
-                                                        options={{
-                                                            disableDefaultUI: false,
-                                                            mapTypeControl: false,
-                                                            streetViewControl: true,
-                                                            styles: [{ "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "off" }] }]
-                                                        }}
-                                                    >
-                                                        <Marker
-                                                            position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                                            animation={window.google?.maps.Animation.DROP}
-                                                            onClick={() => setShowInfoWindow(true)}
-                                                            icon={{
-                                                                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                                                            }}
-                                                        />
-
-                                                        {showInfoWindow && (
-                                                            <InfoWindow
-                                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                                                onCloseClick={() => setShowInfoWindow(false)}
-                                                            >
-                                                                <div className="p-2 max-w-[200px]">
-                                                                    <h4 className="font-bold text-gray-900 text-sm truncate">{room.title}</h4>
-                                                                    <p className="text-blue-600 font-bold text-xs mt-0.5">NPR {parseFloat(room.price).toLocaleString()}/month</p>
-                                                                    <p className="text-gray-500 text-[10px] mt-1 flex items-start gap-1">
-                                                                        <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
-                                                                        {room.location}
-                                                                    </p>
-                                                                </div>
-                                                            </InfoWindow>
-                                                        )}
-
-                                                        {/* Nearby Places Markers */}
-                                                        {nearbyPlaces.map(place => (
-                                                            <Marker
-                                                                key={place.id}
-                                                                position={place.location}
-                                                                icon={{
-                                                                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                                                                }}
-                                                                onClick={() => setSelectedNearby(place)}
-                                                            />
-                                                        ))}
-
-                                                        {selectedNearby && (
-                                                            <InfoWindow
-                                                                position={selectedNearby.location}
-                                                                onCloseClick={() => setSelectedNearby(null)}
-                                                            >
-                                                                <div className="p-2 min-w-[150px]">
-                                                                    <h5 className="font-bold text-gray-900 text-xs">{selectedNearby.name}</h5>
-                                                                    <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-wider">
-                                                                        {selectedNearby.type.replace(/_/g, ' ')}
-                                                                    </p>
-                                                                </div>
-                                                            </InfoWindow>
-                                                        )}
-                                                    </GoogleMap>
-                                                </div>
-
-                                                {/* Nearby Places Discovery */}
-                                                <div className="mt-6 pt-6 border-t border-gray-50">
-                                                    <h4 className="text-[10px] font-black text-gray-400 mb-4 uppercase tracking-widest flex items-center gap-2">
-                                                        <Navigation className="w-3.5 h-3.5 text-blue-500" />
-                                                        Surroundings (Within 2KM)
-                                                    </h4>
-                                                    <div className="grid grid-cols-1 gap-3">
-                                                        {nearbyPlaces.length > 0 ? (
-                                                            nearbyPlaces.map(place => (
-                                                                <div key={place.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-md transition-all duration-300 group">
-                                                                    <div className="w-9 h-9 rounded-lg bg-white shadow-sm border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:border-blue-100 transition-colors">
-                                                                        {place.type.includes('restaurant') || place.type.includes('food') ? <Utensils className="w-4 h-4 text-orange-500" /> :
-                                                                            place.type.includes('hospital') || place.type.includes('health') ? <Hospital className="w-4 h-4 text-red-500" /> :
-                                                                                place.type.includes('shopping') ? <ShoppingBag className="w-4 h-4 text-blue-500" /> :
-                                                                                    place.type.includes('school') || place.type.includes('university') ? <School className="w-4 h-4 text-indigo-500" /> :
-                                                                                        <MapPin className="w-4 h-4 text-gray-400" />}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="flex justify-between items-start">
-                                                                            <h5 className="font-bold text-gray-900 text-xs truncate">{place.name}</h5>
-                                                                            {place.rating && (
-                                                                                <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded text-[9px] font-bold">
-                                                                                    <Star className="w-2.5 h-2.5 fill-current" />
-                                                                                    {place.rating}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        <p className="text-[10px] text-gray-500 truncate mt-0.5">{place.address}</p>
-                                                                        <span className="text-[8px] font-black text-gray-300 uppercase tracking-tighter mt-1 block">
-                                                                            {place.type.replace(/_/g, ' ')}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            ))
-                                                        ) : (
-                                                            <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic animate-pulse">Scanning area...</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="h-40 bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200">
-                                                <MapPin className="w-8 h-8 mb-2 opacity-20" />
-                                                <p className="text-xs font-bold uppercase tracking-widest">Map data unavailable</p>
-                                                <p className="text-[10px] opacity-60 mt-1">Address: {room.location}</p>
-                                            </div>
-                                        )}
-                                    </div>
+                            ) : (
+                                <div className="h-40 bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200">
+                                    <MapPin className="w-8 h-8 mb-2 opacity-20" />
+                                    <p className="text-xs font-bold uppercase tracking-widest">Map data unavailable</p>
+                                    <p className="text-[10px] opacity-60 mt-1">Address: {room.location}</p>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* Visit Modal */}
-            {showVisitModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fade-in">
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Schedule a Visit</h2>
-                        <p className="text-sm text-gray-500 mb-6">Pick a date and time to view the room.</p>
-
-                        <form onSubmit={handleVisitRequest}>
-                            <div className="space-y-4 mb-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        className="w-full p-2 border rounded-xl"
-                                        value={visitData.date}
-                                        onChange={(e) => setVisitData({ ...visitData, date: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Time</label>
-                                    <input
-                                        type="time"
-                                        required
-                                        className="w-full p-2 border rounded-xl"
-                                        value={visitData.time}
-                                        onChange={(e) => setVisitData({ ...visitData, time: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <button type="button" onClick={() => setShowVisitModal(false)} className="flex-1 py-3 text-gray-600 font-bold hover:bg-gray-50 rounded-xl">Cancel</button>
-                                <button type="submit" disabled={visitLoading} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700">{visitLoading ? 'Sending...' : 'Request Visit'}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Booking Modal (Keep existing) */}
-            {showBookingModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    {/* Existing booking modal content */}
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Request Booking</h2>
-                        <form onSubmit={handleBookingRequest}>
-                            {/* Inputs */}
-                            <div className="space-y-4 mb-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Move-in Date</label>
-                                    <input type="date" className="w-full p-2 border rounded-xl" value={bookingDates.startDate} onChange={(e) => setBookingDates({ ...bookingDates, startDate: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">End Date</label>
-                                    <input type="date" className="w-full p-2 border rounded-xl" value={bookingDates.endDate} onChange={(e) => setBookingDates({ ...bookingDates, endDate: e.target.value })} />
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <button type="button" onClick={() => setShowBookingModal(false)} className="flex-1 py-3 text-gray-600 font-bold hover:bg-gray-50 rounded-xl">Cancel</button>
-                                <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl">Send Request</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-            <Footer />
-        </div>
-    );
+        );
+    }
 };
-
-const Amenity = ({ icon: Icon, label }) => (
-    <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl text-sm font-medium text-gray-700">
-        <Icon size={18} className="text-blue-500" />
-        {label}
-    </div>
-);
-
-const RuleItem = ({ label, allowed }) => (
-    <div className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase flex items-center justify-between border ${allowed ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-500'}`}>
-        <span>{label}</span>
-        <span>{allowed ? 'Yes' : 'No'}</span>
-    </div>
-);
 
 export default RoomDetails;

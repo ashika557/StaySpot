@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, Marker, InfoWindow, StandaloneSearchBox } from '@react-google-maps/api';
 import { MapPin, Navigation, School, Briefcase, Info } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useMapContext } from '../context/MapContext';
 
 import { GOOGLE_MAPS_API_KEY } from '../constants/config';
@@ -122,7 +123,7 @@ const RoomMap = ({ rooms }) => {
             <div className="relative">
                 <GoogleMap
                     mapContainerStyle={mapContainerStyle}
-                    zoom={13}
+                    zoom={15}
                     center={defaultCenter}
                     onLoad={onMapLoad}
                     options={{
@@ -172,6 +173,10 @@ const RoomMap = ({ rooms }) => {
                                 />
                                 <h4 className="font-bold text-gray-900 text-sm line-clamp-1">{selectedRoom.title}</h4>
                                 <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
+                                <p className="text-gray-500 text-[10px] mt-1 flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {selectedRoom.location}
+                                </p>
                                 {distances[selectedRoom.id] && (
                                     <div className="mt-2 pt-2 border-t flex flex-col gap-0.5">
                                         <div className="flex justify-between text-[10px] font-bold text-gray-500">
