@@ -5,7 +5,7 @@ import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';
 import { visitService } from '../services/tenantService';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES, getMediaUrl } from '../constants/api';
+import { ROUTES, getMediaUrl, API_ENDPOINTS } from '../constants/api';
 import OwnerHeader from '../components/OwnerHeader';
 import TenantDetailsModal from '../components/TenantDetailsModal';
 import Footer from '../components/Footer';
@@ -30,7 +30,20 @@ export default function OwnerDashboard({ user, onLogout }) {
     getRoomData();
     getRecentChats();
     getVisitRequests();
+    getFinancialData();
   }, []);
+
+  async function getFinancialData() {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.OWNER_FINANCIALS);
+      if (response.ok) {
+        const data = await response.json();
+        setTotalIncome(data.stats.all_time.earnings);
+      }
+    } catch (error) {
+      console.error("Failed to fetch financial data", error);
+    }
+  }
 
   async function getRecentChats() {
     try {
@@ -61,7 +74,8 @@ export default function OwnerDashboard({ user, onLogout }) {
         setAvailableRooms(available);
         const occupied = rooms.filter(room => room.status === 'Occupied').length;
         setOccupiedRooms(occupied);
-        setTotalIncome(0);
+        // Total Income is fetched separately
+
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
@@ -147,7 +161,7 @@ export default function OwnerDashboard({ user, onLogout }) {
                       <DollarSign className="w-6 h-6 text-green-600" />
                     </div>
                   </div>
-                  <p className="text-sm text-gray-500 font-medium">Tracking enabled</p>
+                  <p className="text-sm text-green-600 font-medium">All time</p>
                 </div>
               </div>
 

@@ -29,7 +29,7 @@ const OwnerPayments = ({ user, onLogout }) => {
     const [filters, setFilters] = useState({
         rooms: [],
         month: 'All Months',
-        year: '2025',
+        year: new Date().getFullYear().toString(),
         room_id: 'All Rooms'
     });
     const [currentPage, setCurrentPage] = useState(1);
@@ -40,7 +40,8 @@ const OwnerPayments = ({ user, onLogout }) => {
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
-    const years = ['2024', '2025'];
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear.toString(), (currentYear - 1).toString()];
 
     useEffect(() => {
         fetchFinancialData();
