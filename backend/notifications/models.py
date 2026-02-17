@@ -13,6 +13,7 @@ class Notification(models.Model):
         ('visit_rejected', 'Visit Rejected'),
         ('visit_cancelled', 'Visit Cancelled'),
         ('rent_reminder', 'Rent Due Reminder'),
+        ('payment_received', 'Payment Received'),
     )
 
     recipient = models.ForeignKey(
