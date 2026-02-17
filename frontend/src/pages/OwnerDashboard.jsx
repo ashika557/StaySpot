@@ -72,7 +72,7 @@ export default function OwnerDashboard({ user, onLogout }) {
         setTotalRooms(rooms.length);
         const available = rooms.filter(room => room.status === 'Available').length;
         setAvailableRooms(available);
-        const occupied = rooms.filter(room => room.status === 'Occupied').length;
+        const occupied = rooms.filter(room => room.status === 'Occupied' || room.status === 'Rented').length;
         setOccupiedRooms(occupied);
         // Total Income is fetched separately
 
