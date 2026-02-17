@@ -62,6 +62,14 @@ class RoomSerializer(serializers.ModelSerializer):
     def get_review_count(self, obj):
         return obj.reviews.count()
     
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Dynamic status override:
+        # If owner is verified and status is 'Pending Verification', show as 'Available'
+        if instance.owner.is_identity_verified and ret['status'] == 'Pending Verification':
+            ret['status'] = 'Available'
+        return ret
+    
     def create(self, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
         room = Room.objects.create(**validated_data)
