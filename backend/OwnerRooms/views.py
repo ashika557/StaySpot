@@ -148,6 +148,17 @@ class RoomViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
             
         serializer.save(owner=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+
+
+        # If owner is verified, ensure status doesn't revert to Pending Verification
+        # Frontend might send 'Pending Verification' if the form wasn't updated to know better
+        if user.is_identity_verified and serializer.validated_data.get('status') == 'Pending Verification':
+             serializer.save(status='Available')
+        else:
+             serializer.save()
     
     @action(detail=False, methods=['get'])
     def suggested(self, request):
@@ -312,6 +323,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user
+        from rest_framework import serializers # Import here to be available for all checks
         
         # Admin bypass
         if user.role == 'Admin':
@@ -319,7 +331,6 @@ class BookingViewSet(viewsets.ModelViewSet):
         else:
             # Check verification status
             if user.verification_status != 'Approved':
-                from rest_framework import serializers
                 error_messages = {
                     'Not Submitted': "You must upload an identity document before booking a room. Please go to your profile to submit verification.",
                     'Pending': "Your identity verification is pending admin approval. You cannot book rooms until your document is approved.",
@@ -329,7 +340,11 @@ class BookingViewSet(viewsets.ModelViewSet):
             
             # Simple check if room is available
             room = serializer.validated_data.get('room')
-            if room.status != 'Available':
+            
+            # Allow verification pending rooms if owner is verified (consistent with frontend display)
+            is_actually_available = room.status == 'Available' or (room.status == 'Pending Verification' and room.owner.is_identity_verified)
+            
+            if not is_actually_available:
                 # Return error if room is not free
                 raise serializers.ValidationError({"error": "Sorry, this room is already occupied."})
 
