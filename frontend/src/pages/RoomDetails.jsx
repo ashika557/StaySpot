@@ -399,8 +399,8 @@ const RoomDetails = ({ user }) => {
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider rounded-full">
-                                            Available Now
+                                        <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${room.status === 'Available' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
+                                            {room.status}
                                         </span>
                                         <div className="flex items-center gap-1 text-yellow-500">
                                             <Star className="w-4 h-4 fill-current" />
@@ -466,10 +466,11 @@ const RoomDetails = ({ user }) => {
                             <div className="space-y-3">
                                 <button
                                     onClick={() => setShowBookingModal(true)}
-                                    className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] flex items-center justify-center gap-2"
+                                    disabled={room.status !== 'Available'}
+                                    className={`w-full py-4 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 ${room.status === 'Available' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-gray-400 cursor-not-allowed'}`}
                                 >
                                     <Calendar className="w-5 h-5" />
-                                    Request to Book
+                                    {room.status === 'Available' ? 'Request to Book' : 'Currently ' + room.status}
                                 </button>
                                 <button
                                     onClick={() => setShowVisitModal(true)}

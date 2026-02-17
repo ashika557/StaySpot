@@ -327,6 +327,12 @@ class BookingViewSet(viewsets.ModelViewSet):
                 }
                 raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
             
+            # Simple check if room is available
+            room = serializer.validated_data.get('room')
+            if room.status != 'Available':
+                # Return error if room is not free
+                raise serializers.ValidationError({"error": "Sorry, this room is already occupied."})
+
             booking = serializer.save(tenant=user)
         
         # Notify room owner about new booking request

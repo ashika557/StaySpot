@@ -358,8 +358,9 @@ const SearchRooms = ({ user }) => {
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex flex-col">
                                                             <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">{room.title}</h3>
-                                                            {room.status === 'Rented' && (
-                                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded w-fit uppercase">RENTED</span>
+                                                            {/* Show status if not available */}
+                                                            {(room.status === 'Rented' || room.status === 'Occupied') && (
+                                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded w-fit uppercase">{room.status}</span>
                                                             )}
                                                         </div>
                                                         <div className="text-blue-600 font-bold text-sm">NPR {parseFloat(room.price).toLocaleString()}/m</div>

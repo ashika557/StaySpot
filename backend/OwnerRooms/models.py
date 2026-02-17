@@ -13,6 +13,7 @@ class Room(models.Model):
     STATUS_CHOICES = [
         ('Pending Verification', 'Pending Verification'),
         ('Available', 'Available'),
+        ('Occupied', 'Occupied'), # Status when room is taken
         ('Rented', 'Rented'),
         ('Disabled', 'Disabled'),
     ]
