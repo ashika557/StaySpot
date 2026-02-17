@@ -28,6 +28,7 @@ const RoomDetails = ({ user }) => {
     const [bookingDate, setBookingDate] = useState('');
     const [bookingEndDate, setBookingEndDate] = useState('');
     const [nearbyPlaces, setNearbyPlaces] = useState([]);
+    const [hasActiveBooking, setHasActiveBooking] = useState(false);
 
     // Visit Request State
     const [showVisitModal, setShowVisitModal] = useState(false);
@@ -83,9 +84,28 @@ const RoomDetails = ({ user }) => {
         }
     };
 
+    const checkUserBooking = async () => {
+        try {
+            if (user && user.role === 'Tenant') {
+                const bookings = await bookingService.getAllBookings();
+                // Check if user has a confirmed or active booking for THIS room
+                const activeBooking = bookings.find(b =>
+                    b.room.id === Number(id) &&
+                    (b.status === 'Confirmed' || b.status === 'Active')
+                );
+                if (activeBooking) {
+                    setHasActiveBooking(true);
+                }
+            }
+        } catch (error) {
+            console.error("Error checking booking status:", error);
+        }
+    };
+
     useEffect(() => {
         fetchRoomDetails();
-    }, [id]);
+        checkUserBooking();
+    }, [id, user]);
 
     const handleBooking = async (e) => {
         e.preventDefault();
@@ -454,12 +474,26 @@ const RoomDetails = ({ user }) => {
                         {/* Action Card */}
                         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
                             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold text-gray-400">
-                                    {room.owner_name ? room.owner_name[0] : <User className="w-6 h-6" />}
+                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold text-gray-400 overflow-hidden">
+                                    {room.owner?.profile_photo ? (
+                                        <img src={getMediaUrl(room.owner.profile_photo)} alt={room.owner.full_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        room.owner?.full_name ? room.owner.full_name[0] : <User className="w-6 h-6" />
+                                    )}
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Listed by</p>
-                                    <p className="font-bold text-gray-900">{room.owner_name || 'Owner'}</p>
+                                    <p className="font-bold text-gray-900">{room.owner?.full_name || 'Owner'}</p>
+
+                                    {/* Show contact info only if booked */}
+                                    {hasActiveBooking ? (
+                                        <>
+                                            <p className="text-xs text-gray-500">{room.owner?.email}</p>
+                                            <p className="text-xs text-gray-500">{room.owner?.phone}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-[10px] text-gray-400 italic">Contact info available after booking</p>
+                                    )}
                                 </div>
                             </div>
 
