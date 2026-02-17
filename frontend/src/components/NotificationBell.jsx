@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Trash2, MessageSquare, Calendar, ChevronRight } from 'lucide-react';
+import { Bell, Check, Trash2, MessageSquare, Calendar, ChevronRight, Wallet } from 'lucide-react';
 import { notificationService } from '../services/notificationService';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../constants/api';
@@ -97,8 +97,12 @@ const NotificationBell = ({ user, isDark = false }) => {
             } else {
                 navigate('/owner/visits');
             }
-        } else if (notification.notification_type === 'rent_reminder') {
-            navigate(ROUTES.TENANT_PAYMENTS);
+        } else if (notification.notification_type === 'rent_reminder' || notification.notification_type === 'payment_received') {
+            if (user.role === 'Tenant') {
+                navigate('/tenant/payments');
+            } else {
+                navigate('/owner/payments');
+            }
         }
         setIsOpen(false);
     };
@@ -117,6 +121,7 @@ const NotificationBell = ({ user, isDark = false }) => {
             case 'booking_cancelled':
             case 'visit_cancelled': return <Trash2 className="w-4 h-4 text-red-500" />;
             case 'rent_reminder': return <Calendar className="w-4 h-4 text-purple-500" />;
+            case 'payment_received': return <Wallet className="w-4 h-4 text-green-600" />;
             default: return <Bell className="w-4 h-4 text-gray-500" />;
         }
     };
