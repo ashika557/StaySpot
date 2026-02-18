@@ -293,8 +293,8 @@ class BookingViewSet(viewsets.ModelViewSet):
             # Auto-create Payment if confirmed
             if new_status in ['Confirmed', 'Active']:
                 from payments.models import Payment
-                # Check if initial rent payment exists
-                if not Payment.objects.filter(booking=booking, payment_type='Rent').exists():
+                # Check if initial rent payment exists for this specific booking and period
+                if not Payment.objects.filter(booking=booking, payment_type='Rent', due_date=booking.start_date).exists():
                     Payment.objects.create(
                         booking=booking,
                         amount=booking.monthly_rent,
@@ -302,6 +302,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                         status='Pending',
                         payment_type='Rent'
                     )
+                    print(f"DEBUG: Auto-created Rent payment for booking {booking.id}")
     
     def perform_destroy(self, instance):
         recipient = instance.room.owner if self.request.user.role == 'Tenant' else instance.tenant
