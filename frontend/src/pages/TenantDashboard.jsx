@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
 import TenantHeader from '../components/TenantHeader';
 import Footer from '../components/Footer';
-import { Calendar, MapPin, DollarSign, MessageCircle, Star, ChevronRight, MessageSquare } from 'lucide-react';
-import { dashboardService } from '../services/tenantService';
+import { Calendar, MapPin, DollarSign, MessageCircle, Star, ChevronRight, MessageSquare, Clock } from 'lucide-react';
+import { dashboardService, paymentService } from '../services/tenantService';
 import { roomService } from '../services/roomService';
 import { chatService } from '../services/chatService';
 import { getMediaUrl, ROUTES } from '../constants/api';
@@ -14,11 +14,146 @@ export default function TenantDashboard({ user }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [recentChats, setRecentChats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [verificationMessage, setVerificationMessage] = useState(null);
   const navigate = useNavigate();
+
+  // Safety guards to prevent infinite loops
+  const isVerifyingRef = useRef(false);
+  const hasProcessedCallbackRef = useRef(false);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  const handlePaymentCallback = useCallback(async () => {
+    // Prevent multiple simultaneous verification attempts
+    if (isVerifyingRef.current || hasProcessedCallbackRef.current) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const pidx = urlParams.get('pidx'); // Khalti
+    const purchaseOrderId = urlParams.get('purchase_order_id'); // Khalti/eSewa v2
+    const encodedData = urlParams.get('data'); // eSewa v2 callback data
+
+    // Legacy/Mixed params
+    const status = urlParams.get('status');
+    const paymentIdLegacy = urlParams.get('payment_id');
+    const method = urlParams.get('method');
+
+    if (!pidx && !encodedData && !(status === 'success' && paymentIdLegacy)) return;
+
+    // Mark as processing and CLEAN URL IMMEDIATELY to stop the loop
+    hasProcessedCallbackRef.current = true;
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    // 1. Khalti Callback
+    if (pidx) {
+      try {
+        isVerifyingRef.current = true;
+        setVerificationMessage("Verifying your Khalti payment...");
+        let paymentId = purchaseOrderId?.split('-')[1] || paymentIdLegacy;
+
+        if (paymentId) {
+          const verifyResult = await paymentService.verifyKhaltiPayment(paymentId, pidx);
+          if (verifyResult.status === 'Payment verified successfully') {
+            alert("Success! Your Khalti payment has been verified.");
+            fetchDashboardData();
+          }
+        }
+      } catch (err) {
+        console.error('Khalti callback error:', err);
+      } finally {
+        isVerifyingRef.current = false;
+        setVerificationMessage(null);
+      }
+    }
+
+    // 2. eSewa v2 Callback (data param)
+    if (encodedData) {
+      try {
+        isVerifyingRef.current = true;
+        setVerificationMessage("Verifying your eSewa payment...");
+
+        const decodedString = atob(encodedData);
+        const responseData = JSON.parse(decodedString);
+        const transactionUuid = responseData.transaction_uuid;
+        const paymentId = transactionUuid.split('-')[1];
+        const esewaStatus = responseData.status?.toUpperCase();
+
+        if (esewaStatus === 'COMPLETE' || esewaStatus === 'SUCCESS') {
+          const verifyResult = await paymentService.verifyEsewaPayment(paymentId, encodedData);
+          if (verifyResult.status === 'Payment verified successfully') {
+            alert("Success! Your eSewa payment has been verified.");
+            fetchDashboardData();
+          }
+        } else {
+          alert(`eSewa status: ${responseData.status || 'Unknown'}`);
+        }
+      } catch (err) {
+        console.error('eSewa callback error:', err);
+        alert("eSewa verification failed.");
+      } finally {
+        isVerifyingRef.current = false;
+        setVerificationMessage(null);
+      }
+    }
+
+    // 3. Legacy/Simple Callback (if applicable)
+    if (status === 'success' && paymentIdLegacy && method === 'esewa' && !encodedData) {
+      try {
+        isVerifyingRef.current = true;
+        setVerificationMessage("Verifying payment...");
+        const refId = urlParams.get('refId') || urlParams.get('oid');
+        await paymentService.verifyEsewaPayment(paymentIdLegacy, refId);
+        alert("eSewa payment verified successfully!");
+        fetchDashboardData();
+      } catch (err) {
+        console.error(err);
+      } finally {
+        isVerifyingRef.current = false;
+        setVerificationMessage(null);
+      }
+    } else if (status === 'failure') {
+      alert("Payment failed.");
+    }
+  }, []);
+
+  // Handle callbacks when URL changes
+  useEffect(() => {
+    handlePaymentCallback();
+  }, [handlePaymentCallback]);
+
+  // Background auto-verify for pending payments
+  useEffect(() => {
+    const autoVerify = async () => {
+      if (dashboardData?.payment_reminders?.length > 0 && !isVerifyingRef.current) {
+        const pending = dashboardData.payment_reminders.filter(
+          p => (p.status === 'Pending' || p.status === 'Overdue') && p.transaction_id
+        );
+
+        if (pending.length > 0) {
+          isVerifyingRef.current = true;
+          let changed = false;
+          for (const p of pending) {
+            try {
+              let res;
+              if (p.payment_method === 'Khalti') {
+                res = await paymentService.verifyKhaltiPayment(p.id, p.transaction_id);
+              } else if (p.payment_method === 'eSewa') {
+                res = await paymentService.checkEsewaStatus(p.id, p.transaction_id);
+              }
+              if (res?.status === 'Payment verified successfully') changed = true;
+            } catch (e) { }
+          }
+          isVerifyingRef.current = false;
+          if (changed) fetchDashboardData();
+        }
+      }
+    };
+
+    const interval = setInterval(autoVerify, 30000);
+    if (dashboardData) autoVerify();
+    return () => clearInterval(interval);
+  }, [dashboardData?.payment_reminders]);
 
   const fetchDashboardData = async () => {
     try {
@@ -69,6 +204,14 @@ export default function TenantDashboard({ user }) {
           }}
         />
         <div className="flex-1 overflow-auto p-8">
+          {verificationMessage && (
+            <div className="max-w-4xl mx-auto mb-6 bg-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse">
+              <div className="flex items-center gap-3">
+                <Clock className="animate-spin w-5 h-5 text-blue-100" />
+                <span className="font-bold">{verificationMessage}</span>
+              </div>
+            </div>
+          )}
           {/* Main Grid Layout */}
           <div className="grid grid-cols-3 gap-6">
             {/* Left Column - 2/3 width */}
@@ -243,49 +386,49 @@ function CurrentBookingCard({ booking }) {
 
 // Payment Reminders Card Component
 function PaymentRemindersCard({ payments, onPaymentSuccess }) {
-  const handleEsewaPayment = (payment) => {
-    const esewaUrl = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
-    const transaction_uuid = `PAY-${payment.id}-${Date.now()}`;
+  const handleEsewaPayment = async (payment) => {
+    try {
+      const params = await paymentService.getEsewaParams(payment.id);
+      const esewaUrl = params.esewa_url;
 
-    import('../services/tenantService').then(({ paymentService }) => {
-      paymentService.getEsewaParams(payment.id)
-        .then(params => {
-          const form = document.createElement('form');
-          form.setAttribute('method', 'POST');
-          form.setAttribute('action', esewaUrl);
+      const formFields = {
+        amount: params.amount,
+        tax_amount: params.tax_amount,
+        total_amount: params.total_amount,
+        transaction_uuid: params.transaction_uuid,
+        product_code: params.product_code,
+        product_service_charge: params.product_service_charge,
+        product_delivery_charge: params.product_delivery_charge,
+        success_url: params.success_url,
+        failure_url: params.failure_url,
+        signed_field_names: params.signed_field_names,
+        signature: params.signature
+      };
 
-          const formFields = {
-            amount: params.amount,
-            tax_amount: params.tax_amount,
-            total_amount: params.total_amount,
-            transaction_uuid: params.transaction_uuid,
-            product_code: params.product_code,
-            product_service_charge: params.product_service_charge,
-            product_delivery_charge: params.product_delivery_charge,
-            success_url: params.success_url,
-            failure_url: params.failure_url,
-            signed_field_names: params.signed_field_names,
-            signature: params.signature
-          };
+      const form = document.createElement('form');
+      form.setAttribute('method', 'POST');
+      form.setAttribute('action', esewaUrl);
 
-          for (const key in formFields) {
-            const hiddenField = document.createElement('input');
-            hiddenField.setAttribute('type', 'hidden');
-            hiddenField.setAttribute('name', key);
-            hiddenField.setAttribute('value', formFields[key]);
-            form.appendChild(hiddenField);
-          }
+      for (const key in formFields) {
+        const hiddenField = document.createElement('input');
+        hiddenField.setAttribute('type', 'hidden');
+        hiddenField.setAttribute('name', key);
+        hiddenField.setAttribute('value', formFields[key]);
+        form.appendChild(hiddenField);
+      }
 
-          document.body.appendChild(form);
-          form.submit();
-        });
-    });
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error) {
+      console.error('Error initiating eSewa payment:', error);
+      alert('Failed to initiate payment. Please try again.');
+    }
   };
 
   const handleKhaltiPayment = async (payment) => {
     try {
       const { paymentService } = await import('../services/tenantService');
-      const response = await paymentService.initiateKhaltiPayment(payment.id);
+      const response = await paymentService.initiateKhaltiPayment(payment.id, window.location.href);
       if (response.payment_url) {
         window.location.href = response.payment_url;
       } else {
