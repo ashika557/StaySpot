@@ -178,12 +178,12 @@ export const paymentService = {
     },
 
     // Initiate Khalti payment V2
-    initiateKhaltiPayment: async (paymentId) => {
+    initiateKhaltiPayment: async (paymentId, returnUrl = null) => {
         try {
             const response = await apiRequest(`/payments/${paymentId}/initiate_khalti/`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    return_url: window.location.origin + '/tenant/payments'
+                    return_url: returnUrl || (window.location.origin + '/tenant/payments')
                 }),
             });
             if (!response.ok) throw new Error('Failed to initiate Khalti payment');
@@ -205,6 +205,21 @@ export const paymentService = {
             return await response.json();
         } catch (error) {
             console.error('Error verifying Khalti payment:', error);
+            throw error;
+        }
+    },
+
+    // Lookup eSewa payment status
+    checkEsewaStatus: async (paymentId, transactionUuid) => {
+        try {
+            const response = await apiRequest(`/payments/${paymentId}/check_esewa_status/`, {
+                method: 'POST',
+                body: JSON.stringify({ transaction_uuid: transactionUuid }),
+            });
+            if (!response.ok) throw new Error('Failed to lookup eSewa status');
+            return await response.json();
+        } catch (error) {
+            console.error('Error checking eSewa status:', error);
             throw error;
         }
     },
