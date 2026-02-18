@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TenantSidebar from '../components/TenantSidebar';
 import {
     Search,
@@ -24,114 +24,150 @@ export default function TenantPayments({ user }) {
     const [timeFilter, setTimeFilter] = useState('All Time');
     const [verificationMessage, setVerificationMessage] = useState(null);
 
-    const fetchPayments = async () => {
+    // Safety guards to prevent infinite loops
+    const isVerifyingRef = useRef(false);
+    const hasProcessedCallbackRef = useRef(false);
+
+    const fetchPayments = async (showLoading = true) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             const data = await paymentService.getAllPayments();
-            setPayments(data);
+            setPayments(data || []);
         } catch (error) {
             console.error('Error fetching payments:', error);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
+    // Initial load
     useEffect(() => {
         fetchPayments();
     }, []);
 
-    // handlePaymentCallback defined below
+    const handlePaymentCallback = useCallback(async () => {
+        // Prevent multiple simultaneous verification attempts
+        if (isVerifyingRef.current || hasProcessedCallbackRef.current) return;
 
-    const handlePaymentCallback = React.useCallback(async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const pidx = urlParams.get('pidx');
         const purchaseOrderId = urlParams.get('purchase_order_id');
+        const encodedData = urlParams.get('data');
 
+        if (!pidx && !encodedData) return;
+
+        // Mark as processing and CLEAN URL IMMEDIATELY to stop the loop
+        hasProcessedCallbackRef.current = true;
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        // Khalti Callback
         if (pidx) {
             try {
-                setVerificationMessage("Verifying your Khalti payment... Please wait.");
+                isVerifyingRef.current = true;
+                setVerificationMessage("Verifying your Khalti payment...");
+
                 let paymentId = purchaseOrderId?.split('-')[1];
 
-                // FALLBACK: If purchase_order_id is missing from URL, try to find a pending Khalti payment in current list
+                // Fallback for payment ID if missing from URL
                 if (!paymentId && payments.length > 0) {
-                    const pendingKhalti = payments.find(p => p.status === 'Pending' || p.status === 'Overdue');
-                    if (pendingKhalti) {
-                        paymentId = pendingKhalti.id;
-                        console.log(`DEBUG: purchase_order_id missing, using fallback payment ID: ${paymentId}`);
-                    }
+                    const pendingKhalti = payments.find(p => (p.status === 'Pending' || p.status === 'Overdue'));
+                    if (pendingKhalti) paymentId = pendingKhalti.id;
                 }
 
                 if (paymentId) {
-                    console.log(`DEBUG: Found pidx ${pidx} for payment ${paymentId}. Verifying...`);
-                    try {
-                        const verifyResult = await paymentService.verifyKhaltiPayment(paymentId, pidx);
-
-                        if (verifyResult.error || verifyResult.detail) {
-                            setVerificationMessage(`Verification Error: ${verifyResult.error || verifyResult.detail}`);
-                        } else if (verifyResult.status === 'Payment verified successfully') {
-                            setVerificationMessage("Payment Verified! Your status is now PAID.");
-                            alert("Success! Your Khalti payment has been verified.");
-                        } else {
-                            setVerificationMessage(`Status: ${verifyResult.status || 'Checking...'}`);
-                        }
-                    } catch (err) {
-                        setVerificationMessage(`Network Error: ${err.message}`);
+                    const verifyResult = await paymentService.verifyKhaltiPayment(paymentId, pidx);
+                    if (verifyResult.status === 'Payment verified successfully') {
+                        setVerificationMessage("Payment Verified Successfully!");
+                        alert("Success! Your Khalti payment has been verified.");
+                    } else {
+                        setVerificationMessage(`Status: ${verifyResult.status || 'Done'}`);
                     }
-                    fetchPayments();
-                } else if (payments.length > 0) {
-                    setVerificationMessage("Could not identify payment automatically. Refreshing...");
-                    fetchPayments();
-                }
-
-                // Clean URL parameters only after a slight delay
-                if (pidx && paymentId) {
-                    setTimeout(() => {
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                        setVerificationMessage(null);
-                    }, 5000);
+                    await fetchPayments(false);
                 }
             } catch (err) {
-                console.error('Khalti callback logic error:', err);
-                setVerificationMessage(`App logic error: ${err.message}`);
+                console.error('Khalti callback error:', err);
+                setVerificationMessage(`Verification failed: ${err.message}`);
+            } finally {
+                isVerifyingRef.current = false;
+                setTimeout(() => setVerificationMessage(null), 3000);
             }
         }
 
-        // eSewa v2 Callback
-        const encodedData = urlParams.get('data');
+        // eSewa Callback (v2)
         if (encodedData) {
             try {
-                // Decode eSewa data to find our payment ID
+                isVerifyingRef.current = true;
+                setVerificationMessage("Verifying your eSewa payment...");
+
                 const decodedString = atob(encodedData);
                 const responseData = JSON.parse(decodedString);
                 const transactionUuid = responseData.transaction_uuid;
                 const paymentId = transactionUuid.split('-')[1];
+                const status = responseData.status?.toUpperCase();
 
-                if (responseData.status === 'COMPLETE') {
-                    await paymentService.verifyEsewaPayment(paymentId, encodedData);
-                    alert("eSewa payment verified successfully!");
-                    fetchPayments();
+                if (status === 'COMPLETE' || status === 'SUCCESS') {
+                    const verifyResult = await paymentService.verifyEsewaPayment(paymentId, encodedData);
+                    if (verifyResult.status === 'Payment verified successfully') {
+                        setVerificationMessage("eSewa Payment Verified!");
+                        alert("Success! Your eSewa payment has been verified.");
+                    }
                 } else {
-                    alert("Payment was not completed.");
+                    alert(`eSewa status: ${responseData.status || 'Unknown'}`);
                 }
-                window.history.replaceState({}, document.title, window.location.pathname);
+                await fetchPayments(false);
             } catch (err) {
-                console.error('Callback error:', err);
-                if (encodedData) alert("eSewa payment verification failed.");
+                console.error('eSewa callback error:', err);
+                alert("eSewa verification failed.");
+            } finally {
+                isVerifyingRef.current = false;
+                setTimeout(() => setVerificationMessage(null), 3000);
             }
         }
-    }, [payments]);
+    }, [payments.length]);
 
+    // Handle callbacks when payments or URL changes
     useEffect(() => {
         handlePaymentCallback();
     }, [handlePaymentCallback]);
 
+    // Background auto-verify for both Khalti and eSewa
+    useEffect(() => {
+        const autoVerify = async () => {
+            if (payments.length > 0 && !isVerifyingRef.current) {
+                const pending = payments.filter(
+                    p => (p.status === 'Pending' || p.status === 'Overdue') && p.transaction_id
+                );
+
+                if (pending.length > 0) {
+                    isVerifyingRef.current = true;
+                    let changed = false;
+                    for (const p of pending) {
+                        try {
+                            let res;
+                            if (p.payment_method === 'Khalti') {
+                                res = await paymentService.verifyKhaltiPayment(p.id, p.transaction_id);
+                            } else if (p.payment_method === 'eSewa') {
+                                res = await paymentService.checkEsewaStatus(p.id, p.transaction_id);
+                            }
+
+                            if (res?.status === 'Payment verified successfully') changed = true;
+                        } catch (e) {
+                            console.error('Auto-verify failed for', p.id, e);
+                        }
+                    }
+                    isVerifyingRef.current = false;
+                    if (changed) fetchPayments(false);
+                }
+            }
+        };
+        autoVerify();
+    }, [payments.length]);
+
     const handleEsewaPayment = async (payment) => {
         try {
-            // Get signed parameters from backend
             const params = await paymentService.getEsewaParams(payment.id);
             const esewaUrl = params.esewa_url;
 
-            // These are the fields eSewa v2 expects
             const formFields = {
                 amount: params.amount,
                 failure_url: params.failure_url,
@@ -168,10 +204,8 @@ export default function TenantPayments({ user }) {
 
     const handleKhaltiPayment = async (payment) => {
         try {
-            // Call backend to initiate KPG-2 payment
-            const response = await paymentService.initiateKhaltiPayment(payment.id);
+            const response = await paymentService.initiateKhaltiPayment(payment.id, window.location.href);
             if (response.payment_url) {
-                // Redirect user to Khalti payment portal
                 window.location.href = response.payment_url;
             } else {
                 throw new Error("Payment URL not received");
@@ -182,54 +216,30 @@ export default function TenantPayments({ user }) {
         }
     };
 
-    const handleCheckStatus = async (payment) => {
-        try {
-            setVerificationMessage(`Verifying status for ${payment.payment_type}...`);
-            const verifyResult = await paymentService.verifyKhaltiPayment(payment.id, payment.transaction_id);
-
-            if (verifyResult.error || verifyResult.detail) {
-                setVerificationMessage(`Status: ${verifyResult.error || verifyResult.detail}`);
-            } else if (verifyResult.status === 'Payment verified successfully') {
-                setVerificationMessage("Payment Verified! Your status is now PAID.");
-                alert("Success! Your payment has been verified. Status: PAID.");
-            } else {
-                setVerificationMessage(`Khalti Status: ${verifyResult.status || 'Checking...'}`);
-            }
-            fetchPayments();
-        } catch (err) {
-            console.error('Check status error:', err);
-            setVerificationMessage(`Error: ${err.message}`);
-        }
-    };
-
     // Filter payments
-    const filteredPayments = payments.filter(payment => {
+    const filteredPayments = (payments || []).filter(payment => {
         const matchesSearch =
             payment.booking?.room?.owner?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             payment.payment_type?.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesStatus = statusFilter === 'All Status' || payment.status === statusFilter;
-
-        // Simple time filter logic (for demo/real use case this could be more complex)
-        const matchesTime = true; // Placeholder for now
-
-        return matchesSearch && matchesStatus && matchesTime;
+        return matchesSearch && matchesStatus;
     });
 
     // Calculate summary stats
-    const totalPaid = payments
+    const totalPaid = (payments || [])
         .filter(p => p.status === 'Paid')
         .reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
-    const upcomingRent = payments
+    const upcomingRent = (payments || [])
         .filter(p => p.status === 'Pending' || p.status === 'Overdue')
         .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))[0]?.amount || 0;
 
-    const pendingAmount = payments
+    const pendingAmount = (payments || [])
         .filter(p => p.status === 'Pending' || p.status === 'Overdue')
         .reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
-    const pendingCount = payments.filter(p => p.status === 'Pending' || p.status === 'Overdue').length;
+    const pendingCount = (payments || []).filter(p => p.status === 'Pending' || p.status === 'Overdue').length;
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -246,7 +256,6 @@ export default function TenantPayments({ user }) {
                     }}
                 />
 
-                {/* Content Area */}
                 <div className="flex-1 overflow-auto p-8">
                     {verificationMessage && (
                         <div className="max-w-6xl mx-auto mb-6 bg-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse">
@@ -264,9 +273,7 @@ export default function TenantPayments({ user }) {
                     )}
                     <div className="max-w-6xl mx-auto flex gap-8">
 
-                        {/* Main Column */}
                         <div className="flex-1 space-y-6">
-                            {/* Filters */}
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
                                 <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -310,7 +317,6 @@ export default function TenantPayments({ user }) {
                                 </div>
                             </div>
 
-                            {/* Payment List */}
                             <div className="space-y-4">
                                 {loading ? (
                                     <div className="flex flex-col items-center justify-center py-20">
@@ -391,16 +397,6 @@ export default function TenantPayments({ user }) {
                                                         >
                                                             Pay with Khalti
                                                         </button>
-                                                        {payment.transaction_id && (
-                                                            <button
-                                                                onClick={() => handleCheckStatus(payment)}
-                                                                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors flex items-center gap-2"
-                                                                title="Check if you have already paid on Khalti"
-                                                            >
-                                                                <Clock className="w-3 h-3" />
-                                                                Check Status
-                                                            </button>
-                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -420,13 +416,11 @@ export default function TenantPayments({ user }) {
                             </div>
                         </div>
 
-                        {/* Sidebar Column */}
                         <div className="w-80 space-y-6">
                             <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                                 <h2 className="text-lg font-bold text-slate-800 mb-6">Payment Summary</h2>
 
                                 <div className="space-y-4">
-                                    {/* Total Paid */}
                                     <div className="bg-blue-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-200">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -440,7 +434,6 @@ export default function TenantPayments({ user }) {
                                         </div>
                                     </div>
 
-                                    {/* Upcoming Rent */}
                                     <div className="bg-amber-400 rounded-2xl p-5 text-white shadow-lg shadow-amber-100">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -454,7 +447,6 @@ export default function TenantPayments({ user }) {
                                         </div>
                                     </div>
 
-                                    {/* Pending Amount */}
                                     <div className="bg-rose-500 rounded-2xl p-5 text-white shadow-lg shadow-rose-100">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
