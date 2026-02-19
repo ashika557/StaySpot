@@ -8,9 +8,9 @@ import hashlib
 
 class User(AbstractUser):
     ROLE_CHOICES = [
-        ('Admin', 'Admin'),
         ('Owner', 'Owner'),
         ('Tenant', 'Tenant'),
+        ('Admin', 'Admin'),
     ]
     
     
@@ -165,3 +165,18 @@ class PreRegistrationOTP(models.Model):
     def generate_otp():
         import random
         return str(random.randint(100000, 999999))
+
+class PlatformPolicy(models.Model):
+    """Stores platform-wide policies and documents manageable by admins."""
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Platform Policy'
+        verbose_name_plural = 'Platform Policies'
+
+    def __str__(self):
+        return self.title

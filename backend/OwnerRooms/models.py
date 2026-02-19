@@ -99,6 +99,10 @@ class Room(models.Model):
     # Stats
     views = models.IntegerField(default=0)
     
+    # Descriptions & Details
+    description = models.TextField(blank=True)
+    amenities = models.TextField(blank=True, help_text="Comma-separated amenities")
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
