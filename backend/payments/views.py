@@ -14,7 +14,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Payment
 from .serializers import PaymentSerializer
 from notifications.utils import send_notification
-from .utils import trigger_rent_reminders
+from .utils import trigger_rent_reminders, generate_monthly_payments
 
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
@@ -26,6 +26,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Payment.objects.filter(booking__tenant=user)
         elif user.role == 'Owner':
             return Payment.objects.filter(booking__room__owner=user)
+        elif user.role == 'Admin':
+            return Payment.objects.all()
         return Payment.objects.none()
 
     @action(detail=True, methods=['get'])
@@ -438,10 +440,31 @@ def trigger_reminders(request):
     API endpoint to manually/automatically trigger rent reminders.
     Can be called by frontend on app load or login.
     """
+    # 1. Generate any missing monthly payments first
+    generate_monthly_payments()
+    
+    # 2. Then trigger the reminders for existing pending payments
     count, skipped = trigger_rent_reminders()
+    
     return Response({
         'status': 'success',
         'reminders_sent': count,
         'reminders_skipped': skipped,
-        'message': f"Processed rent reminders. Sent: {count}, Skipped: {skipped}"
+        'message': f"Processed monthly payments and sent {count} reminders. Skipped: {skipped}"
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_monthly_rents(request):
+    """
+    Generates next month's rent payment record for all active bookings
+    whose latest rent payment is already Paid.
+    Call this after a payment is verified to ensure the next reminder appears.
+    """
+    created = generate_monthly_payments()
+    return Response({
+        'status': 'success',
+        'payments_created': created,
+        'message': f"Generated {created} new monthly rent payment(s)."
     })

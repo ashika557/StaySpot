@@ -24,6 +24,10 @@ import OwnerPayments from './pages/OwnerPayments';
 import OwnerVisitRequests from './pages/OwnerVisitRequests';
 import Profile from './pages/Profile';
 import VerificationRequest from './pages/VerificationRequest';
+import AdminDashboard from './pages/AdminDashboard';
+import ManageUsers from './pages/ManageUsers';
+import ManageRooms from './pages/ManageRooms';
+import ManageComplaints from './pages/ManageComplaints';
 import { ROUTES, API_ENDPOINTS } from './constants/api';
 import { apiRequest } from './utils/api';
 
@@ -104,7 +108,11 @@ function App() {
                 />
               ) : user ? (
                 <Navigate
-                  to={user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD}
+                  to={
+                    user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                      user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
+                        ROUTES.TENANT_DASHBOARD
+                  }
                 />
               ) : (
                 <Navigate to={ROUTES.LOGIN} />
@@ -117,7 +125,11 @@ function App() {
             path={ROUTES.LOGIN}
             element={
               user ? (
-                <Navigate to={user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD} />
+                <Navigate to={
+                  user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                    user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
+                      ROUTES.TENANT_DASHBOARD
+                } />
               ) : (
                 <Login onLogin={handleLogin} />
               )
@@ -128,7 +140,11 @@ function App() {
             path={ROUTES.REGISTER}
             element={
               user ? (
-                <Navigate to={user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD} />
+                <Navigate to={
+                  user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                    user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
+                      ROUTES.TENANT_DASHBOARD
+                } />
               ) : (
                 <Register onLogin={handleLogin} />
               )
@@ -213,6 +229,23 @@ function App() {
           <Route
             path={ROUTES.VERIFICATION_REQUEST}
             element={user ? <VerificationRequest user={user} refreshUser={refreshUser} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+
+          <Route
+            path={ROUTES.ADMIN_DASHBOARD}
+            element={user && user.role === 'Admin' ? <AdminDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path="/admin/users"
+            element={user && user.role === 'Admin' ? <ManageUsers user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path="/admin/rooms"
+            element={user && user.role === 'Admin' ? <ManageRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path="/admin/complaints"
+            element={user && user.role === 'Admin' ? <ManageComplaints user={user} /> : <Navigate to={ROUTES.LOGIN} />}
           />
 
           {/* Catch-all */}

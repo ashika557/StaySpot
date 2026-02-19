@@ -28,6 +28,9 @@ export const API_ENDPOINTS = {
   OWNER_TENANTS: '/owner/tenants/',
   OWNER_FINANCIALS: '/owner/financial/dashboard/',
   TRIGGER_REMINDERS: '/trigger-reminders/',
+  ADMIN_DASHBOARD: '/admin/dashboard/',
+  ADMIN_USERS: '/accounts/admin/users/',
+  ADMIN_UPDATE_USER: (id) => `/accounts/admin/users/${id}/update/`,
 };
 
 export const ROUTES = {
@@ -52,6 +55,7 @@ export const ROUTES = {
   ROOM_DETAILS: '/room/:id',
   CHAT: '/chat',
   TENANT_COMPLAINTS: '/tenant/complaints',
+  ADMIN_DASHBOARD: '/admin/dashboard',
 };
 
 /**

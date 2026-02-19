@@ -7,7 +7,7 @@ import { Home, LogOut } from 'lucide-react';
 function Navigation({ user, onLogout, showLanding }) {
   const location = useLocation();
 
-  if (showLanding || !user) return null;
+  if (showLanding || !user || user.role === 'Admin') return null;
 
   const isOwner = user.role === 'Owner' || user.role === 'owner';
   const isTenant = user.role === 'Tenant' || user.role === 'tenant';
@@ -31,8 +31,8 @@ function Navigation({ user, onLogout, showLanding }) {
             <Link
               to={isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD)
-                  ? 'bg-white text-blue-600 shadow-md'
-                  : 'text-white hover:bg-blue-700'
+                ? 'bg-white text-blue-600 shadow-md'
+                : 'text-white hover:bg-blue-700'
                 }`}
             >
               Dashboard
@@ -40,8 +40,8 @@ function Navigation({ user, onLogout, showLanding }) {
             <Link
               to={ROUTES.CHAT}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.CHAT)
-                  ? 'bg-white text-blue-600 shadow-md'
-                  : 'text-white hover:bg-blue-700'
+                ? 'bg-white text-blue-600 shadow-md'
+                : 'text-white hover:bg-blue-700'
                 }`}
             >
               Messages
@@ -50,8 +50,8 @@ function Navigation({ user, onLogout, showLanding }) {
               <Link
                 to={ROUTES.TENANT_SEARCH}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.TENANT_SEARCH)
-                    ? 'bg-white text-blue-600 shadow-md'
-                    : 'text-white hover:bg-blue-700'
+                  ? 'bg-white text-blue-600 shadow-md'
+                  : 'text-white hover:bg-blue-700'
                   }`}
               >
                 Search Rooms
@@ -60,8 +60,8 @@ function Navigation({ user, onLogout, showLanding }) {
             <Link
               to={ROUTES.PROFILE}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.PROFILE)
-                  ? 'bg-white text-blue-600 shadow-md'
-                  : 'text-white hover:bg-blue-700'
+                ? 'bg-white text-blue-600 shadow-md'
+                : 'text-white hover:bg-blue-700'
                 }`}
             >
               Profile

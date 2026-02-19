@@ -6,6 +6,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, RoomReview, Complaint
+from accounts.models import User
 from payments.models import Payment
 from .serializers import (
     RoomSerializer, BookingSerializer, VisitSerializer, 
@@ -28,6 +29,9 @@ class RoomViewSet(viewsets.ModelViewSet):
         # Owners only see their own rooms
         if user.role == 'Owner':
             queryset = queryset.filter(owner=user)
+        elif user.role == 'Admin':
+            # Admins see all rooms (including Hidden ones)
+            pass
         else:
             # Tenants see rooms only from verified owners (or Admins)
             # Also include 'Pending Verification' just in case some rooms are still in that state
@@ -227,6 +231,27 @@ class RoomViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    @action(detail=True, methods=['post'], url_path='admin-action')
+    def admin_action(self, request, pk=None):
+        """Admin action to moderate a room (approve or disable)."""
+        if request.user.role != 'Admin':
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        
+        room = self.get_object()
+        action = request.data.get('action') # 'Approve' or 'Disable'
+        
+        if action == 'Approve':
+            room.status = 'Available'
+            message = 'Room approved and listed successfully.'
+        elif action == 'Disable':
+            room.status = 'Disabled'
+            message = 'Room has been disabled/hidden from users.'
+        else:
+            return Response({'error': 'Invalid action. Use Approve or Disable.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        room.save()
+        return Response({'message': message, 'status': room.status})
+
     @action(detail=True, methods=['post'])
     def increment_views(self, request, pk=None):
         room = self.get_object()
@@ -261,9 +286,9 @@ class BookingViewSet(viewsets.ModelViewSet):
                      raise serializers.ValidationError("Tenants can only cancel bookings.")
             elif user.role in ['Owner', 'Admin']:
                 # Owners and Admins can Confirm or Reject, or Cancel
-                if booking.room.owner != user and user.role != 'Admin':
-                    # Allow Admin to manage any booking, but regular owner only their own
-                    pass 
+                if user.role == 'Admin':
+                    # Superadmin has full control
+                    pass
                 elif booking.room.owner != user:
                     raise serializers.ValidationError("You do not own this room.")
                     
@@ -293,16 +318,25 @@ class BookingViewSet(viewsets.ModelViewSet):
             # Auto-create Payment if confirmed
             if new_status in ['Confirmed', 'Active']:
                 from payments.models import Payment
+                from dateutil.relativedelta import relativedelta
+                
+                # Use 1 month after start date as the first due date
+                first_due_date = booking.start_date + relativedelta(months=1)
+                
+                # If the booking is very short (ends before 1 month), set due date to end_date
+                if booking.end_date and first_due_date > booking.end_date:
+                    first_due_date = booking.end_date
+                
                 # Check if initial rent payment exists for this specific booking and period
-                if not Payment.objects.filter(booking=booking, payment_type='Rent', due_date=booking.start_date).exists():
+                if not Payment.objects.filter(booking=booking, payment_type='Rent', due_date=first_due_date).exists():
                     Payment.objects.create(
                         booking=booking,
                         amount=booking.monthly_rent,
-                        due_date=booking.start_date,
+                        due_date=first_due_date,
                         status='Pending',
                         payment_type='Rent'
                     )
-                    print(f"DEBUG: Auto-created Rent payment for booking {booking.id}")
+                    print(f"DEBUG: Auto-created first Rent payment (due {first_due_date}) for booking {booking.id}")
     
     def perform_destroy(self, instance):
         recipient = instance.room.owner if self.request.user.role == 'Tenant' else instance.tenant
@@ -492,10 +526,14 @@ def tenant_dashboard(request):
         status__in=['Active', 'Confirmed']
     ).first()
     
-    # Get payment reminders (pending and overdue)
+    # Get payment reminders (pending and overdue, due within 7 days)
+    today = timezone.now().date()
+    reminder_window = today + timezone.timedelta(days=7)
+    
     payment_reminders = Payment.objects.filter(
         booking__tenant=user,
-        status__in=['Pending', 'Overdue']
+        status__in=['Pending', 'Overdue'],
+        due_date__lte=reminder_window,
     ).order_by('due_date')[:5]
     
     # Get recent chats (last 3 messages from different conversations)
@@ -678,9 +716,116 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'Tenant':
             return Complaint.objects.filter(tenant=user)
-        elif user.role in ['Owner', 'Admin']:
+        elif user.role == 'Owner':
             return Complaint.objects.filter(owner=user)
+        elif user.role == 'Admin':
+            return Complaint.objects.all()
         return Complaint.objects.none()
 
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_dashboard_stats(request):
+    """
+    Aggregated endpoint for admin dashboard data.
+    """
+    if request.user.role != 'Admin':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    # 1. Base Stats
+    total_users = User.objects.count()
+    verified_users = User.objects.filter(is_identity_verified=True).count()
+    total_rooms = Room.objects.count()
+    total_bookings = Booking.objects.count()
+    active_complaints = Complaint.objects.filter(status__in=['Pending', 'Investigating']).count()
+    
+    # 1a. Financial Stats
+    from payments.models import Payment
+    from django.db.models import Sum
+    from django.utils import timezone
+    
+    all_paid = Payment.objects.filter(status='Paid')
+    total_revenue = all_paid.aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    now = timezone.now()
+    month_paid = all_paid.filter(paid_date__month=now.month, paid_date__year=now.year)
+    this_month_revenue = month_paid.aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # 2. Complaint Status Breakdown
+    complaint_stats = {
+        'Resolved': Complaint.objects.filter(status='Resolved').count(),
+        'In Progress': Complaint.objects.filter(status='Investigating').count(),
+        'Pending': Complaint.objects.filter(status='Pending').count(),
+    }
+    
+    # Calculate percentages for pie chart
+    total_complaints = sum(complaint_stats.values()) or 1
+    complaint_percentages = {
+        'Resolved': round((complaint_stats['Resolved'] / total_complaints) * 100),
+        'In Progress': round((complaint_stats['In Progress'] / total_complaints) * 100),
+        'Pending': round((complaint_stats['Pending'] / total_complaints) * 100),
+    }
+
+    # 3. Recent Activity (Latest 5 items)
+    activities = []
+    
+    # Recent User Registrations
+    recent_users = User.objects.order_by('-date_joined')[:3]
+    for u in recent_users:
+        activities.append({
+            'type': 'New user registration',
+            'detail': f"{u.full_name} signed up as {u.role.lower()}",
+            'time': u.date_joined,
+            'icon': 'user'
+        })
+        
+    # Recent Room Uploads
+    recent_rooms = Room.objects.order_by('-created_at')[:3]
+    for r in recent_rooms:
+        activities.append({
+            'type': 'Room uploaded',
+            'detail': f"{r.owner.full_name} added new property",
+            'time': r.created_at,
+            'icon': 'home'
+        })
+        
+    # Recent Bookings
+    recent_bookings = Booking.objects.order_by('-created_at')[:3]
+    for b in recent_bookings:
+        activities.append({
+            'type': 'New booking',
+            'detail': f"{b.tenant.full_name} booked a room",
+            'time': b.created_at,
+            'icon': 'calendar'
+        })
+        
+    # Recent Complaints
+    recent_complaints = Complaint.objects.order_by('-created_at')[:3]
+    for c in recent_complaints:
+        activities.append({
+            'type': 'Complaint filed',
+            'detail': f"Issue with {c.complaint_type.lower()}",
+            'time': c.created_at,
+            'icon': 'alert'
+        })
+        
+    # Sort all by time and take top 5
+    activities.sort(key=lambda x: x['time'], reverse=True)
+    recent_activities = activities[:5]
+
+    return Response({
+        'stats': {
+            'total_users': total_users,
+            'verified_users': verified_users,
+            'total_rooms': total_rooms,
+            'total_bookings': total_bookings,
+            'active_complaints': active_complaints,
+            'total_revenue': total_revenue,
+            'this_month_revenue': this_month_revenue,
+        },
+        'complaint_breakdown': complaint_percentages,
+        'recent_activity': recent_activities
+    })
+
