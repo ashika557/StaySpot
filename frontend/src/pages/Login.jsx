@@ -90,8 +90,15 @@ function Login({ onLogin }) {
         // Call the onLogin callback
         onLogin(data.user);
 
-        // Navigate to appropriate dashboard
-        navigate(formData.role === 'Owner' || formData.role === 'Admin' ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD);
+        // Navigate to appropriate dashboard based on role
+        const role = data.user?.role;
+        if (role === 'Admin') {
+          navigate(ROUTES.ADMIN_DASHBOARD);
+        } else if (role === 'Owner') {
+          navigate(ROUTES.OWNER_DASHBOARD);
+        } else {
+          navigate(ROUTES.TENANT_DASHBOARD);
+        }
       } else {
         setErrorMessage(data.error || 'Login failed. Please check your credentials.');
       }

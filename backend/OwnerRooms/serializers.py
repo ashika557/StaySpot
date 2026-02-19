@@ -47,7 +47,7 @@ class RoomSerializer(serializers.ModelSerializer):
             'wifi', 'parking', 'water_supply', 'electricity_backup',
             'available_from', 'cooking_allowed', 'smoking_allowed', 
             'drinking_allowed', 'pets_allowed', 'visitor_allowed',
-            'latitude', 'longitude', 'views', 'images', 'uploaded_images', 
+            'latitude', 'longitude', 'description', 'amenities', 'views', 'images', 'uploaded_images', 
             'average_rating', 'review_count',
             'created_at', 'updated_at'
         ]

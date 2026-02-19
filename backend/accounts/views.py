@@ -504,56 +504,118 @@ def resend_otp(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def approve_verification(request, user_id):
-    """Admin endpoint to approve identity verification."""
-    if not request.user.is_staff:
-        return Response({'error': 'Admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+def admin_verify_kyc(request, user_id):
+    """Approve or Reject a user's identity verification request."""
+    if request.user.role != 'Admin':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
     
     try:
         user = User.objects.get(id=user_id)
-        user.verification_status = 'Approved'
+    except User.DoesNotExist:
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    action = request.data.get('action') # 'Approve' or 'Reject'
+    
+    if action == 'Approve':
         user.is_identity_verified = True
+        user.verification_status = 'Approved'
         user.rejection_reason = None
-        user.save()
+        message = 'User identity verified successfully.'
+    elif action == 'Reject':
+        user.is_identity_verified = False
+        user.verification_status = 'Rejected'
+        user.rejection_reason = request.data.get('rejection_reason', 'Document does not meet requirements.')
+        message = 'User identity verification rejected.'
+    else:
+        return Response({'error': 'Invalid action. Use Approve or Reject.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response({
-            'message': f'Verification approved for {user.full_name}.',
-            'user': {
-                'id': user.id,
-                'full_name': user.full_name,
-                'email': user.email,
-                'verification_status': user.verification_status
-            }
-        })
-    except User.DoesNotExist:
-        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+    user.save()
+    
+    return Response({
+        'message': message,
+        'verification_status': user.verification_status,
+        'is_identity_verified': user.is_identity_verified
+    }, status=status.HTTP_200_OK)
 
-
-@api_view(['POST'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def reject_verification(request, user_id):
-    """Admin endpoint to reject identity verification."""
-    if not request.user.is_staff:
-        return Response({'error': 'Admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+def admin_delete_user(request, user_id):
+    """Permanently delete a user account."""
+    if request.user.role != 'Admin':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
     
     try:
         user = User.objects.get(id=user_id)
-        rejection_reason = request.data.get('rejection_reason', 'Document does not meet verification requirements.')
-        
-        user.verification_status = 'Rejected'
-        user.is_identity_verified = False
-        user.rejection_reason = rejection_reason
-        user.save()
-        
-        return Response({
-            'message': f'Verification rejected for {user.full_name}.',
-            'user': {
-                'id': user.id,
-                'full_name': user.full_name,
-                'email': user.email,
-                'verification_status': user.verification_status,
-                'rejection_reason': user.rejection_reason
-            }
-        })
     except User.DoesNotExist:
         return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+    if user == request.user:
+        return Response({'error': 'You cannot delete your own account.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    user_name = user.full_name
+    user.delete()
+    
+    return Response({'message': f'User {user_name} has been permanently deleted.'}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_list_users(request):
+    """List all users for administrative purposes."""
+    if request.user.role != 'Admin':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    users = User.objects.all().order_by('-date_joined')
+    user_list = []
+    for u in users:
+        user_list.append({
+            'id': u.id,
+            'full_name': u.full_name,
+            'email': u.email,
+            'phone': u.phone,
+            'role': u.role,
+            'is_active': u.is_active,
+            'is_identity_verified': u.is_identity_verified,
+            'verification_status': u.verification_status,
+            'date_joined': u.date_joined
+        })
+    
+    return Response(user_list, status=status.HTTP_200_OK)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def admin_update_user(request, user_id):
+    """Update user role or status for administrative purposes."""
+    if request.user.role != 'Admin':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Don't allow changing own role to something else (safety)
+    if user == request.user and 'role' in request.data and request.data['role'] != 'Admin':
+        return Response({'error': 'You cannot demote yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    role = request.data.get('role')
+    is_active = request.data.get('is_active')
+    
+    if role:
+        if role not in [choice[0] for choice in User.ROLE_CHOICES]:
+            return Response({'error': 'Invalid role.'}, status=status.HTTP_400_BAD_REQUEST)
+        user.role = role
+        
+    if is_active is not None:
+        user.is_active = bool(is_active)
+        
+    user.save()
+    
+    return Response({
+        'message': 'User updated successfully.',
+        'user': {
+            'id': user.id,
+            'role': user.role,
+            'is_active': user.is_active
+        }
+    }, status=status.HTTP_200_OK)
+

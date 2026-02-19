@@ -56,6 +56,8 @@ export default function TenantDashboard({ user }) {
           const verifyResult = await paymentService.verifyKhaltiPayment(paymentId, pidx);
           if (verifyResult.status === 'Payment verified successfully') {
             alert("Success! Your Khalti payment has been verified.");
+            // Auto-generate next month's rent record
+            await paymentService.generateMonthlyRents();
             fetchDashboardData();
           }
         }
@@ -83,6 +85,8 @@ export default function TenantDashboard({ user }) {
           const verifyResult = await paymentService.verifyEsewaPayment(paymentId, encodedData);
           if (verifyResult.status === 'Payment verified successfully') {
             alert("Success! Your eSewa payment has been verified.");
+            // Auto-generate next month's rent record
+            await paymentService.generateMonthlyRents();
             fetchDashboardData();
           }
         } else {
@@ -375,13 +379,22 @@ function CurrentBookingCard({ booking }) {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-blue-600">
-              ₹{parseFloat(booking.monthly_rent).toLocaleString()}/month
+              NPR {parseFloat(booking.monthly_rent).toLocaleString()}/month
             </div>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// Helper: compute days left from today to due_date string
+function getDaysLeft(dueDateStr) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDateStr);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due - today) / (1000 * 60 * 60 * 24));
 }
 
 // Payment Reminders Card Component
@@ -442,16 +455,53 @@ function PaymentRemindersCard({ payments, onPaymentSuccess }) {
 
   return (
     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-      <h3 className="font-bold text-gray-800 mb-4">Payment Reminders</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-gray-800">Rent Due Soon</h3>
+        {payments.length > 0 && (
+          <span className="text-xs bg-yellow-100 text-yellow-700 font-bold px-2 py-1 rounded-full">
+            {payments.length} pending
+          </span>
+        )}
+      </div>
 
       {payments.length === 0 ? (
-        <div className="text-center py-6 text-gray-500 text-sm">
-          No pending payments
+        <div className="text-center py-6">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-50 flex items-center justify-center">
+            <DollarSign className="w-6 h-6 text-green-500" />
+          </div>
+          <p className="text-gray-500 text-sm font-medium">No rent due this week</p>
+          <p className="text-gray-400 text-xs mt-1">You\'re all caught up!</p>
         </div>
       ) : (
         <div className="space-y-4">
           {payments.map((payment) => {
-            const isOverdue = payment.status === 'Overdue';
+            const daysLeft = getDaysLeft(payment.due_date);
+            const isOverdue = payment.status === 'Overdue' || daysLeft < 0;
+
+            // Color scheme based on urgency
+            let urgencyColor, urgencyBg, urgencyLabel;
+            if (isOverdue) {
+              urgencyColor = 'text-red-600';
+              urgencyBg = 'bg-red-100';
+              urgencyLabel = `${Math.abs(daysLeft)}d overdue`;
+            } else if (daysLeft === 0) {
+              urgencyColor = 'text-red-600';
+              urgencyBg = 'bg-red-100';
+              urgencyLabel = 'Due today!';
+            } else if (daysLeft === 1) {
+              urgencyColor = 'text-orange-600';
+              urgencyBg = 'bg-orange-100';
+              urgencyLabel = 'Due tomorrow';
+            } else if (daysLeft <= 3) {
+              urgencyColor = 'text-orange-500';
+              urgencyBg = 'bg-orange-50';
+              urgencyLabel = `${daysLeft}d left`;
+            } else {
+              urgencyColor = 'text-yellow-600';
+              urgencyBg = 'bg-yellow-50';
+              urgencyLabel = `${daysLeft}d left`;
+            }
+
             const dueDate = new Date(payment.due_date).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
@@ -459,34 +509,36 @@ function PaymentRemindersCard({ payments, onPaymentSuccess }) {
 
             return (
               <div key={payment.id} className="pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-sm">
-                      {payment.payment_type === 'Rent' ? 'Rent Due' : payment.payment_type}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {payment.room_number ? `Room ${payment.room_number}` : payment.tenant_name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-gray-900 text-sm">
+                        {payment.payment_type === 'Rent' ? 'Monthly Rent' : payment.payment_type}
+                      </h4>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${urgencyBg} ${urgencyColor}`}>
+                        {urgencyLabel}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">Due {dueDate}</p>
                     <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => handleEsewaPayment(payment)}
-                        className="text-[10px] bg-green-600 text-white px-2 py-1 rounded font-bold hover:bg-green-700 transition"
+                        className="text-[10px] bg-green-600 text-white px-2.5 py-1 rounded-lg font-bold hover:bg-green-700 transition"
                       >
-                        eSewa
+                        Pay via eSewa
                       </button>
                       <button
                         onClick={() => handleKhaltiPayment(payment)}
-                        className="text-[10px] bg-purple-600 text-white px-2 py-1 rounded font-bold hover:bg-purple-700 transition"
+                        className="text-[10px] bg-purple-600 text-white px-2.5 py-1 rounded-lg font-bold hover:bg-purple-700 transition"
                       >
-                        Khalti
+                        Pay via Khalti
                       </button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className={`font-bold text-sm ${isOverdue ? 'text-red-600' : 'text-yellow-600'}`}>
+                  <div className="text-right shrink-0">
+                    <div className={`font-bold text-base ${urgencyColor}`}>
                       NPR {parseFloat(payment.amount).toLocaleString()}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">Due {dueDate}</div>
                   </div>
                 </div>
               </div>
@@ -592,7 +644,7 @@ function RoomCard({ room }) {
           alt={room.title}
         />
         <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-white/90 backdrop-blur rounded-lg text-blue-600 font-bold text-sm shadow-sm">
-          ₹{parseFloat(room.price).toLocaleString()}
+          NPR {parseFloat(room.price).toLocaleString()}
         </div>
       </div>
 

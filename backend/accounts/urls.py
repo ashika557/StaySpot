@@ -17,6 +17,8 @@ urlpatterns = [
     path('resend-otp/', views.resend_otp, name='resend_otp'),
     path('update-profile/', views.update_profile, name='update_profile'),
     # Admin verification endpoints
-    path('admin/approve-verification/<int:user_id>/', views.approve_verification, name='approve_verification'),
-    path('admin/reject-verification/<int:user_id>/', views.reject_verification, name='reject_verification'),
+    path('admin/users/', views.admin_list_users, name='admin_list_users'),
+    path('admin/users/<int:user_id>/update/', views.admin_update_user, name='admin_update_user'),
+    path('admin/users/<int:user_id>/verify-kyc/', views.admin_verify_kyc, name='admin_verify_kyc'),
+    path('admin/users/<int:user_id>/delete/', views.admin_delete_user, name='admin_delete_user'),
 ]

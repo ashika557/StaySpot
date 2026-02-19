@@ -379,6 +379,14 @@ const SearchRooms = ({ user }) => {
                                                             {room.average_rating ? room.average_rating.toFixed(1) : '0.0'} ({room.review_count || 0} reviews)
                                                         </span>
                                                     </div>
+
+                                                    {/* Amenities Badges */}
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                        {room.wifi && <span className="text-[9px] bg-green-50 text-green-700 font-bold px-1.5 py-0.5 rounded border border-green-100">WiFi</span>}
+                                                        {room.parking && <span className="text-[9px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-100">Parking</span>}
+                                                        {room.pets_allowed && <span className="text-[9px] bg-orange-50 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-100">Pets</span>}
+                                                        <span className="text-[9px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-100 uppercase">{room.gender_preference || 'Any'}</span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center justify-between mt-2">
                                                     <div className="text-[10px] text-gray-400 font-medium">Owner: {room.owner?.full_name || 'Rajesh Basnet'}</div>
