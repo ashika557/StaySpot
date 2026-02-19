@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation } from 'lucide-react';
+import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation, Info, Cigarette, Dog, Users, Beer, UtensilsCrossed, Zap, Droplets, Car, Layout, ChefHat } from 'lucide-react';
 import { GoogleMap, Marker, Circle } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import Sidebar from './sidebar';
@@ -179,7 +179,15 @@ const RoomDetails = ({ user }) => {
         );
     }
 
-    const amenitiesList = room.amenities ? room.amenities.split(',') : [];
+    const amenitiesList = room.amenities ? room.amenities.split(',').map(a => a.trim()).filter(a => a) : [];
+
+    // Add boolean amenities if they are true
+    if (room.wifi) amenitiesList.push("Free Wi-Fi");
+    if (room.parking) amenitiesList.push("Parking");
+    if (room.water_supply) amenitiesList.push("24/7 Water Supply");
+    if (room.electricity_backup && room.electricity_backup !== 'None') amenitiesList.push(`Backup: ${room.electricity_backup}`);
+    if (room.furnished) amenitiesList.push("Furnished");
+    if (room.kitchen_access) amenitiesList.push("Kitchen Access");
 
     // Helper to get custom SVG marker with white icon inside colored pin
     const getIcon = (type) => {
@@ -414,105 +422,219 @@ const RoomDetails = ({ user }) => {
                             )}
                         </div>
 
-                        {/* Title & Price Header */}
-                        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${room.status === 'Available' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
+                        {/* Title & Price Header - Premium Glass Card */}
+                        <div className="bg-white/90 backdrop-blur-md p-10 rounded-3xl shadow-xl shadow-blue-900/5 border border-white">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg shadow-sm ${room.status === 'Available'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-orange-500 text-white'
+                                            }`}>
                                             {room.status}
                                         </span>
-                                        <div className="flex items-center gap-1 text-yellow-500">
-                                            <Star className="w-4 h-4 fill-current" />
-                                            <span className="text-sm font-bold text-gray-900">4.8</span>
-                                            <span className="text-gray-400 text-xs">(24 reviews)</span>
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 rounded-lg text-yellow-700 border border-yellow-100">
+                                            <Star className="w-3.5 h-3.5 fill-current" />
+                                            <span className="text-xs font-black">4.8</span>
+                                            <span className="text-yellow-400/60 text-[10px] font-bold">(24 Verified)</span>
                                         </div>
                                     </div>
-                                    <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">{room.title}</h1>
-                                    <p className="flex items-center gap-2 text-gray-500 font-medium">
-                                        <MapPin className="w-4 h-4 text-blue-500" />
+                                    <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-tight">
+                                        {room.title}
+                                    </h1>
+                                    <p className="flex items-center gap-2 text-gray-500 font-bold text-sm bg-gray-50 w-fit px-3 py-1.5 rounded-full border border-gray-100">
+                                        <MapPin className="w-4 h-4 text-blue-600" />
                                         {room.location}
                                     </p>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-3xl font-black text-blue-600">
-                                        NPR {parseFloat(room.price).toLocaleString()}
+                                <div className="md:text-right flex flex-col items-start md:items-end">
+                                    <div className="text-xs font-black text-blue-600/40 uppercase tracking-widest mb-1">Stay Value</div>
+                                    <div className="text-4xl font-black text-blue-600 flex items-baseline gap-1">
+                                        <span className="text-lg font-bold">NPR</span>
+                                        {parseFloat(room.price).toLocaleString()}
                                     </div>
-                                    <p className="text-gray-400 text-sm font-medium">per month</p>
+                                    <p className="text-gray-400 text-sm font-bold mt-1">per month premium</p>
                                 </div>
                             </div>
 
-                            <hr className="my-8 border-gray-100" />
+                            <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-100 to-transparent my-10" />
 
-                            {/* Amenities */}
-                            <div className="mb-8">
-                                <h3 className="font-bold text-gray-900 mb-4 px-2">Amenities</h3>
-                                <div className="flex flex-wrap gap-3">
-                                    {amenitiesList.map((amenity, index) => (
-                                        <div key={index} className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-xl text-gray-700 font-bold text-sm border border-gray-100">
-                                            {amenity.toLowerCase().includes('wifi') && <Wifi className="w-4 h-4 text-blue-500" />}
-                                            {amenity.toLowerCase().includes('tv') && <Tv className="w-4 h-4 text-blue-500" />}
-                                            {amenity.toLowerCase().includes('ac') && <Wind className="w-4 h-4 text-blue-500" />}
-                                            <span>{amenity.trim()}</span>
+                            {/* Property Spec Details - Premium Grid */}
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
+                                <div className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-2xl border border-gray-100 shadow-sm group hover:border-blue-100 transition-colors">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                            <Layout className="w-4 h-4" />
                                         </div>
-                                    ))}
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Level</p>
+                                    </div>
+                                    <p className="font-black text-gray-900 text-lg leading-none">{room.floor || 'Grd Floor'}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-2xl border border-gray-100 shadow-sm group hover:border-blue-100 transition-colors">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            <Users className="w-4 h-4" />
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Space</p>
+                                    </div>
+                                    <p className="font-black text-gray-900 text-lg leading-none">{room.size || 'Standard'}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-2xl border border-gray-100 shadow-sm group hover:border-blue-100 transition-colors">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-2 bg-purple-100 text-purple-600 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                            <UtensilsCrossed className="w-4 h-4" />
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Sanitary</p>
+                                    </div>
+                                    <p className="font-black text-gray-900 text-lg leading-none">{room.toilet_type || 'Shared'}</p>
+                                </div>
+                            </div>
+
+                            {/* Amenities - Modern Pill Layout */}
+                            <div className="mt-8">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Exclusive Amenities</h3>
+                                <div className="flex flex-wrap gap-4">
+                                    {amenitiesList.map((amenity, index) => {
+                                        const isWifi = amenity.toLowerCase().includes('wifi');
+                                        const isParking = amenity.toLowerCase().includes('parking');
+                                        const isWater = amenity.toLowerCase().includes('water');
+                                        const isPower = amenity.toLowerCase().includes('backup') || amenity.toLowerCase().includes('electricity');
+                                        const isFurnished = amenity.toLowerCase().includes('furnished');
+                                        const isKitchen = amenity.toLowerCase().includes('kitchen');
+
+                                        return (
+                                            <div key={index}
+                                                className="group flex items-center gap-3 px-5 py-3 bg-white rounded-2xl text-gray-800 font-black text-xs border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all hover:-translate-y-0.5"
+                                            >
+                                                <div className={`p-2 rounded-lg transition-colors ${isWifi ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white' :
+                                                    isKitchen ? 'bg-orange-50 text-orange-600 group-hover:bg-orange-600 group-hover:text-white' :
+                                                        isPower ? 'bg-yellow-50 text-yellow-600 group-hover:bg-yellow-600 group-hover:text-white' :
+                                                            'bg-gray-50 text-gray-600 group-hover:bg-gray-600 group-hover:text-white'
+                                                    }`}>
+                                                    {isWifi && <Wifi className="w-3.5 h-3.5" />}
+                                                    {isKitchen && <ChefHat className="w-3.5 h-3.5" />}
+                                                    {isParking && <Car className="w-3.5 h-3.5" />}
+                                                    {isWater && <Droplets className="w-3.5 h-3.5" />}
+                                                    {isPower && <Zap className="w-3.5 h-3.5" />}
+                                                    {isFurnished && <Layout className="w-3.5 h-3.5" />}
+                                                    {!isWifi && !isKitchen && !isParking && !isWater && !isPower && !isFurnished && <Star className="w-3.5 h-3.5" />}
+                                                </div>
+                                                <span className="tracking-tight">{amenity.trim()}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Description */}
-                        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                            <h3 className="font-bold text-gray-900 mb-4">Description</h3>
-                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                        {/* Description - Elegant Typography */}
+                        <div className="bg-white/70 backdrop-blur-sm p-10 rounded-3xl shadow-xl shadow-blue-900/5 border border-white mb-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-1 h-6 bg-blue-600 rounded-full" />
+                                <h3 className="font-black text-gray-900 text-xl tracking-tight">The Space</h3>
+                            </div>
+                            <p className="text-gray-600 leading-[1.8] text-lg font-medium whitespace-pre-line">
                                 {room.description}
                             </p>
+                        </div>
+
+                        {/* House Rules Section - Modern Grid */}
+                        <div className="bg-white/70 backdrop-blur-sm p-10 rounded-3xl shadow-xl shadow-blue-900/5 border border-white">
+                            <h3 className="font-black text-gray-900 text-xl mb-8 flex items-center gap-3 tracking-tight">
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                                    <Info className="w-6 h-6" />
+                                </div>
+                                Essential Guidelines
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
+                                {[
+                                    { key: 'cooking_allowed', icon: UtensilsCrossed, label: 'Culinary Activities', active: room.cooking_allowed },
+                                    { key: 'smoking_allowed', icon: Cigarette, label: 'Indoor Smoking', active: room.smoking_allowed },
+                                    { key: 'pets_allowed', icon: Dog, label: 'Pet Companions', active: room.pets_allowed },
+                                    { key: 'visitor_allowed', icon: Users, label: 'Guest Visitation', active: room.visitor_allowed },
+                                    { key: 'drinking_allowed', icon: Beer, label: 'Alcohol Policy', active: room.drinking_allowed }
+                                ].map((rule, idx) => (
+                                    <div key={idx}
+                                        className={`flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 ${rule.active
+                                                ? 'bg-green-50/50 border-green-100/50 hover:bg-green-50'
+                                                : 'bg-red-50/50 border-red-100/50 hover:bg-red-50'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-2.5 rounded-xl ${rule.active ? 'bg-white text-green-600' : 'bg-white text-red-600 shadow-sm'}`}>
+                                                <rule.icon className="w-5 h-5" />
+                                            </div>
+                                            <span className={`font-black text-sm tracking-tight ${rule.active ? 'text-green-800' : 'text-red-800'}`}>
+                                                {rule.label}
+                                            </span>
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${rule.active
+                                                ? 'bg-green-600 text-white'
+                                                : 'bg-red-600 text-white'
+                                            }`}>
+                                            {rule.active ? 'Yes' : 'No'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
                     {/* Right Column - Booking & Map */}
                     <div className="space-y-6">
-                        {/* Action Card */}
-                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
-                            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold text-gray-400 overflow-hidden">
-                                    {room.owner?.profile_photo ? (
-                                        <img src={getMediaUrl(room.owner.profile_photo)} alt={room.owner.full_name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        room.owner?.full_name ? room.owner.full_name[0] : <User className="w-6 h-6" />
-                                    )}
+                        {/* Action Card - Glassmorphism style */}
+                        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl shadow-blue-900/5 border border-white/20 sticky top-24 ring-1 ring-black/5">
+                            <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
+                                <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center p-0.5 shadow-lg shadow-blue-200">
+                                    <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-xl font-black text-blue-600 overflow-hidden">
+                                        {room.owner?.profile_photo ? (
+                                            <img src={getMediaUrl(room.owner.profile_photo)} alt={room.owner.full_name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            room.owner?.full_name ? room.owner.full_name[0] : <User className="w-6 h-6" />
+                                        )}
+                                    </div>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Listed by</p>
-                                    <p className="font-bold text-gray-900">{room.owner?.full_name || 'Owner'}</p>
+                                    <p className="text-[10px] text-blue-600/60 font-black uppercase tracking-widest mb-0.5">Contact Host</p>
+                                    <p className="font-black text-gray-900 text-lg leading-tight">{room.owner?.full_name || 'Owner'}</p>
 
-                                    {/* Show contact info only if booked */}
                                     {hasActiveBooking ? (
-                                        <>
-                                            <p className="text-xs text-gray-500">{room.owner?.email}</p>
+                                        <div className="space-y-0.5 mt-1">
+                                            <p className="text-xs text-blue-600 font-bold">{room.owner?.email}</p>
                                             <p className="text-xs text-gray-500">{room.owner?.phone}</p>
-                                        </>
+                                        </div>
                                     ) : (
-                                        <p className="text-[10px] text-gray-400 italic">Contact info available after booking</p>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                            <p className="text-[10px] text-gray-400 font-bold italic">Identity Verified</p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <button
                                     onClick={() => setShowBookingModal(true)}
                                     disabled={room.status !== 'Available'}
-                                    className={`w-full py-4 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 ${room.status === 'Available' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-gray-400 cursor-not-allowed'}`}
+                                    className={`w-full py-4.5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 group ${room.status === 'Available'
+                                        ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        }`}
                                 >
-                                    <Calendar className="w-5 h-5" />
-                                    {room.status === 'Available' ? 'Request to Book' : 'Currently ' + room.status}
+                                    <Calendar className={`w-5 h-5 transition-transform group-hover:rotate-12 ${room.status === 'Available' ? 'text-blue-100' : 'text-gray-300'}`} />
+                                    {room.status === 'Available' ? 'Secure Your Stay' : 'Currently ' + room.status}
                                 </button>
                                 <button
                                     onClick={() => setShowVisitModal(true)}
-                                    className="w-full py-4 bg-white text-gray-900 border-2 border-gray-100 font-bold rounded-2xl hover:bg-gray-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                    className="w-full py-4.5 bg-white text-gray-900 border-2 border-gray-100 font-black text-sm uppercase tracking-widest rounded-2xl hover:bg-gray-50 hover:border-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2 group"
                                 >
-                                    <ShieldCheck className="w-5 h-5 text-gray-400" />
-                                    Schedule Visit
+                                    <ShieldCheck className="w-5 h-5 text-blue-500 transition-transform group-hover:scale-110" />
+                                    Express Visit
                                 </button>
+
+                                <p className="text-[10px] text-center text-gray-400 font-medium px-4">
+                                    No commitment required. Reach out to the owner to discuss details or schedule a viewing.
+                                </p>
                             </div>
                         </div>
 

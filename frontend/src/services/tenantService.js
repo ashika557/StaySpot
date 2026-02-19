@@ -224,6 +224,20 @@ export const paymentService = {
         }
     },
 
+    // Trigger generation of next month's rent payment records for all active bookings
+    generateMonthlyRents: async () => {
+        try {
+            const response = await apiRequest('/generate-monthly-rents/', {
+                method: 'POST',
+            });
+            if (!response.ok) throw new Error('Failed to generate monthly rents');
+            return await response.json();
+        } catch (error) {
+            console.error('Error generating monthly rents:', error);
+            // Non-critical, don't rethrow
+        }
+    },
+
     // Mark payment as paid
     markAsPaid: async (paymentId) => {
         try {

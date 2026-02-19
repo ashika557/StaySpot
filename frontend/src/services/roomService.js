@@ -55,7 +55,6 @@ export const roomService = {
     formData.append('title', roomData.title);
     formData.append('location', roomData.location);
     formData.append('price', roomData.price);
-    formData.append('deposit', roomData.deposit || 0);
     formData.append('room_type', roomData.roomType);
     formData.append('floor', roomData.floor || '');
     formData.append('size', roomData.size || '');
@@ -65,6 +64,8 @@ export const roomService = {
     formData.append('furnished', roomData.furnished || false);
     formData.append('available_from', roomData.availableFrom || '');
     formData.append('electricity_backup', roomData.electricityBackup || 'None');
+    formData.append('description', roomData.description || '');
+    formData.append('amenities', roomData.amenities || '');
 
     // House Rules
     formData.append('cooking_allowed', roomData.cookingAllowed || false);
@@ -122,7 +123,6 @@ export const roomService = {
     formData.append('title', roomData.title);
     formData.append('location', roomData.location);
     formData.append('price', roomData.price);
-    formData.append('deposit', roomData.deposit || 0);
     formData.append('room_type', roomData.roomType);
     formData.append('floor', roomData.floor || '');
     formData.append('size', roomData.size || '');
@@ -132,6 +132,8 @@ export const roomService = {
     formData.append('furnished', roomData.furnished || false);
     formData.append('available_from', roomData.availableFrom || '');
     formData.append('electricity_backup', roomData.electricityBackup || 'None');
+    formData.append('description', roomData.description || '');
+    formData.append('amenities', roomData.amenities || '');
 
     // House Rules
     formData.append('cooking_allowed', roomData.cookingAllowed || false);

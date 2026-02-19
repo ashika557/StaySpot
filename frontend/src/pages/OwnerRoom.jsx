@@ -20,15 +20,16 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
   const [selectedImages, setSelectedImages] = React.useState([]);
   const [showMapSelector, setShowMapSelector] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    title: '', location: '', price: '', deposit: '', roomType: 'Single Room',
-    floor: '', size: '', status: 'Pending Verification',
+    title: '', location: '', price: '', roomType: 'Single Room',
+    floor: '', size: '', status: 'Available',
     preferredTenant: 'Any', genderPreference: 'Any',
     toiletType: 'Shared', kitchenAccess: false, furnished: false,
     wifi: false, parking: false, waterSupply: false,
     electricityBackup: 'None', availableFrom: '',
     cookingAllowed: false, smokingAllowed: false, drinkingAllowed: false,
     petsAllowed: false, visitorAllowed: false,
-    latitude: '', longitude: ''
+    latitude: '', longitude: '',
+    description: '', amenities: ''
   });
 
   // Fetch rooms on component mount
@@ -68,7 +69,6 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
       title: room.title,
       location: room.location,
       price: room.price,
-      deposit: room.deposit || '',
       roomType: room.room_type,
       floor: room.floor || '',
       size: room.size || '',
@@ -89,7 +89,9 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
       petsAllowed: room.pets_allowed,
       visitorAllowed: room.visitor_allowed,
       latitude: room.latitude || '',
-      longitude: room.longitude || ''
+      longitude: room.longitude || '',
+      description: room.description || '',
+      amenities: room.amenities || ''
     });
     setShowModal('edit');
   };
@@ -145,15 +147,16 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
       setShowModal(null);
       setSelectedImages([]);
       setFormData({
-        title: '', location: '', price: '', deposit: '', roomType: 'Single Room',
-        floor: '', size: '', status: 'Pending Verification',
+        title: '', location: '', price: '', roomType: 'Single Room',
+        floor: '', size: '', status: 'Available',
         preferredTenant: 'Any', genderPreference: 'Any',
-        toiletType: 'Shared', kitchenAccess: false, furnished: false,
-        wifi: false, parking: false, waterSupply: false,
-        electricityBackup: 'None', availableFrom: '',
+        toiletType: 'Shared', kitchenAccess: false,
+        furnished: false, wifi: false, parking: false,
+        waterSupply: false, electricityBackup: 'None', availableFrom: '',
         cookingAllowed: false, smokingAllowed: false, drinkingAllowed: false,
         petsAllowed: false, visitorAllowed: false,
-        latitude: '', longitude: ''
+        latitude: '', longitude: '',
+        description: '', amenities: ''
       });
     } catch (error) {
       console.error('Error saving room:', error);
@@ -492,16 +495,10 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                             placeholder="Street, City, Area" required />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                         <div>
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Monthly Rent *</label>
                           <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-100 outline-none transition"
-                            placeholder="NPR" required />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Security Deposit *</label>
-                          <input type="number" value={formData.deposit} onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
                             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-100 outline-none transition"
                             placeholder="NPR" required />
                         </div>
@@ -608,7 +605,27 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                     </div>
                   </div>
 
-                  {/* Section 5: Media & Location */}
+                  {/* Section 5: Detailed Description */}
+                  <div className="col-span-2 space-y-6 pt-6 border-t border-gray-100">
+                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-[10px]">5</div>
+                      Detailed Description
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Detailed Description *</label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-3 min-h-[120px] outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
+                          placeholder="Describe your room, special conditions, or unique features..."
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 6: Media & Location */}
                   <div className="col-span-2 grid grid-cols-2 gap-8 pt-6 border-t border-gray-100">
                     <div className="space-y-4">
                       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Photos & Visuals</h3>
