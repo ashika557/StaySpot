@@ -14,7 +14,6 @@ import {
     Filter
 } from 'lucide-react';
 import Sidebar from './sidebar';
-import TenantHeader from '../components/TenantHeader';
 import { API_ENDPOINTS, ROUTES, getMediaUrl } from '../constants/api';
 import { apiRequest } from '../utils/api';
 
@@ -126,12 +125,10 @@ const OwnerPayments = ({ user, onLogout }) => {
     };
 
     return (
-        <div className="flex bg-gray-50 min-h-screen">
+        <div className="flex h-screen bg-gray-50 overflow-auto">
             <Sidebar user={user} />
             <div className="flex-1 flex flex-col min-w-0">
-                <TenantHeader user={user} onLogout={onLogout} />
-
-                <main className="p-8 overflow-y-auto">
+                <main className="p-8">
                     <div className="mb-8">
                         <h2 className="text-2xl font-bold text-gray-900">Earnings & Payments</h2>
                         <p className="text-gray-500">Track and manage your rental income</p>

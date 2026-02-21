@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
-import TenantHeader from '../components/TenantHeader';
-import Footer from '../components/Footer';
 import { Calendar, MapPin, DollarSign, MessageCircle, Star, ChevronRight, MessageSquare, Clock } from 'lucide-react';
 import { dashboardService, paymentService } from '../services/tenantService';
 import { roomService } from '../services/roomService';
@@ -193,21 +191,13 @@ export default function TenantDashboard({ user }) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-auto">
       <TenantSidebar user={user} />
 
       {/* Main Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TenantHeader
-          user={user}
-          title="Tenant Dashboard"
-          subtitle={`Welcome back, ${user?.full_name || 'User'}`}
-          onLogout={() => {
-            localStorage.removeItem('user');
-            window.location.href = '/';
-          }}
-        />
-        <div className="flex-1 overflow-auto p-8">
+      <div className="flex-1 flex flex-col">
+        {/* Main Content */}
+        <div className="flex-1 p-8">
           {verificationMessage && (
             <div className="max-w-4xl mx-auto mb-6 bg-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse">
               <div className="flex items-center gap-3">
@@ -240,7 +230,6 @@ export default function TenantDashboard({ user }) {
             </div>
           </div>
         </div>
-        <Footer />
       </div>
     </div>
   );

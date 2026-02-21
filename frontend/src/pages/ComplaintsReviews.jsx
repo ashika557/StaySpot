@@ -6,7 +6,6 @@ import complaintService from '../services/complaintService';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
 import TenantSidebar from '../components/TenantSidebar';
-import TenantHeader from '../components/TenantHeader';
 
 export default function ComplaintsReviews({ user }) {
     const [complaints, setComplaints] = useState([]);
@@ -188,20 +187,11 @@ export default function ComplaintsReviews({ user }) {
     }
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="flex h-screen bg-gray-50 overflow-auto">
             <TenantSidebar user={user} />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TenantHeader
-                    user={user}
-                    title="Complaints & Reviews"
-                    subtitle="Manage your room experiences and report issues"
-                    onLogout={() => {
-                        localStorage.removeItem('user');
-                        window.location.href = '/';
-                    }}
-                />
-                <div className="flex-1 overflow-auto p-8">
+            <div className="flex-1 flex flex-col">
+                <div className="flex-1 p-8">
                     <div className="max-w-6xl mx-auto">
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -2,15 +2,20 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ROUTES, getMediaUrl } from '../constants/api';
 import NotificationBell from './NotificationBell';
-import { Home, LogOut } from 'lucide-react';
+import { Home, LogOut, User } from 'lucide-react';
 
 function Navigation({ user, onLogout, showLanding }) {
   const location = useLocation();
 
-  if (showLanding || !user || user.role === 'Admin') return null;
+  // Show landing page navigation if explicitly requested
+  if (showLanding) return null;
 
-  const isOwner = user.role === 'Owner' || user.role === 'owner';
-  const isTenant = user.role === 'Tenant' || user.role === 'tenant';
+  // Don't show regular navigation if user is not logged in and not on landing
+  if (!user) return null;
+
+  const isOwner = user.role?.toLowerCase() === 'owner';
+  const isTenant = user.role?.toLowerCase() === 'tenant';
+  const isAdmin = user.role?.toLowerCase() === 'admin';
 
   const isActive = (path) => location.pathname === path;
 
@@ -29,23 +34,27 @@ function Navigation({ user, onLogout, showLanding }) {
           {/* Main Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             <Link
-              to={isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD)
+              to={isAdmin ? ROUTES.ADMIN_DASHBOARD : (isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(isAdmin ? ROUTES.ADMIN_DASHBOARD : (isOwner ? ROUTES.OWNER_DASHBOARD : ROUTES.TENANT_DASHBOARD))
                 ? 'bg-white text-blue-600 shadow-md'
                 : 'text-white hover:bg-blue-700'
                 }`}
             >
               Dashboard
             </Link>
-            <Link
-              to={ROUTES.CHAT}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.CHAT)
-                ? 'bg-white text-blue-600 shadow-md'
-                : 'text-white hover:bg-blue-700'
-                }`}
-            >
-              Messages
-            </Link>
+
+            {!isAdmin && (
+              <Link
+                to={ROUTES.CHAT}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.CHAT)
+                  ? 'bg-white text-blue-600 shadow-md'
+                  : 'text-white hover:bg-blue-700'
+                  }`}
+              >
+                Messages
+              </Link>
+            )}
+
             {isTenant && (
               <Link
                 to={ROUTES.TENANT_SEARCH}
@@ -57,15 +66,18 @@ function Navigation({ user, onLogout, showLanding }) {
                 Search Rooms
               </Link>
             )}
-            <Link
-              to={ROUTES.PROFILE}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.PROFILE)
-                ? 'bg-white text-blue-600 shadow-md'
-                : 'text-white hover:bg-blue-700'
-                }`}
-            >
-              Profile
-            </Link>
+
+            {!isAdmin && (
+              <Link
+                to={ROUTES.PROFILE}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(ROUTES.PROFILE)
+                  ? 'bg-white text-blue-600 shadow-md'
+                  : 'text-white hover:bg-blue-700'
+                  }`}
+              >
+                Profile
+              </Link>
+            )}
           </div>
 
           {/* Right Side */}
@@ -78,18 +90,26 @@ function Navigation({ user, onLogout, showLanding }) {
               <div className="text-right">
                 <p className="text-xs text-blue-100">Welcome back,</p>
                 <p className="text-sm font-semibold truncate max-w-[120px]">
-                  {user.full_name || 'User'}
+                  {user.full_name || user.username || 'User'}
                 </p>
               </div>
 
               {/* Profile Picture */}
-              <Link to={ROUTES.PROFILE} className="relative group">
-                <img
-                  src={user.profile_photo ? getMediaUrl(user.profile_photo) : `https://ui-avatars.com/api/?name=${user.full_name || 'User'}&background=fff&color=3b82f6&bold=true&size=128`}
-                  alt="Profile"
-                  className="w-10 h-10 rounded-full border-2 border-white object-cover group-hover:scale-105 transition-transform shadow-md"
-                />
-              </Link>
+              {!isAdmin && (
+                <Link to={ROUTES.PROFILE} className="relative group">
+                  <img
+                    src={user.profile_photo ? getMediaUrl(user.profile_photo) : `https://ui-avatars.com/api/?name=${user.full_name || 'User'}&background=fff&color=3b82f6&bold=true&size=128`}
+                    alt="Profile"
+                    className="w-10 h-10 rounded-full border-2 border-white object-cover group-hover:scale-105 transition-transform shadow-md"
+                  />
+                </Link>
+              )}
+
+              {isAdmin && (
+                <div className="w-10 h-10 rounded-full border-2 border-white bg-white flex items-center justify-center shadow-md">
+                  <User className="w-6 h-6 text-blue-600" />
+                </div>
+              )}
 
               {/* Logout Button */}
               <button

@@ -49,23 +49,8 @@ export default function AdminDashboard({ user }) {
 
             <main className="flex-1 lg:ml-64 p-8">
                 {/* Header */}
-                <header className="flex justify-between items-center mb-10">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <Bell className="w-6 h-6" />
-                            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold">3</span>
-                        </button>
-                        <div className="flex items-center gap-3">
-                            <img
-                                src={user?.profile_photo ? getMediaUrl(user.profile_photo) : `https://ui-avatars.com/api/?name=${user?.full_name || 'Admin'}&background=3b82f6&color=fff&bold=true`}
-                                alt="Profile"
-                                className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover"
-                            />
-                        </div>
-                    </div>
+                <header className="mb-10">
+                    <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
                 </header>
 
                 {error && (

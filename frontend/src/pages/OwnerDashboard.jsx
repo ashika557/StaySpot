@@ -6,9 +6,7 @@ import { chatService } from '../services/chatService';
 import { visitService } from '../services/tenantService';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES, getMediaUrl, API_ENDPOINTS } from '../constants/api';
-import OwnerHeader from '../components/OwnerHeader';
 import TenantDetailsModal from '../components/TenantDetailsModal';
-import Footer from '../components/Footer';
 
 export default function OwnerDashboard({ user, onLogout }) {
   const [totalRooms, setTotalRooms] = useState(0);
@@ -95,10 +93,10 @@ export default function OwnerDashboard({ user, onLogout }) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex bg-gray-50">
       <OwnerSidebar user={user} />
 
-      <div className="flex-1 overflow-auto flex flex-col">
+      <div className="flex-1 flex flex-col overflow-auto">
         <div className="flex-1 p-8">
           {loading ? (
             <div className="text-center py-8">
@@ -264,7 +262,6 @@ export default function OwnerDashboard({ user, onLogout }) {
             </>
           )}
         </div>
-        <Footer />
       </div>
 
       <TenantDetailsModal

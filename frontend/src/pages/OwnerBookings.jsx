@@ -3,8 +3,6 @@ import { Check, X, Calendar, Clock, ChevronDown } from 'lucide-react';
 import OwnerSidebar from '../components/OwnerSidebar';
 import { bookingService } from '../services/bookingService';
 import { getMediaUrl } from '../constants/api';
-import OwnerHeader from '../components/OwnerHeader';
-import Footer from '../components/Footer';
 
 const OwnerBookings = ({ user, onLogout }) => {
     const [bookings, setBookings] = useState([]);
@@ -56,10 +54,10 @@ const OwnerBookings = ({ user, onLogout }) => {
     const history = filteredBookings.filter(b => b.status !== 'Pending');
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="flex bg-gray-50">
             <OwnerSidebar user={user} />
 
-            <div className="flex-1 flex flex-col overflow-auto">
+            <div className="flex-1 flex flex-col">
 
                 <div className="p-8">
                     <div className="flex justify-between items-center mb-8">

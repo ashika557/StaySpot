@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, ArrowRight, XCircle } from 'lucide-react';
 import TenantSidebar from '../components/TenantSidebar';
-import TenantHeader from '../components/TenantHeader';
-import Footer from '../components/Footer';
 import { bookingService } from '../services/bookingService';
 import { chatService } from '../services/chatService';
 import { getMediaUrl, ROUTES } from '../constants/api';
@@ -50,57 +48,50 @@ const TenantBookings = ({ user }) => {
     });
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="flex bg-gray-50">
             <TenantSidebar user={user} />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TenantHeader
-                    user={user}
-                    title="My Bookings"
-                    subtitle="Track your room requests and history"
-                    onLogout={() => {
-                        localStorage.removeItem('user');
-                        window.location.href = '/';
-                    }}
-                />
-                <div className="flex-1 overflow-auto p-8">
-                    {/* Tabs */}
-                    <div className="flex gap-2 mb-8">
-                        {['All', 'Upcoming', 'Completed', 'Cancelled'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-2 rounded-xl text-sm font-bold transition ${activeTab === tab
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                                    : 'bg-white text-gray-500 hover:bg-gray-100'
-                                    }`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
+            <div className="flex-1 overflow-auto p-8">
+                <div className="mb-8">
+                    <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+                    <p className="text-gray-500">Track your room requests and history</p>
+                </div>
 
-                    <div className="space-y-4">
-                        {loading ? (
-                            <div className="flex justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            </div>
-                        ) : filteredBookings.length === 0 ? (
-                            <div className="text-center py-12 text-gray-500 bg-white rounded-2xl border border-gray-100">
-                                <Calendar size={48} className="mx-auto mb-4 text-gray-300" />
-                                <p>No bookings found in this category.</p>
-                            </div>
-                        ) : (
-                            filteredBookings.map(booking => (
-                                <BookingCard
-                                    key={booking.id}
-                                    booking={booking}
-                                    onCancel={() => handleCancelBooking(booking.id)}
-                                    navigate={navigate}
-                                />
-                            ))
-                        )}
-                    </div>
+                <div className="flex gap-2 mb-8">
+                    {['All', 'Upcoming', 'Completed', 'Cancelled'].map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-6 py-2 rounded-xl text-sm font-bold transition ${activeTab === tab
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                                : 'bg-white text-gray-500 hover:bg-gray-100'
+                                }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="space-y-4">
+                    {loading ? (
+                        <div className="flex justify-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                    ) : filteredBookings.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500 bg-white rounded-2xl border border-gray-100">
+                            <Calendar size={48} className="mx-auto mb-4 text-gray-300" />
+                            <p>No bookings found in this category.</p>
+                        </div>
+                    ) : (
+                        filteredBookings.map(booking => (
+                            <BookingCard
+                                key={booking.id}
+                                booking={booking}
+                                onCancel={() => handleCancelBooking(booking.id)}
+                                navigate={navigate}
+                            />
+                        ))
+                    )}
                 </div>
             </div>
         </div>

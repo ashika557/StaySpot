@@ -3,7 +3,6 @@ import { apiRequest, getCsrfToken } from '../utils/api';
 import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
 import OwnerSidebar from '../components/OwnerSidebar';
 import TenantSidebar from '../components/TenantSidebar';
-import TenantHeader from '../components/TenantHeader';
 
 function Profile({ user, onUpdateUser, refreshUser }) {
     const [formData, setFormData] = useState({
@@ -92,15 +91,10 @@ function Profile({ user, onUpdateUser, refreshUser }) {
             <SidebarComponent user={user} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <TenantHeader
-                    user={user}
-                    title="Account Settings"
-                    subtitle="Update your profile and identity verification"
-                    onLogout={() => {
-                        localStorage.removeItem('user');
-                        window.location.href = '/';
-                    }}
-                />
+                <header className="bg-white border-b border-gray-200 p-8">
+                    <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+                    <p className="text-gray-500 mt-1">Update your profile and identity verification</p>
+                </header>
                 <div className="flex-1 overflow-auto p-8">
                     <div className="max-w-4xl mx-auto">
 

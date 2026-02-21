@@ -4,8 +4,6 @@ import { Link } from 'react-router-dom';
 import { GoogleMap, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import TenantSidebar from '../components/TenantSidebar';
-import TenantHeader from '../components/TenantHeader';
-import Footer from '../components/Footer';
 import { roomService } from '../services/roomService';
 import { CONFIG } from '../constants/config';
 import { getMediaUrl } from '../constants/api';
@@ -151,22 +149,12 @@ const SearchRooms = ({ user }) => {
     }
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="flex bg-gray-50">
             <TenantSidebar user={user} />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TenantHeader
-                    user={user}
-                    title="Search Rooms"
-                    subtitle="Find your perfect stay spot"
-                    onLogout={() => {
-                        localStorage.removeItem('user');
-                        window.location.href = '/';
-                    }}
-                />
-
+            <div className="flex-1 flex flex-col overflow-auto">
                 {/* Main Content area */}
-                <div className="flex-1 overflow-auto p-8">
+                <div className="flex-1 p-8">
                     {/* Filters Section */}
                     <div className="search-filters-card mb-8">
                         <div className="filters-title">Search Filters</div>
@@ -455,7 +443,6 @@ const SearchRooms = ({ user }) => {
                         </div>
                     </div>
                 </div>
-                <Footer />
             </div>
         </div>
     );

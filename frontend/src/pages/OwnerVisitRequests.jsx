@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import OwnerHeader from '../components/OwnerHeader';
-import Footer from '../components/Footer';
 import {
     Calendar,
     MapPin,
@@ -98,18 +96,11 @@ export default function OwnerVisitRequests({ user, onLogout }) {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-gray-50 overflow-auto">
             <OwnerSidebar user={user} />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <OwnerHeader
-                    user={user}
-                    title="Visit Requests"
-                    subtitle="Manage tenant viewing schedules and approvals."
-                    onLogout={onLogout}
-                />
-
-                <div className="flex-1 overflow-auto p-8">
+            <div className="flex-1 flex flex-col">
+                <div className="flex-1 p-8">
                     <div className="max-w-6xl mx-auto flex gap-8">
 
                         {/* Left Sidebar / Filters */}
@@ -300,7 +291,6 @@ export default function OwnerVisitRequests({ user, onLogout }) {
                         </div>
                     </div>
                 </div>
-                <Footer user={user} />
             </div>
 
             {/* Tenant Details Modal */}

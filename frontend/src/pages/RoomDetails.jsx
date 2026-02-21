@@ -4,8 +4,8 @@ import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, L
 import { GoogleMap, Marker, Circle } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import Sidebar from './sidebar';
-import TenantSidebar from './TenantNavbar';
-import TenantHeader from '../components/TenantHeader';
+import TenantSidebar from '../components/TenantSidebar';
+import OwnerSidebar from '../components/OwnerSidebar';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
 import { visitService } from '../services/tenantService';
@@ -39,17 +39,17 @@ const RoomDetails = ({ user }) => {
     const fetchCurrentlyNearbyPlaces = async (lat, lng) => {
         // Use Overpass API to get nearby amenities
         const query = `
-            [out:json];
-            (
-              node["amenity"="restaurant"](around:2000, ${lat}, ${lng});
-              node["amenity"="cafe"](around:2000, ${lat}, ${lng});
-              node["amenity"="hospital"](around:2000, ${lat}, ${lng});
-              node["amenity"="school"](around:2000, ${lat}, ${lng});
-              node["shop"="supermarket"](around:2000, ${lat}, ${lng});
-              node["shop"="mall"](around:2000, ${lat}, ${lng});
+[out:json];
+(
+    node["amenity" = "restaurant"](around: 2000, ${lat}, ${lng});
+node["amenity" = "cafe"](around: 2000, ${lat}, ${lng});
+node["amenity" = "hospital"](around: 2000, ${lat}, ${lng});
+node["amenity" = "school"](around: 2000, ${lat}, ${lng});
+node["shop" = "supermarket"](around: 2000, ${lat}, ${lng});
+node["shop" = "mall"](around: 2000, ${lat}, ${lng});
             );
             out body 20;
-        `;
+`;
         try {
             const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
             const data = await response.json();
@@ -252,15 +252,14 @@ const RoomDetails = ({ user }) => {
         <div className="min-h-screen bg-gray-50 font-sans">
             {/* Dynamic Sidebar/Navbar based on role */}
             {user?.role === 'Tenant' ? (
-                <>
-                    <TenantHeader user={user} />
-                    <div className="flex">
-                        <TenantSidebar user={user} />
-                        <main className="flex-1 p-8 ml-64 mt-16">
+                <div className="flex h-screen bg-gray-50 overflow-auto">
+                    <TenantSidebar user={user} />
+                    <main className="flex-1 p-8">
+                        <div className="max-w-7xl mx-auto">
                             {renderContent()}
-                        </main>
-                    </div>
-                </>
+                        </div>
+                    </main>
+                </div>
             ) : (
                 <div className="flex">
                     <Sidebar user={user} />
@@ -556,8 +555,8 @@ const RoomDetails = ({ user }) => {
                                 ].map((rule, idx) => (
                                     <div key={idx}
                                         className={`flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 ${rule.active
-                                                ? 'bg-green-50/50 border-green-100/50 hover:bg-green-50'
-                                                : 'bg-red-50/50 border-red-100/50 hover:bg-red-50'
+                                            ? 'bg-green-50/50 border-green-100/50 hover:bg-green-50'
+                                            : 'bg-red-50/50 border-red-100/50 hover:bg-red-50'
                                             }`}
                                     >
                                         <div className="flex items-center gap-4">
@@ -569,8 +568,8 @@ const RoomDetails = ({ user }) => {
                                             </span>
                                         </div>
                                         <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${rule.active
-                                                ? 'bg-green-600 text-white'
-                                                : 'bg-red-600 text-white'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-red-600 text-white'
                                             }`}>
                                             {rule.active ? 'Yes' : 'No'}
                                         </div>

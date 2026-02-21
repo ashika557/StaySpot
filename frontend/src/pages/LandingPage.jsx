@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Home, Map, Calendar, MessageSquare, Star, CreditCard, MapPin, Shield, Zap, Twitter, Facebook, Linkedin } from 'lucide-react';
+import Footer from '../components/Footer';
 
 export default function StaySpotLanding({ onGetStarted, onSignIn, user }) {
   const navigate = useNavigate();
@@ -175,54 +176,6 @@ export default function StaySpotLanding({ onGetStarted, onSignIn, user }) {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Home className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold">STAYSPOT</span>
-              </div>
-              <p className="text-gray-400 text-sm mb-4">Modern room renting, digital booking, and secure for everyone.</p>
-              <div className="flex gap-3">
-                <Twitter className="w-5 h-5 text-gray-400" />
-                <Facebook className="w-5 h-5 text-gray-400" />
-                <Linkedin className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <div className="space-y-2 text-sm text-gray-400">
-                <div>Home</div>
-                <div>About</div>
-                <div>Features</div>
-                <div>Contact</div>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <div className="space-y-2 text-sm text-gray-400">
-                <div>About Us</div>
-                <div>Privacy Policy</div>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Contact Info</h4>
-              <div className="space-y-2 text-sm text-gray-400">
-                <div>hello@stayspot.com</div>
-                <div>+977 9800000000</div>
-                <div>Kathmandu, Nepal</div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            © 2025 STAYSPOT. All rights reserved.
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

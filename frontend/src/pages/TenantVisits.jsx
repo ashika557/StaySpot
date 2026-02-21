@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import TenantSidebar from '../components/TenantSidebar';
-import TenantHeader from '../components/TenantHeader';
-import Footer from '../components/Footer';
 import {
     Calendar,
     MapPin,
@@ -69,20 +67,11 @@ export default function TenantVisits({ user }) {
     });
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="flex h-screen bg-gray-50 overflow-auto">
             <TenantSidebar user={user} />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TenantHeader
-                    user={user}
-                    title="My Visits"
-                    subtitle="Manage your room viewings"
-                    onLogout={() => {
-                        localStorage.removeItem('user');
-                        window.location.href = '/';
-                    }}
-                />
-                <div className="flex-1 overflow-auto p-8">
+            <div className="flex-1 flex flex-col">
+                <div className="flex-1 p-8">
                     <div className="max-w-5xl mx-auto">
 
                         {/* Filters */}
@@ -191,7 +180,6 @@ export default function TenantVisits({ user }) {
                         )}
 
                     </div>
-                    <Footer user={user} />
                 </div>
             </div>
         </div>
