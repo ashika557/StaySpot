@@ -60,4 +60,39 @@ export const adminService = {
             throw error;
         }
     },
+
+    /**
+     * Get all complaints
+     */
+    getComplaints: async () => {
+        try {
+            const response = await apiRequest(API_ENDPOINTS.ADMIN_COMPLAINTS);
+            if (!response.ok) {
+                throw new Error('Failed to fetch complaints');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching complaints:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update complaint status
+     */
+    updateComplaintStatus: async (complaintId, status) => {
+        try {
+            const response = await apiRequest(`${API_ENDPOINTS.ADMIN_COMPLAINTS}${complaintId}/`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
+            if (!response.ok) {
+                throw new Error('Failed to update complaint status');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating complaint status:', error);
+            throw error;
+        }
+    }
 };

@@ -1,0 +1,251 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}{% load admin_urls %}{% load admin_list %}{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Filter Card Styling */
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--card-shadow);
+    }
+
+    .filter-card h2 {
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        color: var(--text-main);
+        margin: 0 0 20px 0 !important;
+    }
+
+    .filter-flex {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    /* Search Bar */
+    .search-wrapper {
+        position: relative;
+        flex: 1;
+        min-width: 300px;
+    }
+
+    .search-wrapper input {
+        width: 100%;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 10px 16px 10px 40px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .search-wrapper input:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .search-wrapper svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Dropdown/Select styling */
+    #changelist-filter {
+        display: none !important;
+    }
+
+    /* Hide default sidebar */
+    .custom-filter-select {
+        padding: 10px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        min-width: 160px;
+        outline: none;
+        -webkit-appearance: none;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>') no-repeat right 12px center;
+        background-color: white;
+    }
+
+    /* Results Card */
+    .results-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+    }
+
+    .results-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+    }
+
+    .results-header h3 {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        margin: 0 !important;
+        color: var(--text-main);
+    }
+
+    .btn-apply {
+        background: var(--primary-blue);
+        color: white;
+        padding: 10px 24px;
+        border-radius: 10px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .btn-apply:hover {
+        background: #1D4ED8;
+        transform: translateY(-1px);
+    }
+
+    .btn-reset {
+        color: var(--primary-blue);
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .add-user-btn {
+        background: var(--primary-blue) !important;
+        color: white !important;
+        padding: 10px 20px !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        text-decoration: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        transition: all 0.2s !important;
+        border: none !important;
+    }
+
+    .add-user-btn:hover {
+        background: #1D4ED8 !important;
+    }
+
+    /* Action bar */
+    .actions {
+        padding: 12px 24px;
+        background: #F8FAF7;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 13px;
+        color: var(--text-muted);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .actions select {
+        padding: 6px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 13px;
+        outline: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-card">
+    <h2>Filters & Search</h2>
+    <form id="changelist-search" method="get">
+        <div class="filter-flex">
+            <div class="search-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" name="q" value="{{ cl.query }}" placeholder="Search by name, email, or phone...">
+            </div>
+
+            {# Dynamic mapping for filters could be complex, using static placeholders for now to match UI #}
+            <select class="custom-filter-select">
+                <option>All Roles</option>
+                <option>Admin</option>
+                <option>Owner</option>
+                <option>Tenant</option>
+            </select>
+
+            <select class="custom-filter-select">
+                <option>All Status</option>
+                <option>Active</option>
+                <option>Inactive</option>
+            </select>
+
+            <button type="submit" class="btn-apply">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Apply Filters
+            </button>
+            <a href="?" class="btn-reset">Reset All</a>
+        </div>
+    </form>
+</div>
+
+<div class="results-card">
+    <div class="results-header">
+        <h3>Users ({{ cl.result_count }})</h3>
+        {% if has_add_permission %}
+        {% with cl.opts|admin_urlname:'add' as add_url_name %}
+        <a href="{% url add_url_name %}" class="add-user-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add User
+        </a>
+        {% endwith %}
+        {% endif %}
+    </div>
+
+    {% if cl.formset.is_multipart %}
+    <form id="changelist-form" method="post" enctype="multipart/form-data" novalidate>
+        {% else %}
+        <form id="changelist-form" method="post" novalidate>
+            {% endif %}
+            {% csrf_token %}
+            {% if cl.formset %}<div>{{ cl.formset.management_form }}</div>{% endif %}
+
+            {% block result_list %}
+            {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+            {% result_list cl %}
+            {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+            {% endblock %}
+
+            <div style="padding: 24px; border-top: 1px solid var(--border-color);">
+                {% block pagination %}{% pagination cl %}{% endblock %}
+            </div>
+        </form>
+</div>
+{% endblock %}

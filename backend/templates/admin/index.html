@@ -1,230 +1,406 @@
 {% extends "admin/index.html" %}
-{% load i18n static %}
+{% load i18n static stayspot_admin_tags %}
 
-{% block extrahead %}
-{{ block.super }}
+{% block content_title %}{% endblock %}
+
+{% block content %}
+{% get_dashboard_stats as stats %}
+{% get_recent_activities limit=4 as recently %}
+{% get_complaint_distribution as complaints_dist %}
+
 <style>
-    :root {
-        --primary-blue: #2563eb;
-        --secondary-blue: #1e40af;
-        --glass-bg: rgba(255, 255, 255, 0.8);
-        --card-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
-    }
-
-    #content-main {
-        padding-top: 20px;
-    }
-
-    .analytics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 25px;
-        margin-bottom: 40px;
-    }
-
-    .analytics-card {
-        background: white;
-        padding: 24px;
-        border-radius: 20px;
-        border: 1px solid rgba(37, 99, 235, 0.1);
-        box-shadow: var(--card-shadow);
-        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    .dashboard-container {
         display: flex;
         flex-direction: column;
+        gap: 32px;
+    }
+
+    /* Stats Row */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--card-shadow);
+        display: flex;
         justify-content: space-between;
-        position: relative;
-        overflow: hidden;
+        align-items: center;
     }
 
-    .analytics-card:hover {
-        transform: translateY(-5px);
-    }
-
-    .analytics-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 100px;
-        height: 100px;
-        background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, transparent 100%);
-        border-radius: 0 0 0 100%;
-    }
-
-    .card-label {
+    .stat-info .label {
         font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .stat-info .value {
+        font-size: 28px;
         font-weight: 800;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        color: var(--text-main);
+    }
+
+    .stat-info .trend {
+        font-size: 12px;
+        margin-top: 8px;
+        font-weight: 700;
+    }
+
+    .trend.up {
+        color: #10B981;
+    }
+
+    .trend.down {
+        color: #EF4444;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .icon-blue {
+        background: #EFF6FF;
+        color: #3B82F6;
+    }
+
+    .icon-purple {
+        background: #F5F3FF;
+        color: #8B5CF6;
+    }
+
+    .icon-green {
+        background: #ECFDF5;
+        color: #10B981;
+    }
+
+    .icon-red {
+        background: #FEF2F2;
+        color: #EF4444;
+    }
+
+    /* Main Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1.2fr;
+        gap: 24px;
+    }
+
+    .card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--card-shadow);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .card-header h2 {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        margin: 0 !important;
+        color: var(--text-main);
+    }
+
+    /* Recent Activity */
+    .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .activity-item {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .activity-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .activity-time {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .action-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        border-radius: 12px;
+        text-decoration: none !important;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .action-link:hover {
+        transform: translateY(-2px);
+        border-color: var(--border-color);
+    }
+
+    .action-link svg {
+        width: 24px;
+        height: 24px;
         margin-bottom: 12px;
     }
 
-    .card-value {
-        font-size: 32px;
-        font-weight: 900;
-        color: #1e293b;
-        margin: 0;
-        line-height: 1.2;
+    .action-link span {
+        font-size: 13px;
+        font-weight: 700;
     }
 
-    .card-footer {
-        margin-top: 15px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #94a3b8;
+    .bg-blue {
+        background: #EFF6FF;
+        color: #2563EB;
+    }
+
+    .bg-purple {
+        background: #F5F3FF;
+        color: #7C3AED;
+    }
+
+    .bg-red {
+        background: #FEF2F2;
+        color: #DC2626;
+    }
+
+    .bg-green {
+        background: #ECFDF5;
+        color: #059669;
+    }
+
+    /* Chart Area */
+    .chart-container {
+        height: 240px;
         display: flex;
         align-items: center;
-        gap: 8px;
-    }
-
-    .indicator {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--primary-blue);
-    }
-
-    /* Custom scrollbar for modern feel */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: #f1f5f9;
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 10px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-
-    /* Override standard Django modules to look more modern */
-    .module h2,
-    .module caption,
-    .inline-group h2 {
-        background: white !important;
-        color: var(--primary-blue) !important;
-        border-bottom: 2px solid #f1f5f9 !important;
-        font-weight: 800 !important;
-        padding: 15px !important;
+        justify-content: center;
+        position: relative;
     }
 </style>
-{% endblock %}
 
-{% block content %}
-<div id="content-main">
-    {% if analytics %}
-    <div class="analytics-grid">
-        <!-- Revenue Center (Primary) -->
-        <div class="analytics-card" style="border-left: 6px solid #10b981;">
-            <div class="card-label">Financial Overview</div>
-            <div class="card-value">Rs. {{ analytics.monthly_revenue|floatformat:0 }}</div>
-            <div class="card-footer">
-                <span class="indicator" style="background: #10b981;"></span>
-                Monthly Revenue (Total: Rs. {{ analytics.total_revenue|floatformat:0 }})
+<div class="dashboard-container">
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-info">
+                <div class="label">Total Users</div>
+                <div class="value">{{ stats.total_users }}</div>
+                <div class="trend up">+12% from last month</div>
+            </div>
+            <div class="stat-icon icon-blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 1 0 0-7.75"></path>
+                </svg>
             </div>
         </div>
-
-        <!-- User Growth -->
-        <div class="analytics-card" style="border-left: 6px solid #2563eb;">
-            <div class="card-label">User Community</div>
-            <div class="card-value">{{ analytics.total_users }} Users</div>
-            <div class="card-footer">
-                <span class="indicator" style="background: #2563eb;"></span>
-                {{ analytics.tenants }} Tenants | {{ analytics.owners }} Owners
+        <div class="stat-card">
+            <div class="stat-info">
+                <div class="label">Total Rooms</div>
+                <div class="value">{{ stats.total_rooms }}</div>
+                <div class="trend up">+8% from last month</div>
+            </div>
+            <div class="stat-icon icon-purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
             </div>
         </div>
-
-        <!-- Inventory -->
-        <div class="analytics-card" style="border-left: 6px solid #f59e0b;">
-            <div class="card-label">Property Listings</div>
-            <div class="card-value">{{ analytics.active_rooms }} Active</div>
-            <div class="card-footer">
-                <span class="indicator" style="background: #f59e0b;"></span>
-                {{ analytics.total_rooms }} Total Properties | {{ analytics.total_bookings }} Bookings
+        <div class="stat-card">
+            <div class="stat-info">
+                <div class="label">Total Bookings</div>
+                <div class="value">{{ stats.total_bookings }}</div>
+                <div class="trend up">+15% from last month</div>
+            </div>
+            <div class="stat-icon icon-green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
             </div>
         </div>
-
-        <!-- Critical Attention -->
-        <div class="analytics-card" style="border-left: 6px solid #ef4444;">
-            <div class="card-label">Ops Moderation</div>
-            <div class="card-value">{{ analytics.active_issues }} Conflicts</div>
-            <div class="card-footer">
-                <span class="indicator" style="background: #ef4444;"></span>
-                {{ analytics.pending_verifications }} KYC Pending Verifications
+        <div class="stat-card">
+            <div class="stat-info">
+                <div class="label">Active Complaints</div>
+                <div class="value">{{ stats.active_complaints }}</div>
+                <div class="trend down">5 pending review</div>
+            </div>
+            <div class="stat-icon icon-red">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                    </path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
             </div>
         </div>
     </div>
-    {% endif %}
 
-    <!-- Original Admin Modules List -->
-    {% if app_list %}
-    {% for app in app_list %}
-    <div class="app-{{ app.app_label }} module"
-        style="margin-bottom: 30px; border-radius: 15px; overflow: hidden; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <table>
-            <caption>
-                <a href="{{ app.app_url }}" class="section"
-                    title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}"
-                    style="color: #1e293b; font-size: 16px;">{{ app.name }}</a>
-            </caption>
-            {% for model in app.models %}
-            <tr class="model-{{ model.object_name|lower }}">
-                {% if model.admin_url %}
-                <th scope="row" style="padding: 12px 20px;"><a href="{{ model.admin_url }}"
-                        style="font-weight: 700; color: #475569;">{{ model.name }}</a></th>
-                {% else %}
-                <th scope="row" style="padding: 12px 20px;">{{ model.name }}</th>
-                {% endif %}
-
-                <td style="text-align: right; padding-right: 20px;">
-                    {% if model.add_url %}
-                    <a href="{{ model.add_url }}" class="addlink" style="font-weight: 600; margin-right: 15px;">{%
-                        translate 'Add' %}</a>
-                    {% endif %}
-                    {% if model.admin_url %}
-                    {% if model.view_only %}
-                    <a href="{{ model.admin_url }}" class="viewlink" style="font-weight: 600;">{% translate 'View'
-                        %}</a>
-                    {% else %}
-                    <a href="{{ model.admin_url }}" class="changelink" style="font-weight: 600;">{% translate 'Manage'
-                        %}</a>
-                    {% endif %}
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+    <div class="card">
+        <div class="card-header">
+            <h2>Complaints Status</h2>
+        </div>
+        <div class="chart-container">
+            <svg width="400" height="200" viewBox="0 0 400 200">
+                <circle cx="200" cy="100" r="80" stroke="#f1f5f9" stroke-width="40" fill="none" />
+                <circle cx="200" cy="100" r="80" stroke="#10B981" stroke-width="40" fill="none"
+                    stroke-dasharray="251 502" transform="rotate(-90 200 100)" />
+                <circle cx="200" cy="100" r="80" stroke="#F59E0B" stroke-width="40" fill="none"
+                    stroke-dasharray="125 502" transform="rotate(90 200 100)" />
+                <circle cx="200" cy="100" r="80" stroke="#EF4444" stroke-width="40" fill="none"
+                    stroke-dasharray="126 502" transform="rotate(180 200 100)" />
+                <text x="200" y="105" text-anchor="middle" font-weight="800" font-size="20">
+                    {% with stats.active_complaints as ac %}{{ ac }}{% endwith %}
+                </text>
+            </svg>
+            <div style="position: absolute; right: 40px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
+                    <span style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></span> Resolved
+                    (45%)
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
+                    <span style="width: 12px; height: 12px; background: #F59E0B; border-radius: 3px;"></span> In
+                    Progress (32%)
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
+                    <span style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></span> Pending
+                    (23%)
+                </div>
+            </div>
+        </div>
     </div>
-    {% endfor %}
-    {% else %}
-    <p>{% translate 'You don’t have permission to view or edit anything.' %}</p>
-    {% endif %}
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-header">
+                <h2>Recent Activity</h2>
+            </div>
+            <div class="activity-list">
+                {% for act in recently %}
+                <div class="activity-item">
+                    <div
+                        class="activity-icon {% if act.type == 'user' %}icon-blue{% elif act.type == 'room' %}icon-green{% elif act.type == 'booking' %}icon-purple{% else %}icon-red{% endif %}">
+                        {% if act.icon == 'user' %}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                        </svg>
+                        {% elif act.icon == 'home' %}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        </svg>
+                        {% elif act.icon == 'calendar' %}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">{{ act.title }}</div>
+                        <div class="activity-desc">{{ act.desc }}</div>
+                        <div class="activity-time">{{ act.time|timesince }} ago</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="color: var(--text-muted); font-size: 14px;">No recent activity found.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Quick Actions</h2>
+            </div>
+            <div class="quick-actions">
+                <a href="/admin/accounts/user/" class="action-link bg-blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Manage Users</span>
+                </a>
+                <a href="/admin/OwnerRooms/room/" class="action-link bg-purple">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                    <span>Manage Rooms</span>
+                </a>
+                <a href="/admin/OwnerRooms/complaint/" class="action-link bg-red">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                    </svg>
+                    <span>Complaints</span>
+                </a>
+                <a href="/admin/auth/group/" class="action-link bg-green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
-
-<style>
-    /* Final polish for the table rows */
-    #content-main tr:hover th,
-    #content-main tr:hover td {
-        background-color: #f8fafc !important;
-    }
-
-    .addlink,
-    .changelink,
-    .viewlink {
-        color: var(--primary-blue) !important;
-        text-decoration: none !important;
-    }
-
-    .addlink:hover,
-    .changelink:hover,
-    .viewlink:hover {
-        text-decoration: underline !important;
-    }
-</style>
 {% endblock %}

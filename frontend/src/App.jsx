@@ -25,12 +25,16 @@ import OwnerPayments from './pages/OwnerPayments';
 import OwnerVisitRequests from './pages/OwnerVisitRequests';
 import Profile from './pages/Profile';
 import VerificationRequest from './pages/VerificationRequest';
+import AdminLayout from './components/AdminLayout';
+import AdminSettings from './pages/AdminSettings';
 import AdminDashboard from './pages/AdminDashboard';
 import ManageUsers from './pages/ManageUsers';
 import ManageRooms from './pages/ManageRooms';
 import ManageComplaints from './pages/ManageComplaints';
 import { ROUTES, API_ENDPOINTS } from './constants/api';
 import { apiRequest } from './utils/api';
+
+import { useLocation } from 'react-router-dom';
 
 function App() {
   const [user, setUser] = React.useState(null);
@@ -94,172 +98,195 @@ function App() {
   return (
     <MapProvider>
       <Router>
-        <div className="flex flex-col min-h-screen">
-          <Navigation user={user} onLogout={handleLogout} showLanding={showLanding} />
-
-          <main className="flex-grow">
-            <Routes>
-              {/* Landing page */}
-              <Route
-                path={ROUTES.HOME}
-                element={
-                  showLanding ? (
-                    <StaySpotLanding
-                      onGetStarted={() => setShowLanding(false)}
-                      onSignIn={() => setShowLanding(false)}
-                      user={user}
-                    />
-                  ) : user ? (
-                    <Navigate
-                      to={
-                        user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
-                          user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                            ROUTES.TENANT_DASHBOARD
-                      }
-                    />
-                  ) : (
-                    <Navigate to={ROUTES.LOGIN} />
-                  )
-                }
-              />
-
-              {/* Auth routes */}
-              <Route
-                path={ROUTES.LOGIN}
-                element={
-                  user ? (
-                    <Navigate to={
-                      user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
-                        user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                          ROUTES.TENANT_DASHBOARD
-                    } />
-                  ) : (
-                    <Login onLogin={handleLogin} />
-                  )
-                }
-              />
-
-              <Route
-                path={ROUTES.REGISTER}
-                element={
-                  user ? (
-                    <Navigate to={
-                      user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
-                        user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                          ROUTES.TENANT_DASHBOARD
-                    } />
-                  ) : (
-                    <Register onLogin={handleLogin} />
-                  )
-                }
-              />
-
-              <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
-              <Route path={`${ROUTES.RESET_PASSWORD}/:token`} element={<ResetPassword />} />
-              <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail />} />
-
-              <Route
-                path={ROUTES.TENANT_SEARCH}
-                element={user && user.role === 'Tenant' ? <SearchRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.TENANT_DASHBOARD}
-                element={user && user.role === 'Tenant' ? <TenantDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.TENANT_BOOKINGS}
-                element={user && user.role === 'Tenant' ? <TenantBookings user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.TENANT_VISITS}
-                element={user && user.role === 'Tenant' ? <TenantVisits user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.TENANT_PAYMENTS}
-                element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              {/* Fallback for Khalti Redirection */}
-              <Route
-                path="/payments/khalti_callback/"
-                element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.TENANT_COMPLAINTS}
-                element={user && user.role === 'Tenant' ? <ComplaintsReviews user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.ROOM_DETAILS}
-                element={user ? <RoomDetails user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-
-              <Route
-                path={ROUTES.OWNER_DASHBOARD}
-                element={user && user.role === 'Owner' ? <OwnerDashboard user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.OWNER_ROOMS}
-                element={user && user.role === 'Owner' ? <OwnerRooms user={user} refreshUser={refreshUser} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.OWNER_BOOKINGS}
-                element={user && user.role === 'Owner' ? <OwnerBookings user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path="/owner/visits"
-                element={user && user.role === 'Owner' ? <OwnerVisitRequests user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.OWNER_TENANTS}
-                element={user && user.role === 'Owner' ? <OwnerTenants user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.OWNER_PAYMENTS}
-                element={user && user.role === 'Owner' ? <OwnerPayments user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-
-              <Route
-                path={ROUTES.CHAT}
-                element={user ? <Chat user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path={ROUTES.PROFILE}
-                element={user ? <Profile user={user} refreshUser={refreshUser} onUpdateUser={(updatedUser) => {
-                  setUser(updatedUser);
-                  localStorage.setItem('user', JSON.stringify(updatedUser));
-                }} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-
-              <Route
-                path={ROUTES.VERIFICATION_REQUEST}
-                element={user ? <VerificationRequest user={user} refreshUser={refreshUser} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-
-              <Route
-                path={ROUTES.ADMIN_DASHBOARD}
-                element={user && user.role === 'Admin' ? <AdminDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path="/admin/users"
-                element={user && user.role === 'Admin' ? <ManageUsers user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path="/admin/rooms"
-                element={user && user.role === 'Admin' ? <ManageRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-              <Route
-                path="/admin/complaints"
-                element={user && user.role === 'Admin' ? <ManageComplaints user={user} /> : <Navigate to={ROUTES.LOGIN} />}
-              />
-
-              {/* Catch-all */}
-              <Route path="*" element={<Navigate to={ROUTES.HOME} />} />
-            </Routes>
-          </main>
-
-          <Footer />
-        </div>
+        <AppContent
+          user={user}
+          setUser={setUser}
+          showLanding={showLanding}
+          setShowLanding={setShowLanding}
+          handleLogin={handleLogin}
+          handleLogout={handleLogout}
+          refreshUser={refreshUser}
+        />
       </Router>
     </MapProvider>
+  );
+}
+
+function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, handleLogout, refreshUser }) {
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      {!isAdminPath && !showLanding && user && (
+        <Navigation user={user} onLogout={handleLogout} showLanding={showLanding} />
+      )}
+
+      <main className="flex-grow">
+        <Routes>
+          {/* Landing page */}
+          <Route
+            path={ROUTES.HOME}
+            element={
+              showLanding ? (
+                <StaySpotLanding
+                  onGetStarted={() => setShowLanding(false)}
+                  onSignIn={() => setShowLanding(false)}
+                  user={user}
+                />
+              ) : user ? (
+                <Navigate
+                  to={
+                    user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                      user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
+                        ROUTES.TENANT_DASHBOARD
+                  }
+                />
+              ) : (
+                <Navigate to={ROUTES.LOGIN} />
+              )
+            }
+          />
+
+          {/* Auth routes */}
+          <Route
+            path={ROUTES.LOGIN}
+            element={
+              user ? (
+                <Navigate to={
+                  user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                    user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
+                      ROUTES.TENANT_DASHBOARD
+                } />
+              ) : (
+                <Login onLogin={handleLogin} />
+              )
+            }
+          />
+
+          <Route
+            path={ROUTES.REGISTER}
+            element={
+              user ? (
+                <Navigate to={
+                  user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                    user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
+                      ROUTES.TENANT_DASHBOARD
+                } />
+              ) : (
+                <Register onLogin={handleLogin} />
+              )
+            }
+          />
+
+          <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
+          <Route path={`${ROUTES.RESET_PASSWORD}/:token`} element={<ResetPassword />} />
+          <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail />} />
+
+          <Route
+            path={ROUTES.TENANT_SEARCH}
+            element={user && user.role === 'Tenant' ? <SearchRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.TENANT_DASHBOARD}
+            element={user && user.role === 'Tenant' ? <TenantDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.TENANT_BOOKINGS}
+            element={user && user.role === 'Tenant' ? <TenantBookings user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.TENANT_VISITS}
+            element={user && user.role === 'Tenant' ? <TenantVisits user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.TENANT_PAYMENTS}
+            element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          {/* Fallback for Khalti Redirection */}
+          <Route
+            path="/payments/khalti_callback/"
+            element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.TENANT_COMPLAINTS}
+            element={user && user.role === 'Tenant' ? <ComplaintsReviews user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.ROOM_DETAILS}
+            element={user ? <RoomDetails user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+
+          <Route
+            path={ROUTES.OWNER_DASHBOARD}
+            element={user && user.role === 'Owner' ? <OwnerDashboard user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.OWNER_ROOMS}
+            element={user && user.role === 'Owner' ? <OwnerRooms user={user} refreshUser={refreshUser} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.OWNER_BOOKINGS}
+            element={user && user.role === 'Owner' ? <OwnerBookings user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path="/owner/visits"
+            element={user && user.role === 'Owner' ? <OwnerVisitRequests user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.OWNER_TENANTS}
+            element={user && user.role === 'Owner' ? <OwnerTenants user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.OWNER_PAYMENTS}
+            element={user && user.role === 'Owner' ? <OwnerPayments user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+
+          <Route
+            path={ROUTES.CHAT}
+            element={user ? <Chat user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+          <Route
+            path={ROUTES.PROFILE}
+            element={user ? <Profile user={user} refreshUser={refreshUser} onUpdateUser={(updatedUser) => {
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+
+          <Route
+            path={ROUTES.VERIFICATION_REQUEST}
+            element={user ? <VerificationRequest user={user} refreshUser={refreshUser} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
+
+          {/* Admin Routes with Layout */}
+          <Route
+            path="/admin/*"
+            element={
+              user && user.role === 'Admin' ? (
+                <AdminLayout user={user}>
+                  <Routes>
+                    <Route path="dashboard" element={<AdminDashboard user={user} />} />
+                    <Route path="users" element={<ManageUsers user={user} />} />
+                    <Route path="rooms" element={<ManageRooms user={user} />} />
+                    <Route path="complaints" element={<ManageComplaints user={user} />} />
+                    <Route path="settings" element={<AdminSettings user={user} />} />
+                    <Route path="*" element={<Navigate to="/admin/dashboard" />} />
+                  </Routes>
+                </AdminLayout>
+              ) : (
+                <Navigate to={ROUTES.LOGIN} />
+              )
+            }
+          />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to={ROUTES.HOME} />} />
+        </Routes>
+      </main>
+
+      {!showLanding && !isAdminPath && <Footer />}
+    </div>
   );
 }
 
