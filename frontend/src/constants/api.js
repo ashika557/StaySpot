@@ -47,6 +47,7 @@ export const ROUTES = {
   OWNER_BOOKINGS: '/owner/bookings',
   OWNER_TENANTS: '/owner/tenants',
   OWNER_PAYMENTS: '/owner/payments',
+  OWNER_MAINTENANCE: '/owner/maintenance',
   TENANT_DASHBOARD: '/tenant/dashboard',
   TENANT_SEARCH: '/tenant/search',
   TENANT_BOOKINGS: '/tenant/bookings',

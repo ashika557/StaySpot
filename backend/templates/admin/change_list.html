@@ -4,7 +4,6 @@
 {% block extrastyle %}
 {{ block.super }}
 <style>
-    /* Filter Card Styling */
     .filter-card {
         background: white;
         border-radius: 12px;
@@ -28,7 +27,6 @@
         flex-wrap: wrap;
     }
 
-    /* Search Bar */
     .search-wrapper {
         position: relative;
         flex: 1;
@@ -60,12 +58,10 @@
         height: 18px;
     }
 
-    /* Dropdown/Select styling */
     #changelist-filter {
         display: none !important;
     }
 
-    /* Hide default sidebar */
     .custom-filter-select {
         padding: 10px 16px;
         border: 1px solid var(--border-color);
@@ -74,12 +70,8 @@
         font-weight: 500;
         min-width: 160px;
         outline: none;
-        -webkit-appearance: none;
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>') no-repeat right 12px center;
-        background-color: white;
     }
 
-    /* Results Card */
     .results-card {
         background: white;
         border-radius: 12px;
@@ -116,12 +108,6 @@
         align-items: center;
         gap: 8px;
         font-size: 14px;
-        transition: all 0.2s;
-    }
-
-    .btn-apply:hover {
-        background: #1D4ED8;
-        transform: translateY(-1px);
     }
 
     .btn-reset {
@@ -145,30 +131,6 @@
         transition: all 0.2s !important;
         border: none !important;
     }
-
-    .add-user-btn:hover {
-        background: #1D4ED8 !important;
-    }
-
-    /* Action bar */
-    .actions {
-        padding: 12px 24px;
-        background: #F8FAF7;
-        border-bottom: 1px solid var(--border-color);
-        font-size: 13px;
-        color: var(--text-muted);
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-
-    .actions select {
-        padding: 6px 12px;
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        font-size: 13px;
-        outline: none;
-    }
 </style>
 {% endblock %}
 
@@ -183,30 +145,9 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" name="q" value="{{ cl.query }}" placeholder="Search by name, email, or phone...">
+                <input type="text" name="q" value="{{ cl.query }}" placeholder="Search...">
             </div>
-
-            {# Dynamic mapping for filters could be complex, using static placeholders for now to match UI #}
-            <select class="custom-filter-select">
-                <option>All Roles</option>
-                <option>Admin</option>
-                <option>Owner</option>
-                <option>Tenant</option>
-            </select>
-
-            <select class="custom-filter-select">
-                <option>All Status</option>
-                <option>Active</option>
-                <option>Inactive</option>
-            </select>
-
-            <button type="submit" class="btn-apply">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Apply Filters
-            </button>
+            <button type="submit" class="btn-apply">Apply Filters</button>
             <a href="?" class="btn-reset">Reset All</a>
         </div>
     </form>
@@ -214,17 +155,10 @@
 
 <div class="results-card">
     <div class="results-header">
-        <h3>Users ({{ cl.result_count }})</h3>
+        <h3>{{ cl.opts.verbose_name_plural|capfirst }} ({{ cl.result_count }})</h3>
         {% if has_add_permission %}
         {% with cl.opts|admin_urlname:'add' as add_url_name %}
-        <a href="{% url add_url_name %}" class="add-user-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Add User
-        </a>
+        <a href="{% url add_url_name %}" class="add-user-btn">+ Add New</a>
         {% endwith %}
         {% endif %}
     </div>

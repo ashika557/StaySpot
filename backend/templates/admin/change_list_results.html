@@ -12,27 +12,14 @@
             <tr>
                 {% for header in result_headers %}
                 <th scope="col" {{ header.class_attrib }}
-                    style="padding: 16px 24px; text-align: left; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <div class="text">
-                        {% if header.sortable %}
-                        <a href="{{ header.url_primary }}"
-                            style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 4px;">
-                            {{ header.label|capfirst }}
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
-                            </svg>
-                        </a>
-                        {% else %}
-                        <span>{{ header.label|capfirst }}</span>
-                        {% endif %}
-                    </div>
+                    style="padding: 16px 24px; text-align: left; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                    <div class="text">{{ header.label|capfirst }}</div>
                 </th>{% endfor %}
             </tr>
         </thead>
         <tbody>
             {% for result in results %}
-            <tr style="border-bottom: 1px solid #F1F5F9; transition: background 0.2s;">
+            <tr style="border-bottom: 1px solid #F1F5F9;">
                 {% for item in result %}
                 <td style="padding: 16px 24px; vertical-align: middle;">{{ item }}</td>
                 {% endfor %}
@@ -44,65 +31,6 @@
 {% endif %}
 
 <style>
-    /* Premium Table Styling */
-    #result_list tbody tr:hover {
-        background: #F8FAFC;
-    }
-
-    /* Target specific columns by class */
-    .field-username a {
-        font-weight: 700;
-        color: var(--text-main);
-        text-decoration: none;
-        font-size: 14px;
-    }
-
-    .field-email {
-        color: var(--text-muted);
-        font-size: 13px;
-    }
-
-    /* Action Buttons in Table */
-    .action-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .btn-view {
-        background: #EFF6FF;
-        color: #2563EB;
-    }
-
-    .btn-view:hover {
-        background: #DBEAFE;
-    }
-
-    .btn-deactivate {
-        background: #FFF7ED;
-        color: #EA580C;
-    }
-
-    .btn-deactivate:hover {
-        background: #FFEDD5;
-    }
-
-    .btn-activate {
-        background: #ECFDF5;
-        color: #059669;
-    }
-
-    .btn-activate:hover {
-        background: #D1FAE5;
-    }
-
-    /* Badges */
     .role-badge {
         display: inline-block;
         padding: 4px 10px;
@@ -147,25 +75,9 @@
         color: #10B981;
     }
 
-    .status-active::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        background: currentColor;
-        border-radius: 50%;
-    }
-
     .status-inactive {
         background: #FEF2F2;
         color: #EF4444;
-    }
-
-    .status-inactive::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        background: currentColor;
-        border-radius: 50%;
     }
 </style>
 
@@ -175,25 +87,20 @@
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
 
-            // First column: Add Avatar
+            // Avatar and Username
             const userCell = row.querySelector('.field-username') || cells[1];
             if (userCell) {
                 const name = userCell.innerText.trim();
                 const initial = name.charAt(0).toUpperCase();
-                const email = row.querySelector('.field-email') ? row.querySelector('.field-email').innerText : '';
-
                 userCell.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 40px; height: 40px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #64748B; flex-shrink: 0;">${initial}</div>
-                        <div>
-                            <div style="font-weight: 700; color: #1E293B;">${name}</div>
-                            <div style="font-size: 12px; color: #64748B;">${email}</div>
-                        </div>
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #64748B;">${initial}</div>
+                        <div style="font-weight: 700; color: #1E293B;">${name}</div>
                     </div>
                 `;
             }
 
-            // Role Badge
+            // Roles
             const roleCell = row.querySelector('.field-role');
             if (roleCell) {
                 const role = roleCell.innerText.trim();
@@ -201,7 +108,7 @@
                 roleCell.innerHTML = `<span class="role-badge ${roleClass}">${role}</span>`;
             }
 
-            // Status Badge
+            // Status
             const activeCell = row.querySelector('.field-is_active');
             if (activeCell) {
                 const img = activeCell.querySelector('img');
@@ -210,40 +117,6 @@
                     ? `<span class="status-badge status-active">Active</span>`
                     : `<span class="status-badge status-inactive">Inactive</span>`;
             }
-
-            // Actions Column (If exists or we add one via JS)
-            // For now, let's append a temporary Actions cell if it's the User list
-            if (window.location.pathname.includes('/accounts/user/')) {
-                const lastCell = cells[cells.length - 1];
-                const isActive = activeCell && (activeCell.innerText.includes('Active'));
-
-                const actionHtml = `
-                    <div style="display: flex; gap: 8px;">
-                        <a href="#" class="action-btn btn-view">View</a>
-                        ${isActive
-                        ? `<a href="#" class="action-btn btn-deactivate">Deactivate</a>`
-                        : `<a href="#" class="action-btn btn-activate">Activate</a>`
-                    }
-                    </div>
-                `;
-                // Add new cell if not already there
-                if (!row.querySelector('.field-actions')) {
-                    const newCell = document.createElement('td');
-                    newCell.className = 'field-actions';
-                    newCell.innerHTML = actionHtml;
-                    row.appendChild(newCell);
-                }
-            }
         });
-
-        // Add "Actions" header if we added action cells
-        const headerRow = document.querySelector('#result_list thead tr');
-        if (headerRow && window.location.pathname.includes('/accounts/user/') && !headerRow.querySelector('.column-actions')) {
-            const newHeader = document.createElement('th');
-            newHeader.className = 'column-actions';
-            newHeader.style.cssText = 'padding: 16px 24px; text-align: left; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase;';
-            newHeader.innerText = 'Actions';
-            headerRow.appendChild(newHeader);
-        }
     });
 </script>

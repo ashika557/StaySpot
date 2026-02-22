@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Calendar, Users, DollarSign, MessageSquare, Eye, Settings, TrendingUp, User } from 'lucide-react';
+import { Home, Calendar, Users, DollarSign, MessageSquare, Eye, Settings, TrendingUp, User, Wrench } from 'lucide-react';
 import { getMediaUrl } from '../constants/api';
 
 export default function OwnerSidebar({ user }) {
@@ -11,6 +11,7 @@ export default function OwnerSidebar({ user }) {
         { id: 'rooms', icon: Home, label: 'My Rooms', path: '/owner/rooms' },
         { id: 'bookings', icon: Calendar, label: 'Bookings', path: '/owner/bookings' },
         { id: 'tenants', icon: Users, label: 'Tenants', path: '/owner/tenants' },
+        { id: 'maintenance', icon: Wrench, label: 'Maintenance', path: '/owner/maintenance' },
         { id: 'payments', icon: DollarSign, label: 'Payments', path: '/owner/payments' },
         { id: 'messages', icon: MessageSquare, label: 'Messages', path: '/chat' },
         { id: 'visits', icon: Eye, label: 'Visits', path: '/owner/visits' },

@@ -84,15 +84,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Encoded data is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            print(f"DEBUG: verify_esewa called for payment {payment.id}")
             # Decode the base64 data from eSewa
             decoded_bytes = base64.b64decode(encoded_data)
             decoded_str = decoded_bytes.decode('utf-8')
             response_data = json.loads(decoded_str)
-            print(f"DEBUG: eSewa response data: {response_data}")
             
             # Verify signature in response
             # eSewa v2 sends 'data' as a base64 encoded JSON string
+            # Inside that JSON, 'transaction_uuid' contains our original payment ID
             
             resp_sig = response_data.get('signature')
             resp_fields = response_data.get('signed_field_names', '').split(',')
@@ -103,10 +102,15 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 message_parts.append(f"{field}={response_data.get(field)}")
             message_str = ",".join(message_parts)
             
+            print(f"DEBUG: Verifying message: {message_str}")
+            
             secret_key = settings.ESEWA_SECRET_KEY
             expected_sig = base64.b64encode(
                 hmac.new(secret_key.encode(), message_str.encode(), hashlib.sha256).digest()
             ).decode()
+            
+            print(f"DEBUG: Expected signature: {expected_sig}")
+            print(f"DEBUG: Received signature: {resp_sig}")
             
             if resp_sig != expected_sig:
                  # PROD: return Response({'error': 'Invalid signature verification failed'}, status=status.HTTP_400_BAD_REQUEST)
@@ -125,7 +129,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
             payment.payment_method = 'eSewa'
             payment.transaction_id = transaction_id
             payment.save()
-
             # Update Related Statuses
             booking = payment.booking
             if booking.status == 'Pending':
@@ -140,25 +143,18 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 print(f"DEBUG: Room {room.id} marked as Rented.")
     
             # Notify Owner
-            try:
-                print(f"DEBUG: Sending notification to owner {payment.booking.room.owner.email}")
-                send_notification(
-                    recipient=payment.booking.room.owner,
-                    actor=payment.booking.tenant,
-                    notification_type='payment_received',
-                    text=f"Payment of NPR {payment.amount} received via eSewa for {payment.booking.room.title}. Booking confirmed and room marked as Rented.",
-                    related_id=payment.id
-                )
-                print("DEBUG: Notification sent successfully.")
-            except Exception as notif_error:
-                print(f"ERROR calling send_notification: {notif_error}")
+            send_notification(
+                recipient=payment.booking.room.owner,
+                actor=payment.booking.tenant,
+                notification_type='payment_received',
+                text=f"Payment of NPR {payment.amount} received via eSewa for {payment.booking.room.title}. Booking confirmed and room marked as Rented.",
+                related_id=payment.id
+            )
     
             return Response({'status': 'Payment verified successfully'})
             
         except Exception as e:
-            print(f"ERROR in verify_esewa: {e}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
     @action(detail=True, methods=['post'])
     def check_esewa_status(self, request, pk=None):
@@ -173,8 +169,10 @@ class PaymentViewSet(viewsets.ModelViewSet):
         amount_str = str(int(payment.amount)) if payment.amount == int(payment.amount) else str(payment.amount)
         
         # eSewa Status Query URL (v2)
+        # Sandbox: https://uat.esewa.com.np/api/epw/resources/resource/paymentStatus
+        # Product: https://esewa.com.np/api/epw/resources/resource/paymentStatus
         if any(x in settings.ESEWA_GATEWAY_URL.lower() for x in ["uat", "rc-epay", "rc"]):
-            lookup_url = "https://rc-epay.esewa.com.np/api/epay/transaction/status/"
+            lookup_url = "https://uat.esewa.com.np/api/epay/transaction/status/"
         else:
             lookup_url = "https://esewa.com.np/api/epay/transaction/status/"
             
@@ -277,7 +275,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if not pidx:
             return Response({'error': 'pidx is required. Please initiate payment or contact support.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        print(f"DEBUG: Verifying Khalti Payment ID: {payment.id} with pidx: {pidx}")
         url = settings.KHALTI_LOOKUP_URL
         payload = json.dumps({"pidx": pidx})
         headers = {
@@ -287,7 +284,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
         try:
             response = requests.post(url, headers=headers, data=payload)
-            print(f"DEBUG: Khalti Lookup Status Code: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
                 print(f"DEBUG: Khalti Lookup Data: {data}")
@@ -328,10 +324,9 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     return Response({'status': 'Payment verified successfully'})
                 return Response({'status': data.get('status'), 'message': 'Payment state is not Completed'})
             else:
-                print(f"DEBUG: Khalti Lookup Failed! Content: {response.text}")
+                print(f"DEBUG: Khalti Lookup Failed! Status: {response.status_code}, Content: {response.text}")
                 return Response(response.json(), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print(f"DEBUG: Request Exception: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
@@ -347,7 +342,7 @@ def owner_financial_dashboard(request):
 
     # Filter params
     month = request.query_params.get('month') # '1' to '12' or 'All Months'
-    year = request.query_params.get('year') # e.g., '2025'
+    year = request.query_params.get('year') # e.g., '2024'
     room_id = request.query_params.get('room_id') # 'All Rooms' or ID
 
     # Base queryset for owner's payments

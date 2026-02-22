@@ -500,63 +500,6 @@ def resend_otp(request):
             {'error': str(e)},
             status=status.HTTP_400_BAD_REQUEST
         )
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def admin_verify_kyc(request, user_id):
-    """Approve or Reject a user's identity verification request."""
-    if request.user.role != 'Admin':
-        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
-    
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-    
-    action = request.data.get('action') # 'Approve' or 'Reject'
-    
-    if action == 'Approve':
-        user.is_identity_verified = True
-        user.verification_status = 'Approved'
-        user.rejection_reason = None
-        message = 'User identity verified successfully.'
-    elif action == 'Reject':
-        user.is_identity_verified = False
-        user.verification_status = 'Rejected'
-        user.rejection_reason = request.data.get('rejection_reason', 'Document does not meet requirements.')
-        message = 'User identity verification rejected.'
-    else:
-        return Response({'error': 'Invalid action. Use Approve or Reject.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    user.save()
-    
-    return Response({
-        'message': message,
-        'verification_status': user.verification_status,
-        'is_identity_verified': user.is_identity_verified
-    }, status=status.HTTP_200_OK)
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def admin_delete_user(request, user_id):
-    """Permanently delete a user account."""
-    if request.user.role != 'Admin':
-        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
-    
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-        
-    if user == request.user:
-        return Response({'error': 'You cannot delete your own account.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    user_name = user.full_name
-    user.delete()
-    
-    return Response({'message': f'User {user_name} has been permanently deleted.'}, status=status.HTTP_200_OK)
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def admin_list_users(request):
@@ -619,3 +562,55 @@ def admin_update_user(request, user_id):
         }
     }, status=status.HTTP_200_OK)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_verify_kyc(request, user_id):
+    """Approve or Reject a user's identity verification request."""
+    if request.user.role != 'Admin':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    action = request.data.get('action') # 'Approve' or 'Reject'
+    
+    if action == 'Approve':
+        user.is_identity_verified = True
+        user.verification_status = 'Verified'
+        message = 'User identity verified successfully.'
+    elif action == 'Reject':
+        user.is_identity_verified = False
+        user.verification_status = 'Rejected'
+        message = 'User identity verification rejected.'
+    else:
+        return Response({'error': 'Invalid action. Use Approve or Reject.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    user.save()
+    
+    return Response({
+        'message': message,
+        'verification_status': user.verification_status,
+        'is_identity_verified': user.is_identity_verified
+    }, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_delete_user(request, user_id):
+    """Permanently delete a user account."""
+    if request.user.role != 'Admin':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+    if user == request.user:
+        return Response({'error': 'You cannot delete your own account.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    user_name = user.full_name
+    user.delete()
+    
+    return Response({'message': f'User {user_name} has been permanently deleted.'}, status=status.HTTP_200_OK)

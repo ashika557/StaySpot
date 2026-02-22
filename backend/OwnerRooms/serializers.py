@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from .models import Room, RoomImage, Booking, Visit, Chat, RoomReview, Complaint
 from accounts.models import User
+from chat.serializers import MessageSerializer
 from payments.models import Payment
 from payments.serializers import PaymentSerializer
+# PaymentSerializer imported locally in TenantDashboardSerializer
 
 class RoomImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,7 +16,7 @@ class RoomImageSerializer(serializers.ModelSerializer):
 class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'phone', 'role', 'identity_document', 'is_identity_verified', 'profile_photo']
+        fields = ['id', 'full_name', 'email', 'phone', 'role', 'identity_document', 'is_identity_verified']
 
 
 class RoomReviewSerializer(serializers.ModelSerializer):
@@ -42,11 +44,11 @@ class RoomSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'owner', 'title', 'location', 'room_type',
             'floor', 'size', 'price', 'deposit', 'status', 
-            'preferred_tenant', 'gender_preference', 
-            'toilet_type', 'kitchen_access', 'furnished', 
-            'wifi', 'parking', 'water_supply', 'electricity_backup',
-            'available_from', 'cooking_allowed', 'smoking_allowed', 
-            'drinking_allowed', 'pets_allowed', 'visitor_allowed',
+            'preferred_tenant', 'toilet_type', 'kitchen_access', 
+            'furnished', 'available_from', 'wifi', 'parking', 
+            'attached_bathroom', 'water_supply', 'electricity_backup',
+            'cooking_allowed', 'smoking_allowed', 'drinking_allowed', 
+            'pets_allowed', 'visitor_allowed', 'gender_preference', 
             'latitude', 'longitude', 'description', 'amenities', 'views', 'images', 'uploaded_images', 
             'average_rating', 'review_count',
             'created_at', 'updated_at'
@@ -61,14 +63,6 @@ class RoomSerializer(serializers.ModelSerializer):
     
     def get_review_count(self, obj):
         return obj.reviews.count()
-    
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        # Dynamic status override:
-        # If owner is verified and status is 'Pending Verification', show as 'Available'
-        if instance.owner.is_identity_verified and ret['status'] == 'Pending Verification':
-            ret['status'] = 'Available'
-        return ret
     
     def create(self, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
@@ -141,31 +135,6 @@ class VisitSerializer(serializers.ModelSerializer):
 # PaymentSerializer moved to payments app
 
 
-# Chat serializers
-class ChatSerializer(serializers.ModelSerializer):
-    sender = UserBasicSerializer(read_only=True)
-    receiver = UserBasicSerializer(read_only=True)
-    room = RoomSerializer(read_only=True)
-    receiver_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), 
-        source='receiver', 
-        write_only=True
-    )
-    room_id = serializers.PrimaryKeyRelatedField(
-        queryset=Room.objects.all(), 
-        source='room', 
-        write_only=True,
-        required=False,
-        allow_null=True
-    )
-    
-    class Meta:
-        model = Chat
-        fields = [
-            'id', 'sender', 'receiver', 'receiver_id', 'room', 'room_id',
-            'message', 'timestamp', 'is_read'
-        ]
-        read_only_fields = ['id', 'timestamp']
 
 
 # Dashboard aggregated serializer
@@ -173,7 +142,7 @@ class TenantDashboardSerializer(serializers.Serializer):
     upcoming_visit = VisitSerializer(allow_null=True)
     current_booking = BookingSerializer(allow_null=True)
     payment_reminders = PaymentSerializer(many=True)
-    recent_chats = ChatSerializer(many=True)
+    recent_chats = MessageSerializer(many=True)
     suggested_rooms = RoomSerializer(many=True)
 
 

@@ -5,11 +5,10 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, RoomReview, Complaint
-from accounts.models import User
+from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, RoomReview, Complaint, Chat
 from payments.models import Payment
 from .serializers import (
-    RoomSerializer, BookingSerializer, VisitSerializer, 
+    RoomSerializer, BookingSerializer, VisitSerializer,
     TenantDashboardSerializer, RoomReviewSerializer,
     ComplaintSerializer
 )
@@ -30,35 +29,28 @@ class RoomViewSet(viewsets.ModelViewSet):
         if user.role == 'Owner':
             queryset = queryset.filter(owner=user)
         elif user.role == 'Admin':
-            # Admins see all rooms (including Hidden ones)
+            # Admins see all rooms (including Hidden ones if they want to manage them)
+            # By default filter to showing all unless admin specifically filters
             pass
         else:
-            # Tenants see rooms only from verified owners (or Admins)
-            # Also include 'Pending Verification' just in case some rooms are still in that state
-            queryset = queryset.filter(
-                (Q(owner__is_identity_verified=True) | Q(owner__role='Admin')),
-                status__in=['Available', 'Occupied', 'Pending Verification']
-            )
+            # Tenants see Available rooms (and Occupied rooms so they can still see details)
+            queryset = queryset.filter(status__in=['Available', 'Occupied'])
             
         # Filtering logic
         location = self.request.query_params.get('location')
-        if location:
-            # Flexible location search: check if search term is in location field
-            # or if any word in the search term matches the location
-            location_queries = Q(location__icontains=location)
-            for word in location.split():
-                if len(word) > 2: # Only search for significant words
-                    location_queries |= Q(location__icontains=word)
-            queryset = queryset.filter(location_queries)
         gender = self.request.query_params.get('gender_preference')
         room_type = self.request.query_params.get('room_type')
         
         # Amenities
         wifi = self.request.query_params.get('wifi')
-        water_supply = self.request.query_params.get('water_supply')
-        kitchen_access = self.request.query_params.get('kitchen_access')
-        furnished = self.request.query_params.get('furnished')
+        ac = self.request.query_params.get('ac')
+        tv = self.request.query_params.get('tv')
         parking = self.request.query_params.get('parking')
+        water_supply = self.request.query_params.get('water_supply')
+        attached_bathroom = self.request.query_params.get('attached_bathroom')
+        cctv = self.request.query_params.get('cctv')
+        kitchen = self.request.query_params.get('kitchen')
+        furniture = self.request.query_params.get('furniture')
 
         # Price Range
         min_price = self.request.query_params.get('min_price')
@@ -78,10 +70,14 @@ class RoomViewSet(viewsets.ModelViewSet):
         
         # Boolean Filters
         if wifi == 'true': queryset = queryset.filter(wifi=True)
+        if ac == 'true': queryset = queryset.filter(ac=True)
+        if tv == 'true': queryset = queryset.filter(tv=True)
         if parking == 'true': queryset = queryset.filter(parking=True)
         if water_supply == 'true': queryset = queryset.filter(water_supply=True)
-        if kitchen_access == 'true': queryset = queryset.filter(kitchen_access=True)
-        if furnished == 'true': queryset = queryset.filter(furnished=True)
+        if attached_bathroom == 'true': queryset = queryset.filter(attached_bathroom=True)
+        if cctv == 'true': queryset = queryset.filter(cctv=True)
+        if kitchen == 'true': queryset = queryset.filter(kitchen=True)
+        if furniture == 'true': queryset = queryset.filter(furniture=True)
 
         if min_price:
             queryset = queryset.filter(price__gte=min_price)
@@ -112,7 +108,7 @@ class RoomViewSet(viewsets.ModelViewSet):
             
         # Update user preferences if filtering (only for Tenants)
         if user.role == 'Tenant' and (location or gender or room_type or min_price or max_price):
-            self.update_user_preferences(user, location, gender, room_type, wifi, kitchen_access, furnished)
+            self.update_user_preferences(user, location, gender, room_type, wifi, ac, tv)
             
         return queryset
 
@@ -122,47 +118,23 @@ class RoomViewSet(viewsets.ModelViewSet):
         reviews = room.reviews.all()
         serializer = RoomReviewSerializer(reviews, many=True)
         return Response(serializer.data)
-            
-    def update_user_preferences(self, user, location, gender, room_type, wifi, kitchen_access, furnished):
+    
+    def update_user_preferences(self, user, location, gender, room_type, wifi, ac, tv):
         pref, created = UserSearchPreference.objects.get_or_create(user=user)
         if location: pref.location = location
         if gender: pref.gender_preference = gender
         if room_type: pref.room_type = room_type
         if wifi == 'true': pref.wifi = True
-        if kitchen_access == 'true': pref.kitchen_access = True
-        if furnished == 'true': pref.furnished = True
+        if ac == 'true': pref.ac = True
+        if tv == 'true': pref.tv = True
         pref.save()
 
     def perform_create(self, serializer):
         user = self.request.user
-        
-        # Admin bypass
-        if user.role == 'Admin':
-            serializer.save(owner=user)
-            return
-            
-        # Check verification status
-        if user.verification_status != 'Approved':
+        if not user.is_identity_verified and user.role != 'Admin':
             from rest_framework import serializers
-            error_messages = {
-                'Not Submitted': "You must upload an identity document before listing a room. Please go to your Profile page to upload your Citizenship/ID.",
-                'Pending': "Your document is not verified yet.",
-                'Rejected': f"Your identity verification was rejected. Reason: {user.rejection_reason or 'Document does not meet requirements'}. Please resubmit your verification."
-            }
-            raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
-            
+            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before adding a room."})
         serializer.save(owner=user)
-
-    def perform_update(self, serializer):
-        user = self.request.user
-
-
-        # If owner is verified, ensure status doesn't revert to Pending Verification
-        # Frontend might send 'Pending Verification' if the form wasn't updated to know better
-        if user.is_identity_verified and serializer.validated_data.get('status') == 'Pending Verification':
-             serializer.save(status='Available')
-        else:
-             serializer.save()
     
     @action(detail=False, methods=['get'])
     def suggested(self, request):
@@ -171,9 +143,7 @@ class RoomViewSet(viewsets.ModelViewSet):
         if user.role != 'Tenant':
             return Response({'error': 'Only tenants have suggestions'}, status=status.HTTP_400_BAD_REQUEST)
             
-        queryset = Room.objects.filter(
-            status='Available'
-        ).filter(Q(owner__is_identity_verified=True) | Q(owner__role='Admin'))
+        queryset = Room.objects.filter(status='Available')
         
         try:
             pref = user.search_preference
@@ -187,10 +157,10 @@ class RoomViewSet(viewsets.ModelViewSet):
                 q_objects |= Q(room_type=pref.room_type)
             if pref.wifi:
                 q_objects |= Q(wifi=True)
-            if pref.kitchen_access:
-                q_objects |= Q(kitchen_access=True)
-            if pref.furnished:
-                q_objects |= Q(furnished=True)
+            if pref.ac:
+                q_objects |= Q(ac=True)
+            if pref.tv:
+                q_objects |= Q(tv=True)
             
             if q_objects:
                 queryset = queryset.filter(q_objects).distinct()
@@ -298,6 +268,29 @@ class BookingViewSet(viewsets.ModelViewSet):
         if new_status in ['Confirmed', 'Active']:
             booking.room.status = 'Occupied'
             booking.room.save()
+            
+            # Auto-create Payment if confirmed
+            from payments.models import Payment
+            from dateutil.relativedelta import relativedelta
+            
+            # Use 1 month after start date as the first due date
+            first_due_date = booking.start_date + relativedelta(months=1)
+            
+            # If the booking is very short (ends before 1 month), set due date to end_date
+            if booking.end_date and first_due_date > booking.end_date:
+                first_due_date = booking.end_date
+            
+            # Check if initial rent payment exists for this specific booking and period
+            if not Payment.objects.filter(booking=booking, payment_type='Rent', due_date=first_due_date).exists():
+                Payment.objects.create(
+                    booking=booking,
+                    amount=booking.monthly_rent,
+                    due_date=first_due_date,
+                    status='Pending',
+                    payment_type='Rent'
+                )
+                print(f"DEBUG: Auto-created first Rent payment (due {first_due_date}) for booking {booking.id}")
+
         elif new_status in ['Cancelled', 'Rejected', 'Completed']:
             # If a booking is cancelled/rejected/completed, room becomes available again
             booking.room.status = 'Available'
@@ -314,29 +307,6 @@ class BookingViewSet(viewsets.ModelViewSet):
                 text=f"Booking for {booking.room.title} has been {new_status.lower()}.",
                 related_id=booking.id
             )
-
-            # Auto-create Payment if confirmed
-            if new_status in ['Confirmed', 'Active']:
-                from payments.models import Payment
-                from dateutil.relativedelta import relativedelta
-                
-                # Use 1 month after start date as the first due date
-                first_due_date = booking.start_date + relativedelta(months=1)
-                
-                # If the booking is very short (ends before 1 month), set due date to end_date
-                if booking.end_date and first_due_date > booking.end_date:
-                    first_due_date = booking.end_date
-                
-                # Check if initial rent payment exists for this specific booking and period
-                if not Payment.objects.filter(booking=booking, payment_type='Rent', due_date=first_due_date).exists():
-                    Payment.objects.create(
-                        booking=booking,
-                        amount=booking.monthly_rent,
-                        due_date=first_due_date,
-                        status='Pending',
-                        payment_type='Rent'
-                    )
-                    print(f"DEBUG: Auto-created first Rent payment (due {first_due_date}) for booking {booking.id}")
     
     def perform_destroy(self, instance):
         recipient = instance.room.owner if self.request.user.role == 'Tenant' else instance.tenant
@@ -358,32 +328,17 @@ class BookingViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user
-        from rest_framework import serializers # Import here to be available for all checks
+        if not user.is_identity_verified and user.role != 'Admin':
+            from rest_framework import serializers
+            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
         
-        # Admin bypass
-        if user.role == 'Admin':
-            booking = serializer.save(tenant=user)
-        else:
-            # Check verification status
-            if user.verification_status != 'Approved':
-                error_messages = {
-                    'Not Submitted': "You must upload an identity document before booking a room. Please go to your profile to submit verification.",
-                    'Pending': "Your identity verification is pending admin approval. You cannot book rooms until your document is approved.",
-                    'Rejected': f"Your identity verification was rejected. Reason: {user.rejection_reason or 'Document does not meet requirements'}. Please resubmit your verification."
-                }
-                raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
-            
-            # Simple check if room is available
-            room = serializer.validated_data.get('room')
-            
-            # Allow verification pending rooms if owner is verified (consistent with frontend display)
-            is_actually_available = room.status == 'Available' or (room.status == 'Pending Verification' and room.owner.is_identity_verified)
-            
-            if not is_actually_available:
-                # Return error if room is not free
-                raise serializers.ValidationError({"error": "Sorry, this room is already occupied."})
+        # Check if room is already occupied
+        room_id = serializer.validated_data.get('room').id
+        room = Room.objects.get(id=room_id)
+        if room.status not in ['Available']:
+             raise serializers.ValidationError({"error": "This room is already occupied/unavailable."})
 
-            booking = serializer.save(tenant=user)
+        booking = serializer.save(tenant=user)
         
         # Notify room owner about new booking request
         send_notification(
@@ -409,61 +364,10 @@ class VisitViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user
-        
-        # Admin bypass
-        if user.role == 'Admin':
-            visit = serializer.save(tenant=user)
-        else:
-            # Check verification status
-            if user.verification_status != 'Approved':
-                from rest_framework import serializers
-                error_messages = {
-                    'Not Submitted': "You must upload an identity document before scheduling a visit. Please go to your profile to submit verification.",
-                    'Pending': "Your identity verification is pending admin approval. You cannot schedule visits until your document is approved.",
-                    'Rejected': f"Your identity verification was rejected. Reason: {user.rejection_reason or 'Document does not meet requirements'}. Please resubmit your verification."
-                }
-                raise serializers.ValidationError({"error": error_messages.get(user.verification_status, "Identity verification required.")})
-            
-            visit = serializer.save(tenant=user)
-        
-        # Notify room owner about new visit request
-        send_notification(
-            recipient=visit.owner,
-            actor=user,
-            notification_type='visit_requested',
-            text=f"New visit request for {visit.room.title} from {user.full_name}.",
-            related_id=visit.id
-        )
-
-    def perform_update(self, serializer):
-        user = self.request.user
-        visit = self.get_object()
-        old_status = visit.status
-        new_status = serializer.validated_data.get('status')
-        
-        serializer.save()
-        
-        if new_status and new_status != old_status:
-            # Determine notification recipient and type
-            recipient = visit.owner if user.role == 'Tenant' else visit.tenant
-            
-            # Map status to notification type
-            notif_type = f'visit_{new_status.lower()}'
-            if new_status == 'Scheduled':
-                notif_type = 'visit_approved'
-            elif new_status == 'Completed':
-                # Maybe no notification for completed? Or add it. 
-                # For now let's just stick to the ones we added to model.
-                return
-
-            if notif_type in ['visit_approved', 'visit_rejected', 'visit_cancelled']:
-                send_notification(
-                    recipient=recipient,
-                    actor=user,
-                    notification_type=notif_type,
-                    text=f"Your visit request for {visit.room.title} has been {new_status.lower()}.",
-                    related_id=visit.id
-                )
+        if not user.is_identity_verified and user.role != 'Admin':
+            from rest_framework import serializers
+            raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
+        serializer.save(tenant=user)
 
 
 # PaymentViewSet moved to payments app
@@ -516,7 +420,7 @@ def tenant_dashboard(request):
     # Get upcoming visit (next scheduled visit)
     upcoming_visit = Visit.objects.filter(
         tenant=user, 
-        status__in=['Pending', 'Approved', 'Scheduled'],
+        status='Scheduled',
         visit_date__gte=timezone.now().date()
     ).order_by('visit_date', 'visit_time').first()
     
@@ -526,15 +430,17 @@ def tenant_dashboard(request):
         status__in=['Active', 'Confirmed']
     ).first()
     
-    # Get payment reminders (pending and overdue, due within 7 days)
+    # Get payment reminders — only show rent due within 7 days (or overdue)
+    from datetime import timedelta
     today = timezone.now().date()
-    reminder_window = today + timezone.timedelta(days=7)
-    
+    reminder_window = today + timedelta(days=7)
+
     payment_reminders = Payment.objects.filter(
         booking__tenant=user,
         status__in=['Pending', 'Overdue'],
-        due_date__lte=reminder_window,
+        due_date__lte=reminder_window,   # due today, within 7 days, or already overdue
     ).order_by('due_date')[:5]
+
     
     # Get recent chats (last 3 messages from different conversations)
     recent_messages = Message.objects.filter(
@@ -542,9 +448,7 @@ def tenant_dashboard(request):
     ).order_by('-timestamp')[:3]
     
     # Get suggested rooms (fallback to any available if no preferences)
-    suggested_rooms = Room.objects.filter(
-        status='Available'
-    ).filter(Q(owner__is_identity_verified=True) | Q(owner__role='Admin'))
+    suggested_rooms = Room.objects.filter(status='Available')
     print(f"DEBUG: All available rooms count: {suggested_rooms.count()}")
     
     try:
@@ -559,10 +463,10 @@ def tenant_dashboard(request):
             q_objects |= Q(room_type=pref.room_type)
         if pref.wifi:
             q_objects |= Q(wifi=True)
-        if pref.kitchen_access:
-            q_objects |= Q(kitchen_access=True)
-        if pref.furnished:
-            q_objects |= Q(furnished=True)
+        if pref.ac:
+            q_objects |= Q(ac=True)
+        if pref.tv:
+            q_objects |= Q(tv=True)
         
         if q_objects:
             suggested_rooms = suggested_rooms.filter(q_objects).distinct()
@@ -700,7 +604,7 @@ class RoomReviewViewSet(viewsets.ModelViewSet):
             from rest_framework import serializers
             raise serializers.ValidationError("You can only delete your own reviews.")
         instance.delete()
-    
+
     @action(detail=False, methods=['get'], url_path='room/(?P<room_id>[^/.]+)')
     def by_room(self, request, room_id=None):
         reviews = RoomReview.objects.filter(room_id=room_id)
@@ -723,7 +627,44 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         return Complaint.objects.none()
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user)
+        complaint = serializer.save(tenant=self.request.user)
+        
+        # Notify room owner about new complaint
+        send_notification(
+            recipient=complaint.owner,
+            actor=self.request.user,
+            notification_type='complaint_filed',
+            text=f"New {complaint.complaint_type} request from {self.request.user.full_name}.",
+            related_id=complaint.id
+        )
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        complaint = self.get_object()
+        new_status = serializer.validated_data.get('status')
+        
+        if new_status and new_status != complaint.status:
+            if user.role == 'Tenant':
+                from rest_framework import serializers
+                raise serializers.ValidationError({"error": "Tenants cannot change the status of a complaint."})
+            
+            # Only owner of the room/complaint or admin can change status
+            if user.role == 'Owner' and complaint.owner != user:
+                from rest_framework import serializers
+                raise serializers.ValidationError({"error": "You do not have permission to update this complaint."})
+
+            serializer.save()
+            
+            # Notify tenant about status change
+            send_notification(
+                recipient=complaint.tenant,
+                actor=user,
+                notification_type='complaint_status_change',
+                text=f"Your request '{complaint.complaint_type}' has been marked as {new_status}.",
+                related_id=complaint.id
+            )
+        else:
+            serializer.save()
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

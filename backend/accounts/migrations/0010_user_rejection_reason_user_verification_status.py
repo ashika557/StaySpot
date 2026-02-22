@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0009_alter_user_role'),
+        ('accounts', '0008_preregistrationotp_phoneotp_phone_phoneotp_purpose_and_more'),
     ]
 
     operations = [

@@ -35,7 +35,6 @@ def get_recent_activities(limit=5):
     # New Rooms
     rooms = Room.objects.all().order_by('-created_at')[:limit]
     for r in rooms:
-        # Check if owner exists (some might use owner, some user)
         owner_name = getattr(r, 'owner', getattr(r, 'user', None))
         owner_name = owner_name.full_name if owner_name else "Unknown"
         activities.append({

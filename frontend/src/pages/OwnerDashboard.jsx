@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { Home, Calendar, DollarSign, Bell, MessageSquare } from 'lucide-react';
+import { Home, Calendar, DollarSign, Bell, MessageSquare, Wrench } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';
 import { visitService } from '../services/tenantService';
@@ -160,6 +160,23 @@ export default function OwnerDashboard({ user, onLogout }) {
                     </div>
                   </div>
                   <p className="text-sm text-green-600 font-medium">All time</p>
+                </div>
+
+                {/* Card 5: Maintenance Requests */}
+                <div
+                  className="bg-white rounded-xl p-6 border shadow-sm cursor-pointer hover:shadow-md transition"
+                  onClick={() => navigate(ROUTES.OWNER_MAINTENANCE)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Maintenance</p>
+                      <p className="text-3xl font-bold">Manage</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-100">
+                      <Wrench className="w-6 h-6 text-orange-600" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-orange-600 font-medium">Fix issues</p>
                 </div>
               </div>
 

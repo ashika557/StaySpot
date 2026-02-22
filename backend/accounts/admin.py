@@ -1,29 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, PasswordResetToken, PendingVerification, PlatformPolicy
+from .models import User, PasswordResetToken, PendingVerification
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'full_name', 'phone', 'role', 'is_identity_verified', 'verification_status', 'is_active', 'is_staff')
-    list_filter = ('role', 'is_identity_verified', 'verification_status', 'is_active', 'is_staff', 'is_superuser')
-    actions = ['block_users', 'unblock_users']
+    list_display = ('username', 'email', 'full_name', 'phone', 'role', 'is_identity_verified', 'verification_status', 'is_staff')
+    list_filter = ('role', 'is_identity_verified', 'verification_status', 'is_staff', 'is_superuser')
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Additional Info', {'fields': ('full_name', 'phone', 'role')}),
-        ('Identity Verification', {'fields': ('identity_document', 'identity_preview', 'is_identity_verified', 'verification_status', 'rejection_reason')}),
+        ('Identity Verification', {'fields': ('identity_document', 'identity_preview', 'is_identity_verified', 'verification_status')}),
     )
     readonly_fields = ('identity_preview',)
     
-    def block_users(self, request, queryset):
-        count = queryset.update(is_active=False)
-        self.message_user(request, f"{count} users have been blocked.")
-    block_users.short_description = 'Block selected users'
-
-    def unblock_users(self, request, queryset):
-        count = queryset.update(is_active=True)
-        self.message_user(request, f"{count} users have been unblocked.")
-    unblock_users.short_description = 'Unblock selected users'
-
     def identity_preview(self, obj):
         if obj.identity_document:
             from django.utils.html import format_html
@@ -40,7 +29,7 @@ class PendingVerificationAdmin(admin.ModelAdmin):
     list_display = ('username', 'email', 'full_name', 'role', 'identity_preview_small', 'is_identity_verified')
     list_filter = ('role',)
     readonly_fields = ('identity_preview',)
-    actions = ['verify_users', 'reject_users']
+    actions = ['verify_users']
     
     def get_queryset(self, request):
         return super().get_queryset(request).filter(is_identity_verified=False)
@@ -60,14 +49,9 @@ class PendingVerificationAdmin(admin.ModelAdmin):
     identity_preview.short_description = 'Document Preview'
 
     def verify_users(self, request, queryset):
-        count = queryset.update(is_identity_verified=True, verification_status='Approved', rejection_reason=None)
+        count = queryset.update(is_identity_verified=True, verification_status='Approved')
         self.message_user(request, f"{count} users have been successfully verified.")
-    verify_users.short_description = 'Approve selected verifications'
-
-    def reject_users(self, request, queryset):
-        count = queryset.update(is_identity_verified=False, verification_status='Rejected', rejection_reason='Documents do not meet requirements.')
-        self.message_user(request, f"{count} verifications have been rejected.")
-    reject_users.short_description = 'Reject selected verifications'
+    verify_users.short_description = 'Verify selected users'
 
 
 @admin.register(PasswordResetToken)
@@ -81,9 +65,3 @@ class PasswordResetTokenAdmin(admin.ModelAdmin):
         return obj.is_valid()
     is_valid.boolean = True
     is_valid.short_description = 'Valid'
-
-@admin.register(PlatformPolicy)
-class PlatformPolicyAdmin(admin.ModelAdmin):
-    list_display = ('title', 'is_active', 'updated_at')
-    list_filter = ('is_active',)
-    search_fields = ('title', 'content')

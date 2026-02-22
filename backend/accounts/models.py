@@ -13,27 +13,18 @@ class User(AbstractUser):
         ('Admin', 'Admin'),
     ]
     
-    
     full_name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     
     # Identity Verification
-    VERIFICATION_STATUS_CHOICES = [
-        ('Not Submitted', 'Not Submitted'),
-        ('Pending', 'Pending'),
-        ('Approved', 'Approved'),
-        ('Rejected', 'Rejected'),
-    ]
-    
     identity_document = models.ImageField(upload_to='identity_docs/', null=True, blank=True)
     is_identity_verified = models.BooleanField(default=False)
     verification_status = models.CharField(
         max_length=20, 
-        choices=VERIFICATION_STATUS_CHOICES, 
-        default='Not Submitted'
+        choices=[('Pending', 'Pending'), ('Approved', 'Approved'), ('Rejected', 'Rejected')],
+        default='Pending'
     )
-    rejection_reason = models.TextField(null=True, blank=True)
     
     # Profile Photo
     profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
@@ -114,25 +105,20 @@ class EmailVerificationToken(models.Model):
             self.expires_at = timezone.now() + timezone.timedelta(hours=24)
         super().save(*args, **kwargs)
 class PhoneOTP(models.Model):
-    """Model to store 6-digit phone OTPs for registration or password resets."""
-    PURPOSE_CHOICES = [
-        ('Registration', 'Registration'),
-        ('PasswordReset', 'PasswordReset'),
-    ]
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='phone_otps')
-    phone = models.CharField(max_length=20, null=True, blank=True)
+    """Model to store 6-digit phone OTPs."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='phone_otps', null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True) # For pre-login OTPs
     otp_code = models.CharField(max_length=6)
-    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default='Registration')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_verified = models.BooleanField(default=False)
+    purpose = models.CharField(max_length=20, default='Registration') # 'Registration' or 'PasswordReset'
     
     class Meta:
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"OTP for {self.phone or self.user.phone} ({self.purpose}) - {'Verified' if self.is_verified else 'Pending'}"
+        return f"OTP for {self.phone or self.user.phone} - {self.purpose} - {'Verified' if self.is_verified else 'Pending'}"
     
     def is_valid(self):
         # OTP valid for 10 minutes
@@ -144,19 +130,12 @@ class PhoneOTP(models.Model):
         return str(random.randint(100000, 999999))
 
 class PreRegistrationOTP(models.Model):
-    """Model to store email OTPs before the user is actually created."""
+    """Stores email and OTP *before* user is created."""
     email = models.EmailField(unique=True)
     otp_code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_verified = models.BooleanField(default=False)
-
-    class Meta:
-        verbose_name = 'Pre-Registration OTP'
-        verbose_name_plural = 'Pre-Registration OTPs'
-
-    def __str__(self):
-        return f"Pre-Reg OTP for {self.email} - {'Verified' if self.is_verified else 'Pending'}"
-
+    
     def is_valid(self):
         # Valid for 15 minutes
         return not self.is_verified and timezone.now() < self.created_at + timezone.timedelta(minutes=15)
@@ -166,17 +145,5 @@ class PreRegistrationOTP(models.Model):
         import random
         return str(random.randint(100000, 999999))
 
-class PlatformPolicy(models.Model):
-    """Stores platform-wide policies and documents manageable by admins."""
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Platform Policy'
-        verbose_name_plural = 'Platform Policies'
-
     def __str__(self):
-        return self.title
+        return f"Pre-Reg OTP for {self.email} - {'Verified' if self.is_verified else 'Pending'}"

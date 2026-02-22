@@ -1,10 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    RoomViewSet, BookingViewSet, VisitViewSet, 
-    RoomReviewViewSet, ComplaintViewSet, 
-    tenant_dashboard, debug_user_info, owner_tenant_management,
-    admin_dashboard_stats
+    RoomViewSet, BookingViewSet, VisitViewSet,
+    RoomReviewViewSet, ComplaintViewSet, tenant_dashboard, debug_user_info,
+    owner_tenant_management, admin_dashboard_stats
 )
 
 router = DefaultRouter()

@@ -8,10 +8,7 @@ class Notification(models.Model):
         ('booking_accepted', 'Booking Accepted'),
         ('booking_rejected', 'Booking Rejected'),
         ('booking_cancelled', 'Booking Cancelled'),
-        ('visit_requested', 'New Visit Request'),
-        ('visit_approved', 'Visit Approved'),
-        ('visit_rejected', 'Visit Rejected'),
-        ('visit_cancelled', 'Visit Cancelled'),
+        ('payment_received', 'Payment Received'),
         ('rent_reminder', 'Rent Due Reminder'),
         ('payment_received', 'Payment Received'),
     )

@@ -12,8 +12,8 @@ class Room(models.Model):
     
     STATUS_CHOICES = [
         ('Pending Verification', 'Pending Verification'),
-        ('Available', 'Available'),
-        ('Occupied', 'Occupied'), # Status when room is taken
+        ('Available', 'Available'), # Treated as Approved
+        ('Occupied', 'Occupied'),
         ('Rented', 'Rented'),
         ('Disabled', 'Disabled'),
     ]
@@ -29,18 +29,22 @@ class Room(models.Model):
     # Basic Information
     title = models.CharField(max_length=200)
     location = models.CharField(max_length=300)
+    # room_number removed as per requirement
     room_type = models.CharField(max_length=50, choices=ROOM_TYPES, default='Single Room')
     floor = models.CharField(max_length=50, blank=True)
-    size = models.CharField(max_length=50, blank=True)
+    size = models.CharField(max_length=50, blank=True) # Small, Medium, Large
     
-    # Pricing & Deposit
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    # Details
+    toilet_type = models.CharField(max_length=20, choices=[('Attached', 'Attached'), ('Shared', 'Shared')], default='Shared')
+    kitchen_access = models.BooleanField(default=False)
+    furnished = models.BooleanField(default=False)
+    available_from = models.DateField(null=True, blank=True)
+    
+    # Pricing
+    price = models.DecimalField(max_digits=10, decimal_places=2) # Monthly Rent
     deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
-    # Status
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Available')
-    
-    # Matching & Preferences
+    # Tenant Preference
     preferred_tenant = models.CharField(
         max_length=50, 
         choices=[
@@ -51,29 +55,16 @@ class Room(models.Model):
         ],
         default='Any'
     )
-    gender_preference = models.CharField(
-        max_length=10, 
-        choices=GENDER_PREFERENCE_CHOICES, 
-        default='Any'
-    )
     
-    # Amenities & Specs
-    toilet_type = models.CharField(
-        max_length=20, 
-        choices=[('Attached', 'Attached'), ('Shared', 'Shared')], 
-        default='Shared'
-    )
-    kitchen_access = models.BooleanField(default=False)
-    furnished = models.BooleanField(default=False)
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Available')
+    
+    # Amenities (House-friendly)
     wifi = models.BooleanField(default=False)
     parking = models.BooleanField(default=False)
-    water_supply = models.BooleanField(default=False)
-    electricity_backup = models.CharField(
-        max_length=20, 
-        choices=[('Inverter', 'Inverter'), ('None', 'None')], 
-        default='None'
-    )
-    available_from = models.DateField(null=True, blank=True)
+    attached_bathroom = models.BooleanField(default=False)
+    water_supply = models.BooleanField(default=False) # 24/7 Water
+    electricity_backup = models.CharField(max_length=20, choices=[('Inverter', 'Inverter'), ('None', 'None')], default='None')
     
     # House Rules
     cooking_allowed = models.BooleanField(default=False)
@@ -81,6 +72,13 @@ class Room(models.Model):
     drinking_allowed = models.BooleanField(default=False)
     pets_allowed = models.BooleanField(default=False)
     visitor_allowed = models.BooleanField(default=False)
+    
+    # NEW FIELDS (keeping compatible with existing code if needed)
+    gender_preference = models.CharField(
+        max_length=10, 
+        choices=GENDER_PREFERENCE_CHOICES, 
+        default='Any'
+    )
     latitude = models.DecimalField(
         max_digits=9, 
         decimal_places=6, 
@@ -133,8 +131,8 @@ class UserSearchPreference(models.Model):
     gender_preference = models.CharField(max_length=20, blank=True, null=True)
     room_type = models.CharField(max_length=50, blank=True, null=True)
     wifi = models.BooleanField(default=False)
-    kitchen_access = models.BooleanField(default=False)
-    furnished = models.BooleanField(default=False)
+    ac = models.BooleanField(default=False)
+    tv = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -171,12 +169,9 @@ class Booking(models.Model):
 class Visit(models.Model):
     """Represents a scheduled visit to view a room."""
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Approved', 'Approved'),
         ('Scheduled', 'Scheduled'),
         ('Completed', 'Completed'),
         ('Cancelled', 'Cancelled'),
-        ('Rejected', 'Rejected'),
     ]
     
     tenant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='visits')
@@ -186,7 +181,7 @@ class Visit(models.Model):
     visit_time = models.TimeField()
     purpose = models.CharField(max_length=200, default='Room viewing')
     notes = models.TextField(blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Scheduled')
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -211,6 +206,9 @@ class Chat(models.Model):
     class Meta:
         ordering = ['-timestamp']
     
+    def __str__(self):
+        return f"{self.sender.full_name} to {self.receiver.full_name} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+
 
 class RoomReview(models.Model):
     """Stores tenant reviews and ratings for rooms."""

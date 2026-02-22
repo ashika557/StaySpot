@@ -31,6 +31,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ManageUsers from './pages/ManageUsers';
 import ManageRooms from './pages/ManageRooms';
 import ManageComplaints from './pages/ManageComplaints';
+import OwnerMaintenance from './pages/OwnerMaintenance';
 import { ROUTES, API_ENDPOINTS } from './constants/api';
 import { apiRequest } from './utils/api';
 
@@ -242,6 +243,10 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
             element={user && user.role === 'Owner' ? <OwnerPayments user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
           />
 
+          <Route
+            path={ROUTES.OWNER_MAINTENANCE}
+            element={user && user.role === 'Owner' ? <OwnerMaintenance user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+          />
           <Route
             path={ROUTES.CHAT}
             element={user ? <Chat user={user} /> : <Navigate to={ROUTES.LOGIN} />}

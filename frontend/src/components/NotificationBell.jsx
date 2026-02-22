@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Trash2, MessageSquare, Calendar, ChevronRight, Wallet } from 'lucide-react';
+import { Bell, Check, Trash2, MessageSquare, Calendar, ChevronRight, Wallet, Wrench, AlertTriangle } from 'lucide-react';
 import { notificationService } from '../services/notificationService';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../constants/api';
@@ -91,17 +91,17 @@ const NotificationBell = ({ user, isDark = false }) => {
             } else {
                 navigate(ROUTES.OWNER_BOOKINGS);
             }
-        } else if (notification.notification_type.startsWith('visit')) {
-            if (user.role === 'Tenant') {
-                navigate('/tenant/visits');
-            } else {
-                navigate('/owner/visits');
-            }
         } else if (notification.notification_type === 'rent_reminder' || notification.notification_type === 'payment_received') {
             if (user.role === 'Tenant') {
                 navigate('/tenant/payments');
             } else {
                 navigate('/owner/payments');
+            }
+        } else if (notification.notification_type === 'complaint_status_change' || notification.notification_type === 'complaint_filed') {
+            if (user.role === 'Tenant') {
+                navigate(ROUTES.TENANT_COMPLAINTS);
+            } else {
+                navigate(ROUTES.OWNER_MAINTENANCE);
             }
         }
         setIsOpen(false);
@@ -110,18 +110,16 @@ const NotificationBell = ({ user, isDark = false }) => {
     const getIcon = (type) => {
         switch (type) {
             case 'message': return <MessageSquare className="w-4 h-4 text-blue-500" />;
-            case 'booking_request':
-            case 'visit_requested': return <Calendar className="w-4 h-4 text-orange-500" />;
+            case 'booking_request': return <Calendar className="w-4 h-4 text-orange-500" />;
             case 'booking_accepted':
             case 'booking_approved':
-            case 'visit_approved':
             case 'booking_confirmed': return <Check className="w-4 h-4 text-green-500" />;
             case 'booking_rejected':
-            case 'visit_rejected':
-            case 'booking_cancelled':
-            case 'visit_cancelled': return <Trash2 className="w-4 h-4 text-red-500" />;
+            case 'booking_cancelled': return <Trash2 className="w-4 h-4 text-red-500" />;
             case 'rent_reminder': return <Calendar className="w-4 h-4 text-purple-500" />;
             case 'payment_received': return <Wallet className="w-4 h-4 text-green-600" />;
+            case 'complaint_status_change': return <Wrench className="w-4 h-4 text-blue-600" />;
+            case 'complaint_filed': return <AlertTriangle className="w-4 h-4 text-orange-500" />;
             default: return <Bell className="w-4 h-4 text-gray-500" />;
         }
     };
