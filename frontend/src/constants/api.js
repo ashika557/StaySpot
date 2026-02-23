@@ -29,8 +29,12 @@ export const API_ENDPOINTS = {
   OWNER_FINANCIALS: '/owner/financial/dashboard/',
   TRIGGER_REMINDERS: '/trigger-reminders/',
   ADMIN_DASHBOARD: '/admin/dashboard/',
-  ADMIN_USERS: '/accounts/admin/users/',
-  ADMIN_UPDATE_USER: (id) => `/accounts/admin/users/${id}/update/`,
+  ADMIN_USERS: `/admin/users/`,
+  ADMIN_UPDATE_USER: (id) => `/admin/users/${id}/update/`,
+  ADMIN_VERIFY_KYC: (id) => `/admin/users/${id}/verify-kyc/`,
+  ADMIN_DELETE_USER: (id) => `/admin/users/${id}/delete/`,
+  ADMIN_ROOM_ACTION: (id) => `/rooms/${id}/admin-action/`,
+  ADMIN_COMPLAINTS: '/complaints/',
 };
 
 export const ROUTES = {
@@ -48,6 +52,7 @@ export const ROUTES = {
   OWNER_TENANTS: '/owner/tenants',
   OWNER_PAYMENTS: '/owner/payments',
   OWNER_MAINTENANCE: '/owner/maintenance',
+  OWNER_VISITS: '/owner/visits',
   TENANT_DASHBOARD: '/tenant/dashboard',
   TENANT_SEARCH: '/tenant/search',
   TENANT_BOOKINGS: '/tenant/bookings',

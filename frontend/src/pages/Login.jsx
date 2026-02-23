@@ -64,7 +64,6 @@ function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      console.log('Attempting login...');
 
       const response = await apiRequest(
         API_ENDPOINTS.LOGIN,
@@ -80,12 +79,10 @@ function Login({ onLogin }) {
       );
 
       const data = await response.json();
-      console.log('Login response:', data);
 
       if (response.ok) {
         // Save user data to localStorage
         setUser(data.user);
-        console.log('User data saved to localStorage:', data.user);
 
         // Call the onLogin callback
         onLogin(data.user);

@@ -94,5 +94,51 @@ export const adminService = {
             console.error('Error updating complaint status:', error);
             throw error;
         }
+    },
+
+    /**
+     * Verify user identity (KYC)
+     */
+    verifyKYC: async (userId, action) => {
+        try {
+            const response = await apiRequest(
+                API_ENDPOINTS.ADMIN_VERIFY_KYC(userId),
+                {
+                    method: 'POST',
+                    body: JSON.stringify({ action }) // 'Approve' or 'Reject'
+                }
+            );
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to verify KYC');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error verifying KYC:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Moderate a room (Approve or Disable)
+     */
+    moderateRoom: async (roomId, action) => {
+        try {
+            const response = await apiRequest(
+                API_ENDPOINTS.ADMIN_ROOM_ACTION(roomId),
+                {
+                    method: 'POST',
+                    body: JSON.stringify({ action }) // 'Approve', 'Disable', 'Reject'
+                }
+            );
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to moderate room');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error moderating room:', error);
+            throw error;
+        }
     }
 };

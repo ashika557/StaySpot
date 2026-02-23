@@ -130,6 +130,30 @@ class VisitSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
 
+    def validate(self, data):
+        # Only validate on creation
+        if not self.instance:
+            request = self.context.get('request')
+            if request and request.user:
+                tenant = request.user
+                room = data.get('room')
+                visit_date = data.get('visit_date')
+                
+                # Check for existing pending or scheduled visits for the same day and room
+                from .models import Visit
+                existing_visit = Visit.objects.filter(
+                    tenant=tenant,
+                    room=room,
+                    visit_date=visit_date,
+                    status__in=['Pending', 'Scheduled', 'Approved']
+                ).exists()
+                
+                if existing_visit:
+                    raise serializers.ValidationError({
+                        "error": "You already have a pending or scheduled visit for this room on this date."
+                    })
+        return data
+
 
 # Payment serializers
 # PaymentSerializer moved to payments app
@@ -152,7 +176,8 @@ class ComplaintSerializer(serializers.ModelSerializer):
     owner_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), 
         source='owner', 
-        write_only=True
+        write_only=True,
+        required=False
     )
     room = RoomSerializer(read_only=True)
     room_id = serializers.PrimaryKeyRelatedField(

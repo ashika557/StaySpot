@@ -161,7 +161,6 @@ export default function TenantDashboard({ user }) {
     try {
       setLoading(true);
       const data = await dashboardService.getDashboardData();
-      console.log('Dashboard Data:', data);
       setDashboardData(data);
 
       // Fetch real chats
@@ -585,8 +584,6 @@ function RecentChatsCard({ chats, user, navigate }) {
 
 // Suggested Rooms Section Component
 function SuggestedRoomsSection({ rooms }) {
-  console.log('SuggestedRoomsSection received rooms:', rooms);
-  console.log('Rooms length:', rooms?.length);
 
   return (
     <div>

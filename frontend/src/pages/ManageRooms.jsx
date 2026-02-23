@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { API_ENDPOINTS } from '../constants/api';
+import { adminService } from '../services/adminService';
 
 export default function ManageRooms({ user }) {
     const navigate = useNavigate();
@@ -32,6 +33,20 @@ export default function ManageRooms({ user }) {
             console.error('Failed to fetch rooms:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleModerateRoom = async (roomId, action) => {
+        try {
+            setActionLoading(roomId);
+            await adminService.moderateRoom(roomId, action);
+            // Refresh rooms after action
+            fetchRooms();
+        } catch (error) {
+            console.error(`Failed to ${action} room:`, error);
+            alert(`Failed to ${action} room. Please try again.`);
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -98,9 +113,10 @@ export default function ManageRooms({ user }) {
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
                             <option value="All">All Statuses</option>
+                            <option value="Pending Verification">Pending Verification</option>
                             <option value="Available">Available</option>
                             <option value="Occupied">Occupied</option>
-                            <option value="Hidden">Hidden</option>
+                            <option value="Disabled">Disabled</option>
                         </select>
                     </div>
                 </div>
@@ -158,8 +174,38 @@ export default function ManageRooms({ user }) {
                                     </div>
 
                                     <div className="flex gap-2">
+                                        {room.status === 'Pending Verification' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleModerateRoom(room.id, 'Approve')}
+                                                    disabled={actionLoading === room.id}
+                                                    className="w-10 h-10 flex items-center justify-center text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all font-bold"
+                                                    title="Approve Room"
+                                                >
+                                                    {actionLoading === room.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Building className="w-5 h-5" />}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleModerateRoom(room.id, 'Disable')}
+                                                    disabled={actionLoading === room.id}
+                                                    className="w-10 h-10 flex items-center justify-center text-amber-600 bg-amber-50 rounded-xl hover:bg-amber-100 transition-all font-bold"
+                                                    title="Reject Room"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </>
+                                        )}
+                                        {room.status === 'Available' && (
+                                            <button
+                                                onClick={() => handleModerateRoom(room.id, 'Disable')}
+                                                disabled={actionLoading === room.id}
+                                                className="w-10 h-10 flex items-center justify-center text-amber-600 bg-amber-50 rounded-xl hover:bg-amber-100 transition-all font-bold"
+                                                title="Disable Listing"
+                                            >
+                                                <Eye className="w-5 h-5 opacity-50" />
+                                            </button>
+                                        )}
                                         <button
-                                            onClick={() => navigate(`/rooms/${room.id}`)}
+                                            onClick={() => navigate(`/room/${room.id}`)}
                                             className="w-10 h-10 flex items-center justify-center text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all font-bold"
                                             title="View Details"
                                         >
@@ -169,7 +215,7 @@ export default function ManageRooms({ user }) {
                                             onClick={() => handleDeleteRoom(room.id)}
                                             disabled={actionLoading === room.id}
                                             className="w-10 h-10 flex items-center justify-center text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-all font-bold"
-                                            title="Takedown Listing"
+                                            title="Delete permanently"
                                         >
                                             {actionLoading === room.id ? (
                                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -190,8 +236,10 @@ export default function ManageRooms({ user }) {
 
 function StatusBadge({ status }) {
     const configs = {
+        'Pending Verification': 'bg-amber-500 text-white shadow-amber-200',
         Available: 'bg-emerald-500 text-white shadow-emerald-200',
         Occupied: 'bg-blue-500 text-white shadow-blue-200',
+        Disabled: 'bg-gray-400 text-white shadow-gray-200',
         Hidden: 'bg-gray-400 text-white shadow-gray-200'
     };
     return (

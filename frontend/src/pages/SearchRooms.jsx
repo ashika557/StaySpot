@@ -29,6 +29,7 @@ const SearchRooms = ({ user }) => {
         facilities: {
             wifi: false, parking: false, water_supply: false,
             kitchen_access: false, furnished: false,
+            ac: false, tv: false, cctv: false
         }
     });
 
@@ -134,19 +135,13 @@ const SearchRooms = ({ user }) => {
             facilities: {
                 wifi: false, parking: false, water_supply: false,
                 kitchen_access: false, furnished: false,
+                ac: false, tv: false, cctv: false
             }
         });
         setSearchCoords(null);
         setSearchInputValue('');
     };
 
-    if (!isLoaded) {
-        return (
-            <div className="flex justify-center items-center h-screen bg-gray-50">
-                <Loader className="w-8 h-8 animate-spin text-blue-600" />
-            </div>
-        );
-    }
 
     return (
         <div className="flex bg-gray-50">
@@ -250,7 +245,8 @@ const SearchRooms = ({ user }) => {
                                 {Object.entries({
                                     wifi: 'WiFi', parking: 'Parking',
                                     water_supply: 'Water Supply',
-                                    kitchen_access: 'Kitchen Access', furnished: 'Furnished'
+                                    kitchen_access: 'Kitchen Access', furnished: 'Furnished',
+                                    ac: 'AC', tv: 'TV', cctv: 'CCTV'
                                 }).map(([key, label]) => (
                                     <label key={key} className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
                                         <input
@@ -373,6 +369,8 @@ const SearchRooms = ({ user }) => {
                                                         {room.wifi && <span className="text-[9px] bg-green-50 text-green-700 font-bold px-1.5 py-0.5 rounded border border-green-100">WiFi</span>}
                                                         {room.parking && <span className="text-[9px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-100">Parking</span>}
                                                         {room.pets_allowed && <span className="text-[9px] bg-orange-50 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-100">Pets</span>}
+                                                        {room.ac && <span className="text-[9px] bg-sky-50 text-sky-700 font-bold px-1.5 py-0.5 rounded border border-sky-100">AC</span>}
+                                                        {room.tv && <span className="text-[9px] bg-indigo-50 text-indigo-700 font-bold px-1.5 py-0.5 rounded border border-indigo-100">TV</span>}
                                                         <span className="text-[9px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-100 uppercase">{room.gender_preference || 'Any'}</span>
                                                     </div>
                                                 </div>
@@ -392,53 +390,61 @@ const SearchRooms = ({ user }) => {
                         <div className="flex flex-col overflow-hidden">
                             <h2 className="text-xl font-bold text-gray-800 mb-4">Map View</h2>
                             <div className="flex-1 rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-200 relative">
-                                <GoogleMap
-                                    mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '16px' }}
-                                    center={center}
-                                    zoom={14}
-                                    onLoad={onMapLoad}
-                                    options={{
-                                        disableDefaultUI: true,
-                                        zoomControl: true,
-                                        fullscreenControl: false,
-                                        streetViewControl: false,
-                                        mapTypeControl: false
-                                    }}
-                                >
-                                    {rooms.map(room => (
-                                        (room.latitude && room.longitude) && (
-                                            <Marker
-                                                key={room.id}
-                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                                onClick={() => setSelectedRoom(room)}
-                                            />
-                                        )
-                                    ))}
-
-                                    {selectedRoom && (
-                                        <InfoWindow
-                                            position={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
-                                            onCloseClick={() => setSelectedRoom(null)}
-                                        >
-                                            <div className="p-2 min-w-[200px]">
-                                                <img
-                                                    src={selectedRoom.images?.[0]?.image ? getMediaUrl(selectedRoom.images[0].image) : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=200'}
-                                                    className="w-full h-24 object-cover rounded-lg mb-2"
-                                                    alt=""
+                                {isLoaded ? (
+                                    <GoogleMap
+                                        mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '16px' }}
+                                        center={center}
+                                        zoom={14}
+                                        onLoad={onMapLoad}
+                                        options={{
+                                            disableDefaultUI: true,
+                                            zoomControl: true,
+                                            fullscreenControl: false,
+                                            streetViewControl: false,
+                                            mapTypeControl: false
+                                        }}
+                                    >
+                                        {rooms.map(room => (
+                                            (room.latitude && room.longitude) && (
+                                                <Marker
+                                                    key={room.id}
+                                                    position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                    onClick={() => setSelectedRoom(room)}
                                                 />
-                                                <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{selectedRoom.title}</h4>
-                                                <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
-                                                <p className="text-gray-500 text-[10px] mt-1 flex items-center gap-1">
-                                                    <MapPin className="w-3 h-3" />
-                                                    {selectedRoom.location}
-                                                </p>
-                                                <Link to={`/room/${selectedRoom.id}`} className="block mt-3 text-center py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100">
-                                                    View Details
-                                                </Link>
-                                            </div>
-                                        </InfoWindow>
-                                    )}
-                                </GoogleMap>
+                                            )
+                                        ))}
+
+                                        {selectedRoom && (
+                                            <InfoWindow
+                                                position={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
+                                                onCloseClick={() => setSelectedRoom(null)}
+                                            >
+                                                <div className="p-2 min-w-[200px]">
+                                                    <img
+                                                        src={selectedRoom.images?.[0]?.image ? getMediaUrl(selectedRoom.images[0].image) : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=200'}
+                                                        className="w-full h-24 object-cover rounded-lg mb-2"
+                                                        alt=""
+                                                    />
+                                                    <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{selectedRoom.title}</h4>
+                                                    <p className="text-blue-600 font-bold text-xs mt-1">NPR {parseFloat(selectedRoom.price).toLocaleString()}/month</p>
+                                                    <p className="text-gray-500 text-[10px] mt-1 flex items-center gap-1">
+                                                        <MapPin className="w-3 h-3" />
+                                                        {selectedRoom.location}
+                                                    </p>
+                                                    <Link to={`/room/${selectedRoom.id}`} className="block mt-3 text-center py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-100">
+                                                        View Details
+                                                    </Link>
+                                                </div>
+                                            </InfoWindow>
+                                        )}
+                                    </GoogleMap>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
+                                        <MapPin className="w-10 h-10 text-gray-300" />
+                                        <p className="text-sm font-medium">Map is loading...</p>
+                                        <p className="text-xs text-gray-400">Room list is available on the left</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

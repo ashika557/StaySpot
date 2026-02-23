@@ -51,6 +51,23 @@ export default function ManageUsers({ user }) {
         }
     };
 
+    const handleVerifyKYC = async (userId, action) => {
+        try {
+            setActionLoading(userId);
+            await adminService.verifyKYC(userId, action);
+            setMessage({
+                type: 'success',
+                text: `Identity document ${action === 'Approve' ? 'verified' : 'rejected'} successfully.`
+            });
+            fetchUsers();
+        } catch (error) {
+            setMessage({ type: 'error', text: error.message || 'Verification failed.' });
+        } finally {
+            setActionLoading(null);
+            setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+        }
+    };
+
     const resetFilters = () => {
         setSearchTerm('');
         setRoleFilter('All Roles');
@@ -175,8 +192,9 @@ export default function ManageUsers({ user }) {
                             <tr className="bg-gray-50/20">
                                 <th className="px-10 py-6 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">User</th>
                                 <th className="px-10 py-6 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Role</th>
+                                <th className="px-10 py-6 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Identity</th>
                                 <th className="px-10 py-6 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                                <th className="px-10 py-6 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Joined Date</th>
+                                <th className="px-10 py-6 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Joined</th>
                                 <th className="px-10 py-6 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Actions</th>
                             </tr>
                         </thead>
@@ -228,6 +246,9 @@ export default function ManageUsers({ user }) {
                                             <RoleBadge role={u.role} />
                                         </td>
                                         <td className="px-10 py-6 text-center">
+                                            <KYCBadge verified={u.is_identity_verified} status={u.verification_status} />
+                                        </td>
+                                        <td className="px-10 py-6 text-center">
                                             <StatusBadge active={u.is_active} />
                                         </td>
                                         <td className="px-10 py-6 text-center">
@@ -241,7 +262,21 @@ export default function ManageUsers({ user }) {
                                         </td>
                                         <td className="px-10 py-6">
                                             <div className="flex items-center justify-center gap-3">
-                                                <button className="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-50 flex items-center gap-2 uppercase tracking-tight">
+                                                {u.verification_status === 'Pending' && (
+                                                    <button
+                                                        onClick={() => handleVerifyKYC(u.id, 'Approve')}
+                                                        disabled={actionLoading === u.id}
+                                                        className="px-6 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-50 flex items-center gap-2 uppercase tracking-tight"
+                                                        title="Approve ID"
+                                                    >
+                                                        {actionLoading === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
+                                                        Verify
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => navigate(`/admin/users/${u.id}/details`)}
+                                                    className="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-50 flex items-center gap-2 uppercase tracking-tight"
+                                                >
                                                     <Eye className="w-3.5 h-3.5" /> View
                                                 </button>
                                                 {u.id !== user.id && (
@@ -249,8 +284,8 @@ export default function ManageUsers({ user }) {
                                                         onClick={() => handleUpdateStatus(u.id, !u.is_active)}
                                                         disabled={actionLoading === u.id}
                                                         className={`px-6 py-2 rounded-xl text-xs font-black transition-all shadow-lg flex items-center gap-2 uppercase tracking-tight ${u.is_active
-                                                                ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-amber-50'
-                                                                : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-50'
+                                                            ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-amber-50'
+                                                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-50'
                                                             }`}
                                                     >
                                                         {actionLoading === u.id ? (
@@ -292,8 +327,8 @@ export default function ManageUsers({ user }) {
                                     key={i}
                                     onClick={() => setCurrentPage(i + 1)}
                                     className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${currentPage === i + 1
-                                            ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 scale-110'
-                                            : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 hover:scale-105'
+                                        ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 scale-110'
+                                        : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 hover:scale-105'
                                         }`}
                                 >
                                     {i + 1}
@@ -312,6 +347,36 @@ export default function ManageUsers({ user }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+function KYCBadge({ verified, status }) {
+    if (verified) {
+        return (
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                <BadgeCheck className="w-3.5 h-3.5 text-emerald-500" />
+                Verified
+            </span>
+        );
+    }
+    if (status === 'Pending') {
+        return (
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-100 italic">
+                Pending ID
+            </span>
+        );
+    }
+    if (status === 'Rejected') {
+        return (
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-rose-50 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-100">
+                Rejected
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-gray-50 text-gray-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-100">
+            Unverified
+        </span>
     );
 }
 

@@ -1,4 +1,5 @@
 
+from accounts.models import User
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -49,8 +50,8 @@ class RoomViewSet(viewsets.ModelViewSet):
         water_supply = self.request.query_params.get('water_supply')
         attached_bathroom = self.request.query_params.get('attached_bathroom')
         cctv = self.request.query_params.get('cctv')
-        kitchen = self.request.query_params.get('kitchen')
-        furniture = self.request.query_params.get('furniture')
+        kitchen_access = self.request.query_params.get('kitchen_access')
+        furnished = self.request.query_params.get('furnished')
 
         # Price Range
         min_price = self.request.query_params.get('min_price')
@@ -76,8 +77,8 @@ class RoomViewSet(viewsets.ModelViewSet):
         if water_supply == 'true': queryset = queryset.filter(water_supply=True)
         if attached_bathroom == 'true': queryset = queryset.filter(attached_bathroom=True)
         if cctv == 'true': queryset = queryset.filter(cctv=True)
-        if kitchen == 'true': queryset = queryset.filter(kitchen=True)
-        if furniture == 'true': queryset = queryset.filter(furniture=True)
+        if kitchen_access == 'true': queryset = queryset.filter(kitchen_access=True)
+        if furnished == 'true': queryset = queryset.filter(furnished=True)
 
         if min_price:
             queryset = queryset.filter(price__gte=min_price)
@@ -157,10 +158,12 @@ class RoomViewSet(viewsets.ModelViewSet):
                 q_objects |= Q(room_type=pref.room_type)
             if pref.wifi:
                 q_objects |= Q(wifi=True)
-            if pref.ac:
+            if hasattr(Room, 'ac') and pref.ac:
                 q_objects |= Q(ac=True)
-            if pref.tv:
+            if hasattr(Room, 'tv') and pref.tv:
                 q_objects |= Q(tv=True)
+            if hasattr(Room, 'cctv') and getattr(pref, 'cctv', False):
+                q_objects |= Q(cctv=True)
             
             if q_objects:
                 queryset = queryset.filter(q_objects).distinct()
@@ -361,13 +364,66 @@ class VisitViewSet(viewsets.ModelViewSet):
         elif user.role in ['Owner', 'Admin']:
             return Visit.objects.filter(owner=user)
         return Visit.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        # Auto-cleanup of duplicate visits to solve the "shown twice" error
+        if request.user.is_authenticated:
+            from django.db.models import Count
+            from .models import Visit
+            # Find groups of potential duplicates
+            duplicates = Visit.objects.values('tenant', 'room', 'visit_date', 'visit_time', 'purpose')\
+                .annotate(count=Count('id')).filter(count__gt=1)
+            
+            for duplicate in duplicates:
+                v_ids = Visit.objects.filter(
+                    tenant_id=duplicate['tenant'],
+                    room_id=duplicate['room'],
+                    visit_date=duplicate['visit_date'],
+                    visit_time=duplicate['visit_time'],
+                    purpose=duplicate['purpose']
+                ).values_list('id', flat=True)
+                
+                # Keep the first ID, delete the rest
+                if len(v_ids) > 1:
+                    Visit.objects.filter(id__in=v_ids[1:]).delete()
+        
+        return super().list(request, *args, **kwargs)
     
     def perform_create(self, serializer):
         user = self.request.user
         if not user.is_identity_verified and user.role != 'Admin':
             from rest_framework import serializers
             raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
-        serializer.save(tenant=user)
+        visit = serializer.save(tenant=user)
+        
+        # Notify room owner about new visit request
+        send_notification(
+            recipient=visit.room.owner,
+            actor=user,
+            notification_type='visit_request',
+            text=f"New visit request for {visit.room.title} from {user.full_name}.",
+            related_id=visit.id
+        )
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        old_status = instance.status
+        visit = serializer.save()
+        new_status = visit.status
+        
+        if old_status != new_status:
+            # Map 'Scheduled' to 'accepted' for better readability in notification
+            status_text = new_status.lower()
+            if new_status == 'Scheduled':
+                status_text = 'accepted'
+            
+            send_notification(
+                recipient=visit.tenant,
+                actor=self.request.user,
+                notification_type='visit_status',
+                text=f"Your visit request for {visit.room.title} has been {status_text}.",
+                related_id=visit.id
+            )
 
 
 # PaymentViewSet moved to payments app

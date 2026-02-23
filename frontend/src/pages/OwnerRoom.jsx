@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OwnerSidebar from '../components/OwnerSidebar';
-import Footer from '../components/Footer';
 import { Home, Users, TrendingUp, Eye, Search, Filter, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin, Star, Calendar, DollarSign, LayoutGrid } from 'lucide-react';
 import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
@@ -28,7 +27,8 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
     cookingAllowed: false, smokingAllowed: false, drinkingAllowed: false,
     petsAllowed: false, visitorAllowed: false,
     latitude: '', longitude: '',
-    description: '', amenities: ''
+    description: '', amenities: '',
+    ac: false, tv: false, cctv: false
   });
 
   // Fetch rooms on component mount
@@ -90,7 +90,10 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
       latitude: room.latitude || '',
       longitude: room.longitude || '',
       description: room.description || '',
-      amenities: room.amenities || ''
+      amenities: room.amenities || '',
+      ac: room.ac || false,
+      tv: room.tv || false,
+      cctv: room.cctv || false
     });
     setShowModal('edit');
   };
@@ -155,7 +158,8 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
         cookingAllowed: false, smokingAllowed: false, drinkingAllowed: false,
         petsAllowed: false, visitorAllowed: false,
         latitude: '', longitude: '',
-        description: '', amenities: ''
+        description: '', amenities: '',
+        ac: false, tv: false, cctv: false
       });
     } catch (error) {
       console.error('Error saving room:', error);
@@ -183,7 +187,6 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Loading rooms...</p>
           </div>
-          <Footer user={user} />
         </div>
       </div>
     );
@@ -317,9 +320,15 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                       className="w-full h-52 object-cover rounded-t-xl"
                       alt={room.title}
                     />
-                    <span className={`absolute top - 3 left - 3 px - 3 py - 1 rounded - full text - [10px] font - bold uppercase shadow - sm ${(room.status === 'Available' || room.status === 'Pending Verification') ? 'bg-green-500 text-white' :
-                      room.status === 'Rented' ? 'bg-orange-500 text-white' : 'bg-blue-500 text-white'
-                      } `}>{(room.status === 'Available' || room.status === 'Pending Verification') ? 'Available' : (room.status === 'Rented' ? 'Rented' : room.status)}</span>
+                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase shadow-sm ${room.status === 'Available' ? 'bg-green-500 text-white shadow-green-100' :
+                      room.status === 'Pending Verification' ? 'bg-amber-500 text-white shadow-amber-100' :
+                        room.status === 'Rented' ? 'bg-orange-500 text-white shadow-orange-100' :
+                          'bg-blue-500 text-white shadow-blue-100'
+                      }`}>
+                      {room.status === 'Pending Verification' ? 'Pending Verification' :
+                        room.status === 'Available' ? 'Visible & Available' :
+                          room.status}
+                    </span>
                     <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/70 text-white text-[10px] rounded font-bold">
                       <Eye className="w-3 h-3 inline mr-1" />{room.views}
                     </div>
@@ -341,6 +350,8 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                       {room.wifi && <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded">Wi-Fi</span>}
                       {room.kitchen_access && <span className="px-2 py-1 bg-green-50 text-green-600 rounded">Kitchen</span>}
                       {room.furnished && <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded">Furnished</span>}
+                      {room.ac && <span className="px-2 py-1 bg-sky-50 text-sky-600 rounded">AC</span>}
+                      {room.tv && <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded">TV</span>}
                     </div>
                     <div className="mb-4">
                       <span className="text-xl font-bold text-blue-600">NPR {parseFloat(room.price).toLocaleString()}</span>
@@ -587,6 +598,18 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                             <input type="checkbox" checked={formData.furnished} onChange={(e) => setFormData({ ...formData, furnished: e.target.checked })} className="hidden" />
                             <span className="text-[10px] font-bold uppercase">Furnished</span>
                           </label>
+                          <label className={`flex items - center justify - center gap - 2 p - 3 border rounded - xl cursor - pointer transition ${formData.ac ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-500'} `}>
+                            <input type="checkbox" checked={formData.ac} onChange={(e) => setFormData({ ...formData, ac: e.target.checked })} className="hidden" />
+                            <span className="text-[10px] font-bold uppercase">AC</span>
+                          </label>
+                          <label className={`flex items - center justify - center gap - 2 p - 3 border rounded - xl cursor - pointer transition ${formData.tv ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-500'} `}>
+                            <input type="checkbox" checked={formData.tv} onChange={(e) => setFormData({ ...formData, tv: e.target.checked })} className="hidden" />
+                            <span className="text-[10px] font-bold uppercase">TV</span>
+                          </label>
+                          <label className={`flex items - center justify - center gap - 2 p - 3 border rounded - xl cursor - pointer transition ${formData.cctv ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-500'} `}>
+                            <input type="checkbox" checked={formData.cctv} onChange={(e) => setFormData({ ...formData, cctv: e.target.checked })} className="hidden" />
+                            <span className="text-[10px] font-bold uppercase">CCTV</span>
+                          </label>
                         </div>
                       </div>
                     </div>
@@ -803,7 +826,6 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
             </div>
           )
         }
-        <Footer user={user} />
       </div >
     </div >
   );

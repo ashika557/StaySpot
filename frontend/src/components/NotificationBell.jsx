@@ -103,6 +103,12 @@ const NotificationBell = ({ user, isDark = false }) => {
             } else {
                 navigate(ROUTES.OWNER_MAINTENANCE);
             }
+        } else if (notification.notification_type === 'visit_request' || notification.notification_type === 'visit_status') {
+            if (user.role === 'Tenant') {
+                navigate(ROUTES.TENANT_VISITS);
+            } else {
+                navigate(ROUTES.OWNER_VISITS);
+            }
         }
         setIsOpen(false);
     };
@@ -110,10 +116,14 @@ const NotificationBell = ({ user, isDark = false }) => {
     const getIcon = (type) => {
         switch (type) {
             case 'message': return <MessageSquare className="w-4 h-4 text-blue-500" />;
+            case 'visit_request':
+            case 'visit_status':
             case 'booking_request': return <Calendar className="w-4 h-4 text-orange-500" />;
             case 'booking_accepted':
             case 'booking_approved':
-            case 'booking_confirmed': return <Check className="w-4 h-4 text-green-500" />;
+            case 'booking_confirmed':
+            case 'booking_active':
+            case 'booking_completed': return <Check className="w-4 h-4 text-green-500" />;
             case 'booking_rejected':
             case 'booking_cancelled': return <Trash2 className="w-4 h-4 text-red-500" />;
             case 'rent_reminder': return <Calendar className="w-4 h-4 text-purple-500" />;

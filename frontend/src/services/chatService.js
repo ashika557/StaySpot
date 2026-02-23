@@ -61,37 +61,60 @@ class ChatService {
     /**
      * Connect to WebSocket for a specific conversation
      */
-    connect(conversationId, onEventReceived) {
+    connect(conversationId, onMessage) {
         if (this.socket) {
             this.socket.close();
         }
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = 'localhost:8000'; // Adjust if backend is on different port/host
+        const host = `${window.location.hostname}:8000`; // Dynamically use current hostname
         const wsUrl = `${protocol}//${host}/ws/chat/${conversationId}/`;
 
         this.socket = new WebSocket(wsUrl);
+        this.onMessageReceived = onMessage;
+        this.reconnectAttempts = this.reconnectAttempts || 0;
+        this.maxReconnectAttempts = 5;
 
         console.log(`[ChatService] Connecting to WebSocket at: ${wsUrl}`);
 
         this.socket.onopen = () => {
-            console.log('WebSocket Connected');
+            console.log(`[ChatService] Connected to conversation ${conversationId}`);
+            this.reconnectAttempts = 0;
         };
 
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (onEventReceived) {
-                onEventReceived(data);
+            if (this.onMessageReceived) {
+                this.onMessageReceived(data);
             }
         };
 
-        this.socket.onclose = () => {
-            console.log('WebSocket Disconnected');
+        this.socket.onclose = (event) => {
+            console.log(`[ChatService] Connection closed: ${event.code}. Reconnecting...`);
+            if (event.code !== 1000 && event.code !== 1001) {
+                this.reconnect(conversationId, onMessage);
+            }
         };
 
         this.socket.onerror = (error) => {
-            console.error('WebSocket Error:', error);
+            console.error('[ChatService] WebSocket error:', error);
+            this.socket.close();
         };
+    }
+
+    reconnect(conversationId, onMessage) {
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.log('[ChatService] Max reconnect attempts reached');
+            return;
+        }
+
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+        this.reconnectAttempts++;
+
+        console.log(`[ChatService] Attempting reconnect in ${delay / 1000} seconds... (Attempt ${this.reconnectAttempts})`);
+        setTimeout(() => {
+            this.connect(conversationId, onMessage);
+        }, delay);
     }
 
     /**

@@ -61,6 +61,9 @@ class Room(models.Model):
     
     # Amenities (House-friendly)
     wifi = models.BooleanField(default=False)
+    ac = models.BooleanField(default=False)
+    tv = models.BooleanField(default=False)
+    cctv = models.BooleanField(default=False)
     parking = models.BooleanField(default=False)
     attached_bathroom = models.BooleanField(default=False)
     water_supply = models.BooleanField(default=False) # 24/7 Water
@@ -133,6 +136,8 @@ class UserSearchPreference(models.Model):
     wifi = models.BooleanField(default=False)
     ac = models.BooleanField(default=False)
     tv = models.BooleanField(default=False)
+    cctv = models.BooleanField(default=False)
+    furnished = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -169,8 +174,10 @@ class Booking(models.Model):
 class Visit(models.Model):
     """Represents a scheduled visit to view a room."""
     STATUS_CHOICES = [
+        ('Pending', 'Pending'),
         ('Scheduled', 'Scheduled'),
         ('Completed', 'Completed'),
+        ('Rejected', 'Rejected'),
         ('Cancelled', 'Cancelled'),
     ]
     
@@ -181,7 +188,7 @@ class Visit(models.Model):
     visit_time = models.TimeField()
     purpose = models.CharField(max_length=200, default='Room viewing')
     notes = models.TextField(blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Scheduled')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

@@ -66,6 +66,9 @@ export const roomService = {
     formData.append('electricity_backup', roomData.electricityBackup || 'None');
     formData.append('description', roomData.description || '');
     formData.append('amenities', roomData.amenities || '');
+    formData.append('ac', roomData.ac || false);
+    formData.append('tv', roomData.tv || false);
+    formData.append('cctv', roomData.cctv || false);
 
     // House Rules
     formData.append('cooking_allowed', roomData.cookingAllowed || false);
@@ -134,6 +137,9 @@ export const roomService = {
     formData.append('electricity_backup', roomData.electricityBackup || 'None');
     formData.append('description', roomData.description || '');
     formData.append('amenities', roomData.amenities || '');
+    formData.append('ac', roomData.ac || false);
+    formData.append('tv', roomData.tv || false);
+    formData.append('cctv', roomData.cctv || false);
 
     // House Rules
     formData.append('cooking_allowed', roomData.cookingAllowed || false);

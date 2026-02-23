@@ -10,7 +10,7 @@ const complaintService = {
         const isFormData = complaintData instanceof FormData;
         const response = await apiRequest(API_ENDPOINTS.COMPLAINTS, {
             method: 'POST',
-            body: complaintData,
+            body: isFormData ? complaintData : JSON.stringify(complaintData),
             headers: isFormData ? {} : { 'Content-Type': 'application/json' },
             isMultipart: isFormData
         });
@@ -51,8 +51,8 @@ const complaintService = {
     updateComplaint: async (id, complaintData) => {
         const isFormData = complaintData instanceof FormData;
         const response = await apiRequest(`${API_ENDPOINTS.COMPLAINTS}${id}/`, {
-            method: 'PUT',
-            body: complaintData,
+            method: 'PATCH',
+            body: isFormData ? complaintData : JSON.stringify(complaintData),
             headers: isFormData ? {} : { 'Content-Type': 'application/json' },
             isMultipart: isFormData
         });

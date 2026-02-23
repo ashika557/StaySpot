@@ -175,7 +175,7 @@ export default function StaySpotLanding({ onGetStarted, onSignIn, user }) {
           </div>
         </div>
       </section>
-
+      <Footer />
     </div>
   );
 }
