@@ -169,10 +169,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
         amount_str = str(int(payment.amount)) if payment.amount == int(payment.amount) else str(payment.amount)
         
         # eSewa Status Query URL (v2)
-        # Sandbox: https://uat.esewa.com.np/api/epw/resources/resource/paymentStatus
-        # Product: https://esewa.com.np/api/epw/resources/resource/paymentStatus
+        # Sandbox: https://uat.esewa.com.np/api/epay/transaction/status/
+        # Product: https://esewa.com.np/api/epay/transaction/status/
+        # NOTE: uat.esewa.com.np often has DNS issues in some regions; 
+        # rc-epay.esewa.com.np is often more reliable for testing.
         if any(x in settings.ESEWA_GATEWAY_URL.lower() for x in ["uat", "rc-epay", "rc"]):
-            lookup_url = "https://uat.esewa.com.np/api/epay/transaction/status/"
+            lookup_url = "https://rc-epay.esewa.com.np/api/epay/transaction/status/"
         else:
             lookup_url = "https://esewa.com.np/api/epay/transaction/status/"
             
@@ -180,7 +182,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
         try:
             print(f"DEBUG: eSewa Status Query URL: {url}")
-            response = requests.get(url)
+            response = requests.get(url, timeout=10)
             print(f"DEBUG: eSewa Status Response Code: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
@@ -220,9 +222,13 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     return Response({'status': 'Payment verified successfully'})
                 return Response({'status': esewa_status, 'message': 'Payment not complete'})
             else:
-                return Response({'error': 'Failed to fetch status from eSewa'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': f'eSewa returned {response.status_code}. Status lookup failed.'}, status=status.HTTP_400_BAD_REQUEST)
+        except requests.exceptions.ConnectionError:
+            return Response({'error': 'Failed to connect to eSewa server. Please check your internet connection or try again later.'}, status=status.HTTP_400_BAD_REQUEST)
+        except requests.exceptions.Timeout:
+            return Response({'error': 'eSewa server timed out. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f'An unexpected error occurred: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post'])
     def initiate_khalti(self, request, pk=None):
