@@ -5,7 +5,7 @@ import { GOOGLE_MAPS_API_KEY } from '../constants/config';
 const MapContext = createContext({ isLoaded: false });
 
 // Stable libraries array to prevent reloads
-const LIBRARIES = ['places'];
+const LIBRARIES = ['places', 'geometry'];
 
 export const MapProvider = ({ children }) => {
     const { isLoaded } = useJsApiLoader({
