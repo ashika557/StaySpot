@@ -2,8 +2,8 @@
  * Global Configuration Constants
  */
 
-// Replace 'YOUR_GOOGLE_MAPS_API_KEY_HERE' with your actual key from Google Cloud Console
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyC2yK4Yq1rUUj4u1MjrHZ4ExKWQLWxmPeQ';
+// Google Maps API Configuration
+export const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 export const GOOGLE_MAPS_LIBRARIES = ['places'];
 
 export const CONFIG = {

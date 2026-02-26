@@ -2,20 +2,25 @@
 Django settings for stayspot project.
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-change-this-in-production'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
@@ -184,12 +189,12 @@ DEFAULT_FROM_EMAIL = 'noreply@stayspot.com'
 FRONTEND_URL = 'http://localhost:3000'
 
 # eSewa Configuration (UAT/Sandbox defaults)
-ESEWA_SECRET_KEY = '8gBm/:&EnhH.1/q'
-ESEWA_PRODUCT_CODE = 'EPAYTEST'
+ESEWA_SECRET_KEY = os.environ.get('ESEWA_SECRET_KEY', '')
+ESEWA_PRODUCT_CODE = os.environ.get('ESEWA_PRODUCT_CODE', 'EPAYTEST')
 ESEWA_GATEWAY_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
 
 # Khalti Configuration (Sandbox)
-KHALTI_PUBLIC_KEY = '659ab205adad43409b2c562a15a4fa5f'
-KHALTI_SECRET_KEY = '5f1831135f634d0fb608d7eb64dae94b'
+KHALTI_PUBLIC_KEY = os.environ.get('KHALTI_PUBLIC_KEY', '')
+KHALTI_SECRET_KEY = os.environ.get('KHALTI_SECRET_KEY', '')
 KHALTI_GATEWAY_URL = 'https://dev.khalti.com/api/v2/epayment/initiate/'
 KHALTI_LOOKUP_URL = 'https://dev.khalti.com/api/v2/epayment/lookup/'
