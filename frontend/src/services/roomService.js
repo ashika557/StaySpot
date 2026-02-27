@@ -58,17 +58,14 @@ export const roomService = {
     formData.append('room_type', roomData.roomType);
     formData.append('floor', roomData.floor || '');
     formData.append('size', roomData.size || '');
-    formData.append('preferred_tenant', roomData.preferredTenant || 'Any');
-    formData.append('toilet_type', roomData.toiletType || 'Shared');
-    formData.append('kitchen_access', roomData.kitchenAccess || false);
-    formData.append('furnished', roomData.furnished || false);
-    formData.append('available_from', roomData.availableFrom || '');
+    formData.append('status', roomData.status);
+
+    // Amenities
+    formData.append('wifi', roomData.wifi || false);
+    formData.append('parking', roomData.parking || false);
+    formData.append('water_supply', roomData.waterSupply || false);
+    formData.append('attached_bathroom', roomData.attachedBathroom || false);
     formData.append('electricity_backup', roomData.electricityBackup || 'None');
-    formData.append('description', roomData.description || '');
-    formData.append('amenities', roomData.amenities || '');
-    formData.append('ac', roomData.ac || false);
-    formData.append('tv', roomData.tv || false);
-    formData.append('cctv', roomData.cctv || false);
 
     // House Rules
     formData.append('cooking_allowed', roomData.cookingAllowed || false);
@@ -77,12 +74,12 @@ export const roomService = {
     formData.append('pets_allowed', roomData.petsAllowed || false);
     formData.append('visitor_allowed', roomData.visitorAllowed || false);
 
-    formData.append('status', roomData.status || 'Available');
-    formData.append('wifi', roomData.wifi || false);
-    formData.append('parking', roomData.parking || false);
-    formData.append('water_supply', roomData.waterSupply || false);
+    // Metadata
+    formData.append('description', roomData.description || '');
+    formData.append('amenities', roomData.amenities || '');
     formData.append('gender_preference', roomData.genderPreference || 'Any');
 
+    // Only append coordinates if they have values to avoid conversion errors on backend
     if (roomData.latitude !== undefined && roomData.latitude !== null && roomData.latitude !== '') {
       formData.append('latitude', parseFloat(roomData.latitude).toFixed(6));
     }
@@ -129,17 +126,14 @@ export const roomService = {
     formData.append('room_type', roomData.roomType);
     formData.append('floor', roomData.floor || '');
     formData.append('size', roomData.size || '');
-    formData.append('preferred_tenant', roomData.preferredTenant || 'Any');
-    formData.append('toilet_type', roomData.toiletType || 'Shared');
-    formData.append('kitchen_access', roomData.kitchenAccess || false);
-    formData.append('furnished', roomData.furnished || false);
-    formData.append('available_from', roomData.availableFrom || '');
+    formData.append('status', roomData.status);
+
+    // Amenities
+    formData.append('wifi', roomData.wifi || false);
+    formData.append('parking', roomData.parking || false);
+    formData.append('water_supply', roomData.waterSupply || false);
+    formData.append('attached_bathroom', roomData.attachedBathroom || false);
     formData.append('electricity_backup', roomData.electricityBackup || 'None');
-    formData.append('description', roomData.description || '');
-    formData.append('amenities', roomData.amenities || '');
-    formData.append('ac', roomData.ac || false);
-    formData.append('tv', roomData.tv || false);
-    formData.append('cctv', roomData.cctv || false);
 
     // House Rules
     formData.append('cooking_allowed', roomData.cookingAllowed || false);
@@ -148,12 +142,12 @@ export const roomService = {
     formData.append('pets_allowed', roomData.petsAllowed || false);
     formData.append('visitor_allowed', roomData.visitorAllowed || false);
 
-    formData.append('status', roomData.status);
-    formData.append('wifi', roomData.wifi || false);
-    formData.append('parking', roomData.parking || false);
-    formData.append('water_supply', roomData.waterSupply || false);
+    // Metadata
+    formData.append('description', roomData.description || '');
+    formData.append('amenities', roomData.amenities || '');
     formData.append('gender_preference', roomData.genderPreference || 'Any');
 
+    // Only append coordinates if they have values to avoid conversion errors on backend
     if (roomData.latitude !== undefined && roomData.latitude !== null && roomData.latitude !== '') {
       formData.append('latitude', parseFloat(roomData.latitude).toFixed(6));
     }
@@ -284,6 +278,18 @@ export const roomService = {
     } catch (error) {
       console.error('Error in deleteRoomReview:', error);
       throw error;
+    }
+  },
+
+  // Increment the view count for a room (called when a non-owner views room details)
+  incrementViews: async (id) => {
+    try {
+      await apiRequest(`/rooms/${id}/increment_views/`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      // Silently fail — view tracking is non-critical
+      console.warn('Could not increment room views:', error);
     }
   }
 };
