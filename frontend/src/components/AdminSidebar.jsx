@@ -8,8 +8,8 @@ export default function AdminSidebar({ user }) {
 
     const menuItems = [
         { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-        { id: 'users', icon: Users, label: 'Users', path: '/admin/users' },
-        { id: 'rooms', icon: Home, label: 'Rooms', path: '/admin/rooms' },
+        { id: 'users', icon: Users, label: 'Manage Users', path: '/admin/users' },
+        { id: 'rooms', icon: Home, label: 'Manage Rooms', path: '/admin/rooms' },
         { id: 'complaints', icon: AlertCircle, label: 'Complaints', path: '/admin/complaints' },
         { id: 'settings', icon: Settings, label: 'Settings', path: '/admin/settings' }
     ];
@@ -24,7 +24,7 @@ export default function AdminSidebar({ user }) {
                     </div>
                     <div>
                         <h1 className="text-2xl font-black tracking-tight text-gray-900 leading-none">StaySpot</h1>
-                        <p className="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em] mt-1">Administrator</p>
+                        <p className="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em] mt-1">Admin Panel</p>
                     </div>
                 </div>
             </div>

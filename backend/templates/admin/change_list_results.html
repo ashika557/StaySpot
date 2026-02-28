@@ -1,122 +1,79 @@
 {% load i18n static %}
+
 {% if result_hidden_fields %}
 <div class="hiddenfields">
-    {% for item in result_hidden_fields %}{{ item }}{% endfor %}
+    {% for item in result_hidden_fields %}
+    {{ item }}
+    {% endfor %}
 </div>
 {% endif %}
 
 {% if results %}
 <div class="results">
-    <table id="result_list" style="width: 100%; border-collapse: collapse;">
+    <table id="result_list" style="width: 100%; border-collapse: separate; border-spacing: 0;">
         <thead>
             <tr>
                 {% for header in result_headers %}
                 <th scope="col" {{ header.class_attrib }}
-                    style="padding: 16px 24px; text-align: left; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase;">
-                    <div class="text">{{ header.label|capfirst }}</div>
-                </th>{% endfor %}
+                    style="padding: 16px 24px; text-align: left; background: #F8FAFC; border-bottom: 2px solid #E2E8F0; color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <div class="text">
+                        {% if header.sortable %}
+                        <a href="{{ header.url_primary }}" style="color: inherit; text-decoration: none;">
+                            {{ header.label|capfirst }}
+                        </a>
+                        {% else %}
+                        <span>
+                            {{ header.label|capfirst }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </th>
+                {% endfor %}
             </tr>
         </thead>
         <tbody>
             {% for result in results %}
-            <tr style="border-bottom: 1px solid #F1F5F9;">
+            <tr class="result-row" style="transition: all 0.2s; border-bottom: 1px solid #F1F5F9;">
                 {% for item in result %}
-                <td style="padding: 16px 24px; vertical-align: middle;">{{ item }}</td>
+                <td style="padding: 14px 24px; vertical-align: middle; color: #1E293B; font-size: 13.5px;">
+                    {{ item }}
+                </td>
                 {% endfor %}
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
-{% endif %}
-
-<style>
-    .role-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 800;
-        text-transform: capitalize;
-        border-width: 1px;
-        border-style: solid;
-    }
-
-    .role-owner {
-        background: #F5F3FF;
-        color: #7C3AED;
-        border-color: #DDD6FE;
-    }
-
-    .role-tenant {
-        background: #EFF6FF;
-        color: #2563EB;
-        border-color: #BFDBFE;
-    }
-
-    .role-admin {
-        background: #F1F5F9;
-        color: #475569;
-        border-color: #E2E8F0;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 800;
-    }
-
-    .status-active {
-        background: #ECFDF5;
-        color: #10B981;
-    }
-
-    .status-inactive {
-        background: #FEF2F2;
-        color: #EF4444;
-    }
-</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const rows = document.querySelectorAll('#result_list tbody tr');
         rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-
-            // Avatar and Username
-            const userCell = row.querySelector('.field-username') || cells[1];
-            if (userCell) {
-                const name = userCell.innerText.trim();
-                const initial = name.charAt(0).toUpperCase();
-                userCell.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 36px; height: 36px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #64748B;">${initial}</div>
-                        <div style="font-weight: 700; color: #1E293B;">${name}</div>
-                    </div>
-                `;
+            if (row.innerHTML.includes('Flagged')) {
+                row.style.background = '#FFF1F2';
             }
-
-            // Roles
-            const roleCell = row.querySelector('.field-role');
-            if (roleCell) {
-                const role = roleCell.innerText.trim();
-                const roleClass = role.toLowerCase() === 'owner' ? 'role-owner' : (role.toLowerCase() === 'tenant' ? 'role-tenant' : 'role-admin');
-                roleCell.innerHTML = `<span class="role-badge ${roleClass}">${role}</span>`;
-            }
-
-            // Status
-            const activeCell = row.querySelector('.field-is_active');
-            if (activeCell) {
-                const img = activeCell.querySelector('img');
-                const isActive = img ? img.getAttribute('alt') === 'True' : activeCell.innerText.trim() === 'True';
-                activeCell.innerHTML = isActive
-                    ? `<span class="status-badge status-active">Active</span>`
-                    : `<span class="status-badge status-inactive">Inactive</span>`;
-            }
+            const originalBg = row.style.background || 'white';
+            row.addEventListener('mouseenter', () => {
+                row.style.background = row.innerHTML.includes('Flagged') ? '#FFE4E6' : '#F8FAFC';
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.background = originalBg;
+            });
         });
     });
 </script>
+{% endif %}
+
+<style>
+    #result_list thead th.action-checkbox-column {
+        width: 1.5em;
+    }
+
+    #result_list tbody td.action-checkbox {
+        padding-left: 24px !important;
+    }
+
+    .results table thead th.sorted .text {
+        color: #2563EB;
+    }
+</style>

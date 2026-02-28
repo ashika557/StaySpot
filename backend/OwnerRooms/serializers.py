@@ -192,7 +192,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
         model = Complaint
         fields = [
             'id', 'tenant', 'owner', 'owner_id', 'room', 'room_id',
-            'complaint_type', 'description', 'image', 'status', 
+            'complaint_type', 'priority', 'description', 'image', 'status', 
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'tenant', 'created_at', 'updated_at']

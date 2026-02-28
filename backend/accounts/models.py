@@ -28,6 +28,7 @@ class User(AbstractUser):
     
     # Profile Photo
     profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+    address = models.TextField(blank=True)
     
     def __str__(self):
         return f"{self.full_name} ({self.role})"

@@ -1,0 +1,411 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Card Grid Layout */
+    .dashboard-container {
+        display: flex;
+        gap: 32px;
+        align-items: flex-start;
+    }
+
+    .main-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sidebar-stats {
+        width: 360px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+    }
+
+    /* Cards */
+    .complaint-card {
+        background: white;
+        border-radius: 24px;
+        padding: 32px;
+        margin-bottom: 24px;
+        border: 1px solid #F1F5F9;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .complaint-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    .card-flex {
+        display: flex;
+        gap: 20px;
+    }
+
+    .user-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #F8FAFC;
+        overflow: hidden;
+        border: 2px solid white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .user-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .card-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .card-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: #0F172A;
+        margin: 0;
+        letter-spacing: -0.02em;
+    }
+
+    .card-meta {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 4px;
+        font-size: 13px;
+        color: #64748B;
+        font-weight: 600;
+    }
+
+    .card-meta b {
+        color: #0F172A;
+    }
+
+    .badges {
+        display: flex;
+        gap: 8px;
+    }
+
+    .badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .priority-High {
+        background: #FFF1F2;
+        color: #E11D48;
+    }
+
+    .priority-Medium {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .priority-Low {
+        background: #F0FDF4;
+        color: #16A34A;
+    }
+
+    .status-Pending {
+        background: #E0F2FE;
+        color: #0284C7;
+    }
+
+    .status-Investigating {
+        background: #F5F3FF;
+        color: #7C3AED;
+    }
+
+    .status-Resolved {
+        background: #F0FDF4;
+        color: #16A34A;
+    }
+
+    .card-description {
+        font-size: 15px;
+        color: #475569;
+        line-height: 1.6;
+        margin: 20px 0;
+        font-weight: 500;
+    }
+
+    .card-footer {
+        padding-top: 24px;
+        border-top: 1px solid #F1F5F9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .footer-left {
+        display: flex;
+        gap: 24px;
+        color: #94A3B8;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .footer-icon-flex {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .view-details {
+        color: #2563EB;
+        font-weight: 900;
+        font-size: 12px;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    /* Stats sidebar */
+    .stat-card {
+        background: white;
+        border-radius: 24px;
+        padding: 32px;
+        border: 1px solid #F1F5F9;
+        box-shadow: var(--card-shadow);
+    }
+
+    .stat-card h3 {
+        font-size: 18px;
+        font-weight: 900;
+        margin: 0 0 24px 0;
+        letter-spacing: -0.02em;
+    }
+
+    .issue-item {
+        margin-bottom: 24px;
+    }
+
+    .issue-header {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 700;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .progress-bar {
+        height: 8px;
+        background: #F1F5F9;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+
+    .owner-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-radius: 16px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .owner-item:nth-child(2) {
+        background: #FFF1F2;
+        color: #E11D48;
+    }
+
+    .owner-item:nth-child(3) {
+        background: #FFF7ED;
+        color: #EA580C;
+    }
+
+    .owner-item:nth-child(4) {
+        background: #F8FAFC;
+        color: #64748B;
+    }
+
+    /* Hide standard results */
+    .results {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header-banner" style="margin-bottom: 40px;">
+    <p style="color: #64748B; font-weight: 600; margin: 0 0 8px 0;">Monitor and manage users complaints</p>
+</div>
+
+<div class="dashboard-container">
+    <div class="main-content">
+        <!-- Filters (Simplified duplicate of change_list form for UI match) -->
+        <div class="filter-card"
+            style="margin-bottom: 40px; background: white; padding: 24px; border-radius: 20px; border: 1px solid #F1F5F9; box-shadow: var(--card-shadow);">
+            <form id="changelist-search" method="get" style="display: flex; gap: 16px; align-items: center;">
+                <div class="search-wrapper" style="flex: 1; position: relative;">
+                    <input type="text" name="q" value="{{ cl.query }}" placeholder="Search complaints..."
+                        style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 14px; border: 1px solid #F1F5F9; background: #F8FAFC; outline: none; font-weight: 600; font-size: 14px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"
+                        style="position: absolute; left: 18px; top: 16px; width: 18px;">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <!-- Standard filters are handled by list_filter, we'll keep it simple -->
+                <button type="submit" class="btn-apply"
+                    style="background: #2563EB; color: white; border: none; padding: 14px 28px; border-radius: 14px; font-weight: 800; cursor: pointer;">Apply</button>
+            </form>
+        </div>
+
+        <!-- Custom Card List -->
+        <div class="complaint-list">
+            {% for result in cl.result_list %}
+            <div class="complaint-card">
+                <div class="card-flex">
+                    <div class="user-avatar">
+                        {% if result.tenant.profile_photo %}
+                        <img src="/media/{{ result.tenant.profile_photo }}" alt="">
+                        {% else %}
+                        <div
+                            style="width:100%; height:100%; background:#EFF6FF; display:flex; align-items:center; justify:center; font-weight:900; color:#2563EB;">
+                            {{ result.tenant.full_name|slice:":1" }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">{{ result.description|truncatewords:8 }}</h3>
+                                <div class="card-meta">
+                                    <span>Room <b>{{ result.room.title }}</b></span>
+                                    <span>•</span>
+                                    <span>Reported by <b>{{ result.tenant.full_name }}</b></span>
+                                    <span>•</span>
+                                    <span>{{ result.created_at|timesince }} ago</span>
+                                </div>
+                            </div>
+                            <div class="badges">
+                                <span class="badge priority-{{ result.priority }}">{{ result.priority }} Priority</span>
+                                <span class="badge status-{{ result.status }}">{{ result.status }}</span>
+                            </div>
+                        </div>
+                        <p class="card-description">{{ result.description }}</p>
+                        <div class="card-footer">
+                            <div class="footer-left">
+                                <div class="footer-icon-flex">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        style="width: 14px;">
+                                        <path
+                                            d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
+                                        </path>
+                                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                    </svg>
+                                    {{ result.complaint_type }}
+                                </div>
+                                {% if result.image %}
+                                <div class="footer-icon-flex">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        style="width: 14px;">
+                                        <path
+                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                                        </path>
+                                        <circle cx="12" cy="13" r="4"></circle>
+                                    </svg>
+                                    1 Photo
+                                </div>
+                                {% endif %}
+                                <div class="footer-icon-flex">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        style="width: 14px;">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                    Owner: {{ result.owner.full_name }}
+                                </div>
+                            </div>
+                            <a href="{% url 'admin:OwnerRooms_complaint_change' result.id %}" class="view-details">View
+                                Details →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div
+                style="text-align: center; padding: 80px; background: white; border-radius: 24px; border: 1px dashed #E2E8F0;">
+                <h3 style="font-weight: 900; color: #1E293B;">No complaints found</h3>
+                <p style="color: #64748B;">Try adjusting your filters or search terms.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sidebar Stats -->
+    <div class="sidebar-stats">
+        <div class="stat-card">
+            <h3>Top Issues</h3>
+            {% for issue in top_issues %}
+            <div class="issue-item">
+                <div class="issue-header">
+                    <span>{{ issue.name }}</span>
+                    <span>{{ issue.percentage }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"
+                        style="width: {{ issue.percentage }}%; background: {% if issue.name == 'Maintenance' %}#2563EB{% elif issue.name == 'Noise' %}#10B981{% elif issue.name == 'Security' %}#F59E0B{% else %}#94A3B8{% endif %};">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="stat-card">
+            <h3>High Complaint Owners</h3>
+            {% for owner in high_complaint_owners %}
+            <div class="owner-item">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: #f1f5f9;">
+                        {% if owner.avatar %}
+                        <img src="/media/{{ owner.avatar }}" alt=""
+                            style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                        <div
+                            style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748B;">
+                            {{ owner.name|slice:":1" }}</div>
+                        {% endif %}
+                    </div>
+                    <span>{{ owner.name }}</span>
+                </div>
+                <span>{{ owner.count }} complaints</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Hidden original table -->
+<div class="results" style="display:none !important;">
+    {% result_list cl %}
+</div>
+{% endblock %}

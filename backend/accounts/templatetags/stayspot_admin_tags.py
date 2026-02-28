@@ -64,6 +64,41 @@ def get_recent_activities(limit=5):
 def get_complaint_distribution():
     total = Complaint.objects.count()
     if total == 0:
-        return []
-    data = Complaint.objects.values('status').annotate(total=Count('id'))
-    return list(data)
+        return {'total': 0, 'items': []}
+    
+    # Mapping model statuses to chart labels and colors
+    # Resolved (Green), Investigating (Orange/In Progress), Pending (Red)
+    statuses = [
+        {'id': 'Resolved', 'label': 'Resolved', 'color': '#10B981'},
+        {'id': 'Investigating', 'label': 'In Progress', 'color': '#F59E0B'},
+        {'id': 'Pending', 'label': 'Pending', 'color': '#EF4444'},
+    ]
+    
+    results = []
+    current_rotation = -90 # Start from top
+    
+    for s in statuses:
+        count = Complaint.objects.filter(status=s['id']).count()
+        percentage = (count / total) * 100 if total > 0 else 0
+        # Circumference for r=80 is ~502
+        dash_value = (percentage / 100) * 502
+        
+        results.append({
+            'label': s['label'],
+            'color': s['color'],
+            'count': count,
+            'percentage': round(percentage),
+            'dash_array': f"{round(dash_value)} 502",
+            'rotation': current_rotation
+        })
+        # Update rotation for next segment
+        current_rotation += (percentage / 100) * 360
+        
+    return {'total': total, 'items': results}
+
+@register.simple_tag
+def get_pending_verification_count():
+    return User.objects.filter(
+        identity_document__isnull=False, 
+        is_identity_verified=False
+    ).exclude(identity_document='').count()

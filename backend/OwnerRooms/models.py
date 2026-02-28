@@ -249,10 +249,17 @@ class Complaint(models.Model):
         ('Resolved', 'Resolved'),
     ]
     
+    PRIORITY_CHOICES = [
+        ('Low', 'Low'),
+        ('Medium', 'Medium'),
+        ('High', 'High'),
+    ]
+    
     tenant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='filed_complaints')
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_complaints')
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints')
     complaint_type = models.CharField(max_length=50, choices=COMPLAINT_TYPES, default='Maintenance')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Medium')
     description = models.TextField()
     image = models.ImageField(upload_to='complaint_images/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')

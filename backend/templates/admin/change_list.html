@@ -1,87 +1,112 @@
 {% extends "admin/base_site.html" %}
 {% load i18n %}{% load admin_urls %}{% load admin_list %}{% load static %}
 
+{% block content_title %}
+<div style="margin-bottom: 32px;">
+    <h1
+        style="font-size: 28px; font-weight: 900; color: #0F172A; margin: 0; letter-spacing: -0.025em; text-transform: uppercase;">
+        {{ title|default:cl.opts.verbose_name_plural|capfirst }}</h1>
+    {% if title_description %}
+    <p style="color: #64748B; font-size: 15px; margin: 8px 0 0 0; font-weight: 500;">{{ title_description }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
 {% block extrastyle %}
 {{ block.super }}
 <style>
+    /* Integrated Filter Bar */
     .filter-card {
         background: white;
-        border-radius: 12px;
-        padding: 24px;
+        border-radius: 16px;
+        padding: 20px 24px;
         margin-bottom: 24px;
         border: 1px solid var(--border-color);
-        box-shadow: var(--card-shadow);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        display: flex;
+        align-items: center;
+        gap: 16px;
     }
 
     .filter-card h2 {
-        font-size: 16px !important;
-        font-weight: 700 !important;
-        color: var(--text-main);
-        margin: 0 0 20px 0 !important;
+        display: none !important;
     }
 
     .filter-flex {
         display: flex;
-        gap: 16px;
+        gap: 12px;
         align-items: center;
-        flex-wrap: wrap;
+        width: 100%;
     }
 
     .search-wrapper {
         position: relative;
         flex: 1;
-        min-width: 300px;
+        max-width: 400px;
     }
 
     .search-wrapper input {
         width: 100%;
-        border: 1px solid var(--border-color);
+        border: 1.5px solid #E2E8F0;
         border-radius: 10px;
         padding: 10px 16px 10px 40px;
         font-size: 14px;
+        font-weight: 500;
         outline: none;
         transition: all 0.2s;
+        background: white;
+    }
+
+    .action-select-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .custom-select {
+        padding: 10px 16px;
+        border-radius: 10px;
+        border: 1.5px solid #E2E8F0;
+        background: white;
+        font-size: 14px;
+        font-weight: 600;
+        color: #1E293B;
+        cursor: pointer;
+        min-width: 140px;
     }
 
     .search-wrapper input:focus {
+        background: white;
         border-color: var(--primary-blue);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
     .search-wrapper svg {
         position: absolute;
-        left: 14px;
+        left: 16px;
         top: 50%;
         transform: translateY(-50%);
-        color: var(--text-muted);
-        width: 18px;
-        height: 18px;
+        color: #94A3B8;
+        width: 20px;
+        height: 20px;
     }
 
     #changelist-filter {
         display: none !important;
     }
 
-    .custom-filter-select {
-        padding: 10px 16px;
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 500;
-        min-width: 160px;
-        outline: none;
-    }
-
     .results-card {
         background: white;
-        border-radius: 12px;
+        border-radius: 16px;
         border: 1px solid var(--border-color);
-        box-shadow: var(--card-shadow);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
         overflow: hidden;
     }
 
     .results-header {
-        padding: 20px 24px;
+        padding: 24px 32px;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
@@ -91,7 +116,7 @@
 
     .results-header h3 {
         font-size: 18px !important;
-        font-weight: 800 !important;
+        font-weight: 900 !important;
         margin: 0 !important;
         color: var(--text-main);
     }
@@ -99,8 +124,8 @@
     .btn-apply {
         background: var(--primary-blue);
         color: white;
-        padding: 10px 24px;
-        border-radius: 10px;
+        padding: 12px 28px;
+        border-radius: 12px;
         font-weight: 700;
         border: none;
         cursor: pointer;
@@ -108,6 +133,13 @@
         align-items: center;
         gap: 8px;
         font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .btn-apply:hover {
+        background: #1D4ED8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 
     .btn-reset {
@@ -115,13 +147,20 @@
         font-weight: 700;
         text-decoration: none;
         font-size: 14px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        transition: all 0.2s;
+    }
+
+    .btn-reset:hover {
+        background: #F0F7FF;
     }
 
     .add-user-btn {
         background: var(--primary-blue) !important;
         color: white !important;
-        padding: 10px 20px !important;
-        border-radius: 10px !important;
+        padding: 12px 24px !important;
+        border-radius: 12px !important;
         font-weight: 700 !important;
         font-size: 14px !important;
         text-decoration: none !important;
@@ -131,10 +170,111 @@
         transition: all 0.2s !important;
         border: none !important;
     }
+
+    .add-user-btn:hover {
+        background: #1D4ED8 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    /* Actions Polishing */
+    .actions {
+        padding: 16px 32px !important;
+        background: #F8FAFC !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        color: #64748B !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+
+    .actions select {
+        padding: 8px 12px !important;
+        border-radius: 8px !important;
+        border: 1px solid var(--border-color) !important;
+        outline: none !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+
+    .actions .button {
+        background: #F1F5F9 !important;
+        color: #0F172A !important;
+        padding: 8px 16px !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        border: 1px solid var(--border-color) !important;
+        cursor: pointer !important;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+{% if stats %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .stat-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748B;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 900;
+        color: #0F172A;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+</style>
+<div class="stats-grid">
+    {% for stat in stats %}
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">{{ stat.label }}</span>
+            <span class="stat-value">{{ stat.count|default:"0" }}</span>
+        </div>
+        <div class="stat-icon" style="background: {{ stat.bg }}; color: {{ stat.color }};">
+            {{ stat.icon }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <div class="filter-card">
     <h2>Filters & Search</h2>
     <form id="changelist-search" method="get">
@@ -145,8 +285,10 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" name="q" value="{{ cl.query }}" placeholder="Search...">
+                <input type="text" name="q" value="{{ cl.query }}"
+                    placeholder="Search {{ cl.opts.verbose_name_plural }}...">
             </div>
+
             <button type="submit" class="btn-apply">Apply Filters</button>
             <a href="?" class="btn-reset">Reset All</a>
         </div>
@@ -158,7 +300,7 @@
         <h3>{{ cl.opts.verbose_name_plural|capfirst }} ({{ cl.result_count }})</h3>
         {% if has_add_permission %}
         {% with cl.opts|admin_urlname:'add' as add_url_name %}
-        <a href="{% url add_url_name %}" class="add-user-btn">+ Add New</a>
+        <a href="{% url add_url_name %}" class="add-user-btn">Add {{ cl.opts.verbose_name|capfirst }}</a>
         {% endwith %}
         {% endif %}
     </div>

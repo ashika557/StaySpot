@@ -294,31 +294,28 @@
             <h2>Complaints Status</h2>
         </div>
         <div class="chart-container">
+            {% get_complaint_distribution as complaints_dist %}
             <svg width="400" height="200" viewBox="0 0 400 200">
                 <circle cx="200" cy="100" r="80" stroke="#f1f5f9" stroke-width="40" fill="none" />
-                <circle cx="200" cy="100" r="80" stroke="#10B981" stroke-width="40" fill="none"
-                    stroke-dasharray="251 502" transform="rotate(-90 200 100)" />
-                <circle cx="200" cy="100" r="80" stroke="#F59E0B" stroke-width="40" fill="none"
-                    stroke-dasharray="125 502" transform="rotate(90 200 100)" />
-                <circle cx="200" cy="100" r="80" stroke="#EF4444" stroke-width="40" fill="none"
-                    stroke-dasharray="126 502" transform="rotate(180 200 100)" />
+                {% for item in complaints_dist.items %}
+                {% if item.count > 0 %}
+                <circle cx="200" cy="100" r="80" stroke="{{ item.color }}" stroke-width="40" fill="none"
+                    stroke-dasharray="{{ item.dash_array }}" transform="rotate({{ item.rotation }} 200 100)" />
+                {% endif %}
+                {% endfor %}
                 <text x="200" y="105" text-anchor="middle" font-weight="800" font-size="20">
-                    {% with stats.active_complaints as ac %}{{ ac }}{% endwith %}
+                    {{ complaints_dist.total }}
                 </text>
             </svg>
             <div style="position: absolute; right: 40px; display: flex; flex-direction: column; gap: 12px;">
+                {% for item in complaints_dist.items %}
                 <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
-                    <span style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></span> Resolved
-                    (45%)
+                    <span style="width: 12px; height: 12px; background: {{ item.color }}; border-radius: 3px;"></span>
+                    {{ item.label }} ({{ item.percentage }}%)
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
-                    <span style="width: 12px; height: 12px; background: #F59E0B; border-radius: 3px;"></span> In
-                    Progress (32%)
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
-                    <span style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></span> Pending
-                    (23%)
-                </div>
+                {% empty %}
+                <p style="color: var(--text-muted); font-size: 14px;">No data available</p>
+                {% endfor %}
             </div>
         </div>
     </div>

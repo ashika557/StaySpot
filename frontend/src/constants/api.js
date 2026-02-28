@@ -6,9 +6,6 @@ export const API_BASE_URL = 'http://localhost:8000/api';
 
 export const API_ENDPOINTS = {
   REGISTER: '/register/',
-  REQUEST_REGISTRATION_OTP: '/request-registration-otp/',
-  VERIFY_REGISTRATION_OTP: '/verify-registration-otp/',
-  VERIFY_FORGOT_PASSWORD_OTP: '/verify-forgot-password-otp/',
   LOGIN: '/login/',
   LOGOUT: '/logout/',
   USER: '/user/',
@@ -29,11 +26,11 @@ export const API_ENDPOINTS = {
   OWNER_FINANCIALS: '/owner/financial/dashboard/',
   TRIGGER_REMINDERS: '/trigger-reminders/',
   ADMIN_DASHBOARD: '/admin/dashboard/',
+  // Admin User Management
   ADMIN_USERS: `/admin/users/`,
-  ADMIN_UPDATE_USER: (id) => `/admin/users/${id}/update/`,
-  ADMIN_VERIFY_KYC: (id) => `/admin/users/${id}/verify-kyc/`,
-  ADMIN_DELETE_USER: (id) => `/admin/users/${id}/delete/`,
-  ADMIN_ROOM_ACTION: (id) => `/rooms/${id}/admin-action/`,
+  ADMIN_UPDATE_USER: (userId) => `/admin/users/${userId}/update/`,
+  ADMIN_DELETE_USER: (userId) => `/admin/users/${userId}/delete/`,
+  ADMIN_VERIFY_KYC: (userId) => `/admin/users/${userId}/verify-kyc/`,
   ADMIN_COMPLAINTS: '/complaints/',
 };
 
