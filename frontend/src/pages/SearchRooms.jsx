@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRight, Loader } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, MapPin, Wifi, Wind, Tv, Star, ChevronDown, RotateCcw, ChevronRight, Loader, MessageCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Autocomplete } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import TenantSidebar from '../components/TenantSidebar';
@@ -13,6 +13,7 @@ const SearchRooms = ({ user }) => {
     const { isLoaded } = useMapContext();
     const mapRef = useRef(null);
     const [autocomplete, setAutocomplete] = useState(null);
+    const navigate = useNavigate();
 
     const center = CONFIG.DEFAULT_CENTER;
     const [rooms, setRooms] = useState([]);
@@ -374,9 +375,21 @@ const SearchRooms = ({ user }) => {
                                                 </div>
                                                 <div className="flex items-center justify-between mt-2">
                                                     <div className="text-[10px] text-gray-400 font-medium">Owner: {room.owner?.full_name || 'Rajesh Basnet'}</div>
-                                                    <Link to={`/room/${room.id}`} className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition flex items-center gap-1">
-                                                        Details <ChevronRight size={14} />
-                                                    </Link>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (room.owner?.id) navigate(`/messages?userId=${room.owner.id}`);
+                                                            }}
+                                                            title="Message Owner"
+                                                            className="p-1.5 text-blue-500 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer shadow-sm"
+                                                        >
+                                                            <MessageCircle size={16} className="flex-shrink-0" />
+                                                        </button>
+                                                        <Link to={`/room/${room.id}`} className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition flex items-center gap-1 shadow-sm">
+                                                            Details <ChevronRight size={14} />
+                                                        </Link>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

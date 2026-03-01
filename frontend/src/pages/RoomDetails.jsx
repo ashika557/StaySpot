@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation, Info, Cigarette, Dog, Users, Beer, UtensilsCrossed, Zap, Droplets, Car, Layout, ChefHat } from 'lucide-react';
+import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation, Info, Cigarette, Dog, Users, Beer, UtensilsCrossed, Zap, Droplets, Car, Layout, ChefHat, MessageCircle } from 'lucide-react';
 import { GoogleMap, Marker, Circle } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import OwnerSidebar from '../components/OwnerSidebar';
@@ -554,6 +554,13 @@ const RoomDetails = ({ user }) => {
                                 >
                                     <ShieldCheck className="w-5 h-5 text-gray-400" />
                                     Schedule Visit
+                                </button>
+                                <button
+                                    onClick={() => room.owner?.id && navigate(`/messages?userId=${room.owner.id}`)}
+                                    className="w-full py-4 bg-blue-50 text-blue-700 border-2 border-blue-100 font-bold rounded-2xl hover:bg-blue-100 hover:border-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm"
+                                >
+                                    <MessageCircle className="w-5 h-5" />
+                                    Message {room.owner_name ? `Owner` : 'Owner'}
                                 </button>
                             </div>
                         </div>
