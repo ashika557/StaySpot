@@ -267,12 +267,20 @@
             <span class="stat-label">{{ stat.label }}</span>
             <span class="stat-value">{{ stat.count|default:"0" }}</span>
         </div>
-        <div class="stat-icon" style="background: {{ stat.bg }}; color: {{ stat.color }};">
+        <!-- FIX: Use data attributes instead of inline template vars in style to avoid CSS linter errors -->
+        <div class="stat-icon" data-bg="{{ stat.bg }}" data-color="{{ stat.color }}">
             {{ stat.icon }}
         </div>
     </div>
     {% endfor %}
 </div>
+
+<script>
+    document.querySelectorAll('.stat-icon').forEach(function (el) {
+        el.style.background = el.dataset.bg;
+        el.style.color = el.dataset.color;
+    });
+</script>
 {% endif %}
 
 <div class="filter-card">
