@@ -313,8 +313,8 @@ const SearchRooms = ({ user }) => {
                     </div>
 
                     {/* Results and Map View */}
-                    <div className="grid grid-cols-12 gap-6 h-[calc(100vh-480px)] min-h-[500px]">
-                        <div className="col-span-5 flex flex-col overflow-hidden">
+                    <div className="grid grid-cols-12 gap-6 items-start mb-8">
+                        <div className="col-span-5 flex flex-col h-[750px]">
                             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-baseline gap-2">
                                 Search Results <span className="text-blue-600 text-xs font-bold uppercase tracking-wider">({rooms.length} found)</span>
                             </h2>
@@ -385,9 +385,9 @@ const SearchRooms = ({ user }) => {
                             </div>
                         </div>
 
-                        <div className="col-span-7 flex flex-col overflow-hidden">
+                        <div className="col-span-7 flex flex-col">
                             <h2 className="text-xl font-bold text-gray-800 mb-4">Interactive Map Engine</h2>
-                            <div className="flex-1 rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-200 relative mb-4">
+                            <div className="w-full">
                                 <RoomMap
                                     rooms={rooms}
                                     externalSelectedRoom={selectedRoom}

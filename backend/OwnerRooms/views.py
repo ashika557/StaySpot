@@ -1,5 +1,4 @@
 
-from accounts.models import User
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -7,6 +6,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, RoomReview, Complaint, Chat
+from accounts.models import User
 from payments.models import Payment
 from .serializers import (
     RoomSerializer, BookingSerializer, VisitSerializer,
@@ -50,8 +50,8 @@ class RoomViewSet(viewsets.ModelViewSet):
         water_supply = self.request.query_params.get('water_supply')
         attached_bathroom = self.request.query_params.get('attached_bathroom')
         cctv = self.request.query_params.get('cctv')
-        kitchen_access = self.request.query_params.get('kitchen_access')
-        furnished = self.request.query_params.get('furnished')
+        kitchen = self.request.query_params.get('kitchen')
+        furniture = self.request.query_params.get('furniture')
 
         # Price Range
         min_price = self.request.query_params.get('min_price')
@@ -77,8 +77,8 @@ class RoomViewSet(viewsets.ModelViewSet):
         if water_supply == 'true': queryset = queryset.filter(water_supply=True)
         if attached_bathroom == 'true': queryset = queryset.filter(attached_bathroom=True)
         if cctv == 'true': queryset = queryset.filter(cctv=True)
-        if kitchen_access == 'true': queryset = queryset.filter(kitchen_access=True)
-        if furnished == 'true': queryset = queryset.filter(furnished=True)
+        if kitchen == 'true': queryset = queryset.filter(kitchen=True)
+        if furniture == 'true': queryset = queryset.filter(furniture=True)
 
         if min_price:
             queryset = queryset.filter(price__gte=min_price)
@@ -108,9 +108,59 @@ class RoomViewSet(viewsets.ModelViewSet):
                 pass
             
         # Update user preferences if filtering (only for Tenants)
-        if user.role == 'Tenant' and (location or gender or room_type or min_price or max_price):
-            self.update_user_preferences(user, location, gender, room_type, wifi, ac, tv)
-            
+        if user.role == 'Tenant':
+            if (location or gender or room_type or min_price or max_price or wifi or ac or tv):
+                self.update_user_preferences(user, location, gender, room_type, wifi, ac, tv)
+            else:
+                # If no active filters were applied, sort by the user's saved preferences
+                try:
+                    pref = user.search_preference
+                    # Build Q objects for ranking 
+                    from django.db.models import Case, When, IntegerField, Value
+                    
+                    # We will assign a "score" to each room based on how many preferences it matches
+                    score_cases = []
+                    
+                    if pref.location:
+                        score_cases.append(When(location__icontains=pref.location, then=Value(1)))
+                    if pref.gender_preference and pref.gender_preference != 'Any':
+                        score_cases.append(When(gender_preference=pref.gender_preference, then=Value(1)))
+                    if pref.room_type:
+                        score_cases.append(When(room_type=pref.room_type, then=Value(1)))
+                    if pref.wifi:
+                        score_cases.append(When(wifi=True, then=Value(1)))
+                    if pref.ac:
+                        score_cases.append(When(ac=True, then=Value(1)))
+                    if pref.tv:
+                        score_cases.append(When(tv=True, then=Value(1)))
+                        
+                    if score_cases:
+                        # Annotate the queryset with the total score
+                        queryset = queryset.annotate(
+                            pref_score=sum(Case(*score_cases, default=Value(0), output_field=IntegerField()) for _ in [1]) 
+                            # Django 1.11+ doesn't easily let you sum multiple Case statements like this in one step
+                            # A better approach is to add them inside the annotation:
+                        )
+                        # Actually doing sum of Multiple Cases:
+                        annotations = {}
+                        score_fields = []
+                        for i, case in enumerate(score_cases):
+                            field_name = f'score_part_{i}'
+                            annotations[field_name] = Case(case, default=Value(0), output_field=IntegerField())
+                            score_fields.append(field_name)
+                            
+                        if annotations:
+                            queryset = queryset.annotate(**annotations)
+                            # Sum up the parts
+                            from django.db.models import F
+                            total_score_expr = sum(F(f) for f in score_fields) if len(score_fields) > 1 else F(score_fields[0])
+                            queryset = queryset.annotate(total_pref_score=total_score_expr).order_by('-total_pref_score', '-created_at')
+                        
+                except UserSearchPreference.DoesNotExist:
+                    queryset = queryset.order_by('-created_at')
+        else:
+             queryset = queryset.order_by('-created_at')
+
         return queryset
 
     @action(detail=True, methods=['get'])
@@ -125,9 +175,12 @@ class RoomViewSet(viewsets.ModelViewSet):
         if location: pref.location = location
         if gender: pref.gender_preference = gender
         if room_type: pref.room_type = room_type
-        if wifi == 'true': pref.wifi = True
-        if ac == 'true': pref.ac = True
-        if tv == 'true': pref.tv = True
+        
+        # Handle string 'true' / 'false' / None
+        if wifi is not None: pref.wifi = (wifi == 'true' or wifi == True)
+        if ac is not None: pref.ac = (ac == 'true' or ac == True)
+        if tv is not None: pref.tv = (tv == 'true' or tv == True)
+        
         pref.save()
 
     def perform_create(self, serializer):
@@ -158,12 +211,10 @@ class RoomViewSet(viewsets.ModelViewSet):
                 q_objects |= Q(room_type=pref.room_type)
             if pref.wifi:
                 q_objects |= Q(wifi=True)
-            if hasattr(Room, 'ac') and pref.ac:
+            if pref.ac:
                 q_objects |= Q(ac=True)
-            if hasattr(Room, 'tv') and pref.tv:
+            if pref.tv:
                 q_objects |= Q(tv=True)
-            if hasattr(Room, 'cctv') and getattr(pref, 'cctv', False):
-                q_objects |= Q(cctv=True)
             
             if q_objects:
                 queryset = queryset.filter(q_objects).distinct()
@@ -366,11 +417,10 @@ class VisitViewSet(viewsets.ModelViewSet):
         return Visit.objects.none()
 
     def list(self, request, *args, **kwargs):
-        # Auto-cleanup of duplicate visits to solve the "shown twice" error
+        # Auto-cleanup of duplicate visits
         if request.user.is_authenticated:
             from django.db.models import Count
             from .models import Visit
-            # Find groups of potential duplicates
             duplicates = Visit.objects.values('tenant', 'room', 'visit_date', 'visit_time', 'purpose')\
                 .annotate(count=Count('id')).filter(count__gt=1)
             
@@ -383,7 +433,6 @@ class VisitViewSet(viewsets.ModelViewSet):
                     purpose=duplicate['purpose']
                 ).values_list('id', flat=True)
                 
-                # Keep the first ID, delete the rest
                 if len(v_ids) > 1:
                     Visit.objects.filter(id__in=v_ids[1:]).delete()
         
@@ -412,7 +461,6 @@ class VisitViewSet(viewsets.ModelViewSet):
         new_status = visit.status
         
         if old_status != new_status:
-            # Map 'Scheduled' to 'accepted' for better readability in notification
             status_text = new_status.lower()
             if new_status == 'Scheduled':
                 status_text = 'accepted'
