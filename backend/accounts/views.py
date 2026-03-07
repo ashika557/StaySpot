@@ -201,6 +201,12 @@ def login_view(request):
             'id': user.id,
             'full_name': user.full_name,
             'email': user.email,
+            'phone': user.phone,
+            'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
+            'address': user.address,
+            'city': user.city,
+            'province': user.province,
+            'postal_code': user.postal_code,
             'role': user.role,
             'identity_document': user.identity_document.url if user.identity_document else None,
             'profile_photo': user.profile_photo.url if user.profile_photo else None,
@@ -226,6 +232,12 @@ def get_user(request):
             'id': request.user.id,
             'full_name': request.user.full_name,
             'email': request.user.email,
+            'phone': request.user.phone,
+            'date_of_birth': request.user.date_of_birth.isoformat() if request.user.date_of_birth else None,
+            'address': request.user.address,
+            'city': request.user.city,
+            'province': request.user.province,
+            'postal_code': request.user.postal_code,
             'role': request.user.role,
             'identity_document': request.user.identity_document.url if request.user.identity_document else None,
             'profile_photo': request.user.profile_photo.url if request.user.profile_photo else None,
@@ -241,13 +253,28 @@ def update_profile(request):
     user = request.user
     full_name = request.data.get('full_name')
     phone = request.data.get('phone')
+    date_of_birth = request.data.get('date_of_birth')
+    address = request.data.get('address')
+    city = request.data.get('city')
+    province = request.data.get('province')
+    postal_code = request.data.get('postal_code')
     identity_document = request.FILES.get('identity_document')
     profile_photo = request.FILES.get('profile_photo')
     
     if full_name:
         user.full_name = full_name
-    if phone:
+    if phone is not None:
         user.phone = phone
+    if date_of_birth is not None:
+        user.date_of_birth = date_of_birth if date_of_birth else None
+    if address is not None:
+        user.address = address
+    if city is not None:
+        user.city = city
+    if province is not None:
+        user.province = province
+    if postal_code is not None:
+        user.postal_code = postal_code
     if identity_document:
         user.identity_document = identity_document
         if user.verification_status == 'Not Submitted' or user.verification_status == 'Rejected':
@@ -264,6 +291,12 @@ def update_profile(request):
             'id': user.id,
             'full_name': user.full_name,
             'email': user.email,
+            'phone': user.phone,
+            'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
+            'address': user.address,
+            'city': user.city,
+            'province': user.province,
+            'postal_code': user.postal_code,
             'role': user.role,
             'identity_document': user.identity_document.url if user.identity_document else None,
             'profile_photo': user.profile_photo.url if user.profile_photo else None,

@@ -14,8 +14,7 @@ export default function Sidebar({ user }) {
     { id: 'payments', icon: DollarSign, label: 'Payments', path: '/owner/payments' },
     { id: 'messages', icon: MessageSquare, label: 'Messages', path: '/chat' },
     { id: 'visits', icon: Eye, label: 'Visits', path: '/owner/visits' },
-    { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
-    { id: 'settings', icon: Settings, label: 'Settings', path: '/owner/settings' }
+    { id: 'profile', icon: User, label: 'Profile', path: '/profile' }
   ];
 
   return (
