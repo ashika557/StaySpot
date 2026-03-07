@@ -6,10 +6,11 @@ import {
     Clock,
     CheckCircle,
     XCircle,
-    Filter,
     Search,
-    MoreVertical,
-    CalendarDays
+    CalendarDays,
+    Users,
+    AlertCircle,
+    Eye,
 } from 'lucide-react';
 import { visitService } from '../services/tenantService';
 import { getMediaUrl } from '../constants/api';
@@ -21,7 +22,6 @@ export default function OwnerVisitRequests({ user, onLogout }) {
     const [filter, setFilter] = useState('All Requests');
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Modal State
     const [selectedTenant, setSelectedTenant] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -32,7 +32,6 @@ export default function OwnerVisitRequests({ user, onLogout }) {
     const fetchVisits = async () => {
         try {
             const data = await visitService.getAllVisits();
-            // Sort by date descending
             const sorted = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             setVisits(sorted);
         } catch (error) {
@@ -45,14 +44,8 @@ export default function OwnerVisitRequests({ user, onLogout }) {
     const handleStatusUpdate = async (visitId, newStatus) => {
         try {
             if (!window.confirm(`Are you sure you want to ${newStatus.toLowerCase()} this visit?`)) return;
-
             await visitService.updateVisitStatus(visitId, newStatus);
-
-            // Update local state
-            setVisits(visits.map(v =>
-                v.id === visitId ? { ...v, status: newStatus } : v
-            ));
-
+            setVisits(visits.map(v => v.id === visitId ? { ...v, status: newStatus } : v));
             alert(`Visit ${newStatus.toLowerCase()} successfully!`);
         } catch (error) {
             console.error("Failed to update status", error);
@@ -60,15 +53,44 @@ export default function OwnerVisitRequests({ user, onLogout }) {
         }
     };
 
-    const getStatusColor = (status) => {
+    const getStatusBadge = (status) => {
         switch (status) {
-            case 'Pending': return 'bg-orange-100 text-orange-600';
+            case 'Pending':
+                return 'bg-orange-50 text-orange-500 border border-orange-200';
             case 'Approved':
-            case 'Scheduled': return 'bg-green-100 text-green-600';
+            case 'Scheduled':
+                return 'bg-green-50 text-green-600 border border-green-200';
             case 'Rejected':
-            case 'Cancelled': return 'bg-red-100 text-red-600';
-            case 'Completed': return 'bg-gray-100 text-gray-600';
-            default: return 'bg-blue-100 text-blue-600';
+            case 'Cancelled':
+                return 'bg-red-50 text-red-500 border border-red-200';
+            case 'Completed':
+                return 'bg-gray-100 text-gray-500 border border-gray-200';
+            default:
+                return 'bg-blue-50 text-blue-600 border border-blue-200';
+        }
+    };
+
+    const getStatusDot = (status) => {
+        switch (status) {
+            case 'Pending': return 'bg-orange-400';
+            case 'Approved':
+            case 'Scheduled': return 'bg-green-500';
+            case 'Rejected':
+            case 'Cancelled': return 'bg-red-500';
+            case 'Completed': return 'bg-gray-400';
+            default: return 'bg-blue-500';
+        }
+    };
+
+    const getDateBoxStyle = (status) => {
+        switch (status) {
+            case 'Pending': return 'bg-orange-50 text-orange-600 border border-orange-100';
+            case 'Approved':
+            case 'Scheduled': return 'bg-green-50 text-green-600 border border-green-100';
+            case 'Rejected':
+            case 'Cancelled': return 'bg-red-50 text-red-500 border border-red-100';
+            case 'Completed': return 'bg-gray-50 text-gray-500 border border-gray-200';
+            default: return 'bg-blue-50 text-blue-600 border border-blue-100';
         }
     };
 
@@ -81,9 +103,50 @@ export default function OwnerVisitRequests({ user, onLogout }) {
     });
 
     const pendingCount = visits.filter(v => v.status === 'Pending').length;
-    const todayCount = visits.filter(v =>
-        new Date(v.visit_date).toDateString() === new Date().toDateString()
-    ).length;
+    const scheduledCount = visits.filter(v => v.status === 'Scheduled' || v.status === 'Approved').length;
+    const completedCount = visits.filter(v => v.status === 'Completed').length;
+    const rejectedCount = visits.filter(v => v.status === 'Rejected' || v.status === 'Cancelled').length;
+
+    const statCards = [
+        {
+            label: 'TOTAL REQUESTS',
+            value: visits.length,
+            subtext: 'All visit requests',
+            icon: <CalendarDays className="w-6 h-6 text-blue-500" />,
+            iconBg: 'bg-blue-50',
+            borderColor: 'border-t-blue-500',
+            valueColor: 'text-gray-900',
+        },
+        {
+            label: 'PENDING',
+            value: pendingCount,
+            subtext: 'Awaiting your response',
+            icon: <AlertCircle className="w-6 h-6 text-orange-500" />,
+            iconBg: 'bg-orange-50',
+            borderColor: 'border-t-orange-500',
+            valueColor: pendingCount > 0 ? 'text-orange-500' : 'text-gray-900',
+        },
+        {
+            label: 'SCHEDULED',
+            value: scheduledCount,
+            subtext: 'Upcoming visits',
+            icon: <Calendar className="w-6 h-6 text-green-500" />,
+            iconBg: 'bg-green-50',
+            borderColor: 'border-t-green-500',
+            valueColor: 'text-gray-900',
+        },
+        {
+            label: 'COMPLETED',
+            value: completedCount,
+            subtext: `${rejectedCount} rejected`,
+            icon: <CheckCircle className="w-6 h-6 text-red-400" />,
+            iconBg: 'bg-red-50',
+            borderColor: 'border-t-red-400',
+            valueColor: 'text-gray-900',
+        },
+    ];
+
+    const filterTabs = ['All Requests', 'Pending', 'Scheduled', 'Completed', 'Rejected'];
 
     const handleOpenModal = (tenant) => {
         setSelectedTenant(tenant);
@@ -99,201 +162,238 @@ export default function OwnerVisitRequests({ user, onLogout }) {
         <div className="flex h-screen bg-gray-50 overflow-auto">
             <OwnerSidebar user={user} />
 
-            <div className="flex-1 flex flex-col">
-                <div className="flex-1 p-8">
-                    <div className="max-w-6xl mx-auto flex gap-8">
+            <div className="flex-1 flex flex-col min-w-0 overflow-auto">
+                <main className="p-8">
 
-                        {/* Left Sidebar / Filters */}
-                        <div className="w-64 space-y-6 hidden lg:block">
-                            <div className="bg-white p-4 rounded-xl border shadow-sm">
-                                <h3 className="font-bold text-gray-700 mb-4">Quick Stats</h3>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-500">Pending</span>
-                                        <span className="text-sm font-bold text-orange-500">{pendingCount}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-500">Today</span>
-                                        <span className="text-sm font-bold text-blue-500">{todayCount}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-500">Total</span>
-                                        <span className="text-sm font-bold text-gray-700">{visits.length}</span>
-                                    </div>
+                    {/* Page Header */}
+                    <div className="mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">Visit Requests</h2>
+                        <p className="text-sm text-gray-500 mt-0.5">Manage and respond to tenant visit requests</p>
+                    </div>
+
+                    {/* Stat Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                        {statCards.map((card, i) => (
+                            <div
+                                key={i}
+                                className={`bg-white rounded-xl border-t-4 ${card.borderColor} shadow-sm p-5 flex flex-col gap-3`}
+                            >
+                                <div className={`w-10 h-10 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+                                    {card.icon}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{card.label}</p>
+                                    <p className={`text-2xl font-bold ${card.valueColor}`}>{card.value}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">{card.subtext}</p>
                                 </div>
                             </div>
+                        ))}
+                    </div>
 
-                            <div className="bg-white p-4 rounded-xl border shadow-sm">
-                                <h3 className="font-bold text-gray-700 mb-4">Status</h3>
-                                <div className="space-y-2">
-                                    {['All Requests', 'Pending', 'Scheduled', 'Completed', 'Rejected'].map(opt => (
-                                        <div
-                                            key={opt}
-                                            onClick={() => setFilter(opt)}
-                                            className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-sm font-medium transition ${filter === opt ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {opt}
-                                            {opt === 'Pending' && pendingCount > 0 && (
-                                                <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full">
-                                                    {pendingCount}
-                                                </span>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                    {/* Visit Directory Panel */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+                        {/* Panel Header */}
+                        <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-base font-bold text-gray-900">Visit Directory</h3>
+                                <p className="text-xs text-gray-400 mt-0.5">{filteredVisits.length} request{filteredVisits.length !== 1 ? 's' : ''} found</p>
                             </div>
-                        </div>
 
-                        {/* Main Content */}
-                        <div className="flex-1 space-y-6">
-
-                            {/* Toolbar */}
-                            <div className="flex gap-4 mb-6">
-                                <div className="flex-1 relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            {/* Search + Filter Tabs */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     <input
                                         type="text"
-                                        placeholder="Search by tenant name or room..."
-                                        className="w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Search tenant or room..."
+                                        className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 w-56 transition"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                <button className="flex items-center gap-2 px-4 py-2 border rounded-xl hover:bg-gray-50">
-                                    <Filter className="w-4 h-4 text-gray-500" />
-                                    <span className="text-sm font-medium text-gray-700">Filter</span>
-                                </button>
-                                <div className="relative">
-                                    <select
-                                        className="appearance-none px-4 py-2 pr-8 border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
-                                    >
-                                        <option>Date (Newest)</option>
-                                        <option>Date (Oldest)</option>
-                                    </select>
-                                </div>
-                            </div>
 
-                            {/* List */}
-                            {loading ? (
-                                <div className="text-center py-12">
-                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-500">Loading requests...</p>
-                                </div>
-                            ) : filteredVisits.length > 0 ? (
-                                <div className="space-y-4">
-                                    {filteredVisits.map(visit => (
-                                        <div key={visit.id} className="bg-white p-6 rounded-xl border shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center">
-
-                                            {/* Date Box */}
-                                            <div className={`p-4 rounded-xl text-center min-w-[100px] ${visit.status === 'Pending' ? 'bg-orange-50 text-orange-700' :
-                                                visit.status === 'Scheduled' || visit.status === 'Approved' ? 'bg-green-50 text-green-700' :
-                                                    'bg-gray-50 text-gray-700'
-                                                }`}>
-                                                <div className="text-2xl font-bold">
-                                                    {new Date(visit.visit_date).getDate()}
-                                                </div>
-                                                <div className="text-xs font-bold uppercase mt-1">
-                                                    {new Date(visit.visit_date).toLocaleDateString('en-US', { month: 'short' })}
-                                                </div>
-                                                <div className="text-xs mt-1 opacity-80">
-                                                    {visit.visit_time.slice(0, 5)}
-                                                </div>
-                                            </div>
-
-                                            {/* Info */}
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-1 cursor-pointer group" onClick={() => handleOpenModal(visit.tenant)}>
-                                                    <img
-                                                        src={visit.tenant.profile_photo ? getMediaUrl(visit.tenant.profile_photo) : `https://ui-avatars.com/api/?name=${visit.tenant.full_name}&background=random`}
-                                                        className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                                                        alt=""
-                                                    />
-                                                    <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">
-                                                        {visit.tenant.full_name}
-                                                    </h3>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(visit.status)}`}>
-                                                        {visit.status === 'Approved' ? 'Scheduled' : visit.status}
-                                                    </span>
-                                                </div>
-
-                                                <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
-                                                    <div className="flex items-center gap-1">
-                                                        <MapPin className="w-4 h-4" />
-                                                        {visit.room.title}
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Clock className="w-4 h-4" />
-                                                        30 mins (Est.)
-                                                    </div>
-                                                </div>
-
-                                                {visit.purpose && (
-                                                    <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded-lg inline-block">
-                                                        "{visit.purpose}"
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="flex items-center gap-2 w-full md:w-auto mt-4 md:mt-0">
-                                                {visit.status === 'Pending' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleStatusUpdate(visit.id, 'Scheduled')}
-                                                            className="flex-1 md:flex-none px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"
-                                                        >
-                                                            <CheckCircle className="w-4 h-4" />
-                                                            Accept
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleStatusUpdate(visit.id, 'Rejected')}
-                                                            className="flex-1 md:flex-none px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"
-                                                        >
-                                                            <XCircle className="w-4 h-4" />
-                                                            Reject
-                                                        </button>
-                                                    </>
-                                                )}
-
-                                                {(visit.status === 'Scheduled' || visit.status === 'Approved') && (
-                                                    <button
-                                                        onClick={() => handleStatusUpdate(visit.id, 'Completed')}
-                                                        className="flex-1 md:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"
-                                                    >
-                                                        Mark Completed
-                                                    </button>
-                                                )}
-
-                                                {visit.status === 'Rejected' && (
-                                                    <span className="text-red-500 font-medium text-sm">Request Rejected</span>
-                                                )}
-
-                                                {visit.status === 'Completed' && (
-                                                    <span className="text-green-500 font-medium text-sm flex items-center gap-1">
-                                                        <CheckCircle className="w-4 h-4" /> Completed
-                                                    </span>
-                                                )}
-
-                                            </div>
-
-                                        </div>
+                                <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-lg p-1">
+                                    {filterTabs.map(tab => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setFilter(tab)}
+                                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                                filter === tab
+                                                    ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            {tab}
+                                            {tab === 'Pending' && pendingCount > 0 && (
+                                                <span className="ml-1.5 bg-orange-100 text-orange-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                                    {pendingCount}
+                                                </span>
+                                            )}
+                                        </button>
                                     ))}
                                 </div>
-                            ) : (
-                                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                                    <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-900">No requests found</h3>
-                                    <p className="text-gray-500 mt-1">Try adjusting your filters or search terms.</p>
-                                </div>
-                            )}
-
+                            </div>
                         </div>
+
+                        {/* Content */}
+                        <div className="divide-y divide-gray-50">
+                            {loading ? (
+                                <div className="flex flex-col items-center gap-3 py-16 text-gray-400">
+                                    <div className="w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-sm font-medium">Loading requests...</p>
+                                </div>
+                            ) : filteredVisits.length === 0 ? (
+                                <div className="flex flex-col items-center gap-3 py-16 text-gray-400">
+                                    <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                                        <CalendarDays className="w-6 h-6 text-gray-300" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-gray-500">No requests found</p>
+                                    <p className="text-xs">Try adjusting your filters or search terms</p>
+                                </div>
+                            ) : (
+                                filteredVisits.map((visit) => (
+                                    <div
+                                        key={visit.id}
+                                        className="px-6 py-5 flex flex-col md:flex-row items-start md:items-center gap-5 hover:bg-gray-50/60 transition-colors"
+                                    >
+                                        {/* Date Box */}
+                                        <div className={`rounded-xl p-3 text-center min-w-[72px] ${getDateBoxStyle(visit.status)}`}>
+                                            <div className="text-2xl font-bold leading-none">
+                                                {new Date(visit.visit_date).getDate()}
+                                            </div>
+                                            <div className="text-[10px] font-bold uppercase mt-1 opacity-80">
+                                                {new Date(visit.visit_date).toLocaleDateString('en-US', { month: 'short' })}
+                                            </div>
+                                            <div className="text-[10px] mt-1 font-medium opacity-70">
+                                                {visit.visit_time.slice(0, 5)}
+                                            </div>
+                                        </div>
+
+                                        {/* Tenant Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div
+                                                className="flex items-center gap-3 mb-2 cursor-pointer group"
+                                                onClick={() => handleOpenModal(visit.tenant)}
+                                            >
+                                                <img
+                                                    src={
+                                                        visit.tenant.profile_photo
+                                                            ? getMediaUrl(visit.tenant.profile_photo)
+                                                            : `https://ui-avatars.com/api/?name=${visit.tenant.full_name}&background=eff6ff&color=3b82f6&bold=true`
+                                                    }
+                                                    className="w-9 h-9 rounded-full object-cover border border-gray-100 flex-shrink-0"
+                                                    alt=""
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                        {visit.tenant.full_name}
+                                                    </p>
+                                                    {visit.tenant.email && (
+                                                        <p className="text-xs text-gray-400">{visit.tenant.email}</p>
+                                                    )}
+                                                </div>
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${getStatusBadge(visit.status)}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(visit.status)}`} />
+                                                    {visit.status === 'Approved' ? 'Scheduled' : visit.status}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center flex-wrap gap-4 text-xs text-gray-500">
+                                                <div className="flex items-center gap-1.5">
+                                                    <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                                                    <span className="font-medium text-gray-600">{visit.room.title}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                                    <span>30 mins (Est.)</span>
+                                                </div>
+                                                {visit.purpose && (
+                                                    <span className="text-gray-500 italic">"{visit.purpose}"</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            {visit.status === 'Pending' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(visit.id, 'Scheduled')}
+                                                        className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition shadow-sm shadow-green-100"
+                                                    >
+                                                        <CheckCircle className="w-3.5 h-3.5" />
+                                                        Accept
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(visit.id, 'Rejected')}
+                                                        className="flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-500 border border-red-100 rounded-lg text-xs font-bold transition"
+                                                    >
+                                                        <XCircle className="w-3.5 h-3.5" />
+                                                        Reject
+                                                    </button>
+                                                </>
+                                            )}
+
+                                            {(visit.status === 'Scheduled' || visit.status === 'Approved') && (
+                                                <button
+                                                    onClick={() => handleStatusUpdate(visit.id, 'Completed')}
+                                                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-sm shadow-blue-100"
+                                                >
+                                                    <CheckCircle className="w-3.5 h-3.5" />
+                                                    Mark Completed
+                                                </button>
+                                            )}
+
+                                            {visit.status === 'Rejected' && (
+                                                <span className="flex items-center gap-1.5 text-xs text-red-400 font-semibold bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+                                                    <XCircle className="w-3.5 h-3.5" />
+                                                    Rejected
+                                                </span>
+                                            )}
+
+                                            {visit.status === 'Cancelled' && (
+                                                <span className="flex items-center gap-1.5 text-xs text-gray-400 font-semibold bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg">
+                                                    <XCircle className="w-3.5 h-3.5" />
+                                                    Cancelled
+                                                </span>
+                                            )}
+
+                                            {visit.status === 'Completed' && (
+                                                <span className="flex items-center gap-1.5 text-xs text-green-600 font-semibold bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
+                                                    <CheckCircle className="w-3.5 h-3.5" />
+                                                    Completed
+                                                </span>
+                                            )}
+
+                                            {/* View tenant button */}
+                                            <button
+                                                onClick={() => handleOpenModal(visit.tenant)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-blue-500 transition"
+                                                title="View tenant details"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        {!loading && filteredVisits.length > 0 && (
+                            <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/30">
+                                <p className="text-xs text-gray-400 font-medium">
+                                    Showing <span className="font-bold text-gray-700">{filteredVisits.length}</span> of{' '}
+                                    <span className="font-bold text-gray-700">{visits.length}</span> total requests
+                                </p>
+                            </div>
+                        )}
                     </div>
-                </div>
+
+                </main>
             </div>
 
-            {/* Tenant Details Modal */}
             <TenantDetailsModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}

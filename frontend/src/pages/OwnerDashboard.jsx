@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { Home, Calendar, DollarSign, Bell, MessageSquare, Wrench } from 'lucide-react';
+import { Home, Calendar, DollarSign, Bell, MessageSquare, Wrench, TrendingUp, Users, ArrowRight } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';
 import { visitService } from '../services/tenantService';
@@ -17,13 +17,11 @@ export default function OwnerDashboard({ user, onLogout }) {
   const [visitRequests, setVisitRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal State
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const navigate = useNavigate();
 
-  // Fetch data when component loads
   useEffect(() => {
     getRoomData();
     getRecentChats();
@@ -72,8 +70,6 @@ export default function OwnerDashboard({ user, onLogout }) {
         setAvailableRooms(available);
         const occupied = rooms.filter(room => room.status === 'Occupied' || room.status === 'Rented').length;
         setOccupiedRooms(occupied);
-        // Total Income is fetched separately
-
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
@@ -92,189 +88,235 @@ export default function OwnerDashboard({ user, onLogout }) {
     setSelectedTenant(null);
   };
 
+  const statCards = [
+    {
+      label: 'Total Rooms Listed',
+      value: totalRooms,
+      sub: 'Active listings',
+      icon: <Home className="w-5 h-5" />,
+      iconBg: '#eff6ff',
+      iconColor: '#2563eb',
+      subColor: '#2563eb',
+      accent: '#2563eb',
+    },
+    {
+      label: 'Available Rooms',
+      value: availableRooms,
+      sub: 'Ready for booking',
+      icon: <Calendar className="w-5 h-5" />,
+      iconBg: '#f0fdf4',
+      iconColor: '#16a34a',
+      subColor: '#16a34a',
+      accent: '#16a34a',
+    },
+    {
+      label: 'Occupied Rooms',
+      value: occupiedRooms,
+      sub: 'Currently rented',
+      icon: <Users className="w-5 h-5" />,
+      iconBg: '#fff7ed',
+      iconColor: '#ea580c',
+      subColor: '#ea580c',
+      accent: '#ea580c',
+    },
+    {
+      label: 'Total Income',
+      value: `Rs ${totalIncome.toLocaleString()}`,
+      sub: 'All time earnings',
+      icon: <DollarSign className="w-5 h-5" />,
+      iconBg: '#f0fdf4',
+      iconColor: '#16a34a',
+      subColor: '#16a34a',
+      accent: '#16a34a',
+    },
+    {
+      label: 'Maintenance',
+      value: 'Manage',
+      sub: 'Fix issues',
+      icon: <Wrench className="w-5 h-5" />,
+      iconBg: '#fff7ed',
+      iconColor: '#ea580c',
+      subColor: '#ea580c',
+      accent: '#ea580c',
+      onClick: () => navigate(ROUTES.OWNER_MAINTENANCE),
+      clickable: true,
+    },
+  ];
+
   return (
-    <div className="flex bg-gray-50">
+    <div className="flex bg-gray-50 min-h-screen">
       <OwnerSidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-auto">
         <div className="flex-1 p-8">
+
           {loading ? (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-500">Loading dashboard...</p>
+            <div className="flex flex-col items-center justify-center py-24">
+              <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-5"></div>
+              <p className="text-gray-400 font-medium text-sm">Loading dashboard...</p>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-6 mb-8">
-                {/* Card 1: Total Rooms */}
-                <div className="bg-white rounded-xl p-6 border shadow-sm hover:shadow-md transition">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Total Rooms Listed</p>
-                      <p className="text-3xl font-bold">{totalRooms}</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                      <Home className="w-6 h-6 text-blue-600" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-blue-600 font-medium">Active listings</p>
-                </div>
-
-                {/* Card 2: Available Rooms */}
-                <div className="bg-white rounded-xl p-6 border shadow-sm hover:shadow-md transition">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Available Rooms</p>
-                      <p className="text-3xl font-bold">{availableRooms}</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                      <Calendar className="w-6 h-6 text-green-600" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-green-600 font-medium">Ready for booking</p>
-                </div>
-
-                {/* Card 3: Occupied Rooms */}
-                <div className="bg-white rounded-xl p-6 border shadow-sm hover:shadow-md transition">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Occupied Rooms</p>
-                      <p className="text-3xl font-bold">{occupiedRooms}</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-100">
-                      <Home className="w-6 h-6 text-orange-600" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-orange-600 font-medium">Currently rented</p>
-                </div>
-
-                {/* Card 4: Total Income */}
-                <div className="bg-white rounded-xl p-6 border shadow-sm hover:shadow-md transition">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Total Income</p>
-                      <p className="text-3xl font-bold">Rs {totalIncome.toLocaleString()}</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                      <DollarSign className="w-6 h-6 text-green-600" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-green-600 font-medium">All time</p>
-                </div>
-
-                {/* Card 5: Maintenance Requests */}
-                <div
-                  className="bg-white rounded-xl p-6 border shadow-sm cursor-pointer hover:shadow-md transition"
-                  onClick={() => navigate(ROUTES.OWNER_MAINTENANCE)}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Maintenance</p>
-                      <p className="text-3xl font-bold">Manage</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-100">
-                      <Wrench className="w-6 h-6 text-orange-600" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-orange-600 font-medium">Fix issues</p>
-                </div>
+              {/* Page Header */}
+              <div className="mb-8">
+                <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+                  Welcome back, {user?.full_name?.split(' ')[0] || 'Owner'} 👋
+                </h1>
+                <p className="text-sm text-gray-400 mt-1">Here's what's happening with your properties today.</p>
               </div>
 
+              {/* Stat Cards */}
+              <div className="grid grid-cols-5 gap-5 mb-8">
+                {statCards.map((card, i) => (
+                  <div
+                    key={i}
+                    onClick={card.onClick}
+                    className={`bg-white rounded-2xl p-5 border border-gray-100 shadow-sm transition-all duration-200 ${card.clickable ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : 'hover:shadow-md'}`}
+                    style={{ borderTop: `3px solid ${card.accent}` }}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ background: card.iconBg, color: card.iconColor }}
+                      >
+                        {card.icon}
+                      </div>
+                      {card.clickable && (
+                        <ArrowRight className="w-4 h-4 text-gray-300" />
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">{card.label}</p>
+                    <p className="text-2xl font-extrabold text-gray-900 leading-tight">{card.value}</p>
+                    <p className="text-xs font-semibold mt-2" style={{ color: card.subColor }}>{card.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bottom Grid */}
               <div className="grid grid-cols-2 gap-6">
-                {/* Left Column: Visit Requests */}
-                <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-                  <div className="p-6 border-b flex items-center justify-between bg-white">
-                    <h3 className="text-lg font-bold text-gray-800">New Visit Requests</h3>
-                    <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
+
+                {/* Visit Requests */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900">New Visit Requests</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Pending approvals</p>
+                    </div>
+                    <span className="px-3 py-1 text-xs font-bold rounded-full text-white"
+                      style={{ background: visitRequests.length > 0 ? '#2563eb' : '#9ca3af' }}>
                       {visitRequests.length} New
                     </span>
                   </div>
+
                   <div className="p-6">
                     {visitRequests.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {visitRequests.slice(0, 3).map((visit) => (
-                          <div key={visit.id} className="flex items-center justify-between p-3 border border-gray-50 rounded-xl hover:bg-gray-50 transition cursor-pointer" onClick={() => handleOpenModal(visit.tenant)}>
+                          <div
+                            key={visit.id}
+                            onClick={() => handleOpenModal(visit.tenant)}
+                            className="flex items-center justify-between p-3 rounded-xl border border-gray-50 hover:bg-blue-50 hover:border-blue-100 transition-all duration-150 cursor-pointer group"
+                          >
                             <div className="flex items-center gap-3">
                               <img
-                                src={visit.tenant.profile_photo ? getMediaUrl(visit.tenant.profile_photo) : `https://ui-avatars.com/api/?name=${visit.tenant.full_name}&background=random`}
-                                className="w-10 h-10 rounded-full object-cover shadow-sm"
+                                src={visit.tenant.profile_photo
+                                  ? getMediaUrl(visit.tenant.profile_photo)
+                                  : `https://ui-avatars.com/api/?name=${visit.tenant.full_name}&background=EFF6FF&color=2563EB&bold=true`}
+                                className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow"
                                 alt=""
                               />
                               <div>
-                                <p className="font-bold text-gray-900 leading-tight">{visit.tenant.full_name}</p>
-                                <p className="text-xs text-gray-500 mt-0.5 mt-1 truncate max-w-[150px]">{visit.room.title}</p>
+                                <p className="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors">{visit.tenant.full_name}</p>
+                                <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[140px]">{visit.room.title}</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-bold text-blue-600">{new Date(visit.visit_date).toLocaleDateString()}</p>
+                              <p className="text-xs font-bold text-blue-600">{new Date(visit.visit_date).toLocaleDateString()}</p>
                               <p className="text-xs text-gray-400 mt-0.5">{visit.visit_time.slice(0, 5)}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-10 text-gray-400">
-                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                        <p className="font-medium">No new visit requests.</p>
+                      <div className="flex flex-col items-center justify-center py-10 text-gray-300">
+                        <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                          <Calendar className="w-7 h-7" />
+                        </div>
+                        <p className="text-sm font-semibold text-gray-400">No new visit requests</p>
+                        <p className="text-xs text-gray-300 mt-1">Check back later</p>
                       </div>
                     )}
+
                     <button
                       onClick={() => navigate('/owner/visits')}
-                      className="w-full mt-6 py-2.5 text-blue-600 text-sm font-bold bg-blue-50 hover:bg-blue-100 rounded-xl transition"
+                      className="w-full mt-5 py-2.5 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2"
                     >
-                      View All Requests
+                      View All Requests <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Right Column: Tenant Chats */}
-                <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-                  <div className="p-6 border-b flex justify-between items-center bg-white">
-                    <h3 className="text-lg font-bold text-gray-800">Recent Tenant Chats</h3>
-                    <MessageSquare className="w-5 h-5 text-gray-400" />
+                {/* Recent Chats */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900">Recent Tenant Chats</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Latest conversations</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4 text-blue-500" />
+                    </div>
                   </div>
+
                   <div className="p-6">
                     {recentChats.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {recentChats.map((chat) => (
-                          <div key={chat.id} className="p-3 border border-gray-50 rounded-xl cursor-pointer hover:bg-gray-50 transition" onClick={() => navigate(ROUTES.CHAT)}>
-                            <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold overflow-hidden shadow-sm">
-                                {chat.other_user.profile_photo ? (
-                                  <img src={getMediaUrl(chat.other_user.profile_photo)} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  chat.other_user.full_name[0]
-                                )}
+                          <div
+                            key={chat.id}
+                            onClick={() => navigate(ROUTES.CHAT)}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-gray-50 hover:bg-blue-50 hover:border-blue-100 transition-all duration-150 cursor-pointer group"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold overflow-hidden ring-2 ring-white shadow flex-shrink-0">
+                              {chat.other_user.profile_photo ? (
+                                <img src={getMediaUrl(chat.other_user.profile_photo)} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-sm">{chat.other_user.full_name[0]}</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <p className="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors">{chat.other_user.full_name}</p>
+                                <span className="text-[10px] text-gray-400 font-semibold">
+                                  {new Date(chat.updated_at).toLocaleDateString()}
+                                </span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1">
-                                  <p className="font-bold text-gray-900">{chat.other_user.full_name}</p>
-                                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                                    {new Date(chat.updated_at).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-500 truncate leading-relaxed">
-                                  {chat.last_message ? chat.last_message.text : 'Start a conversation...'}
-                                </p>
-                              </div>
+                              <p className="text-xs text-gray-400 truncate">
+                                {chat.last_message ? chat.last_message.text : 'Start a conversation...'}
+                              </p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-10 text-gray-400">
-                        <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                        <p className="font-medium">No recent messages.</p>
+                      <div className="flex flex-col items-center justify-center py-10 text-gray-300">
+                        <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                          <MessageSquare className="w-7 h-7" />
+                        </div>
+                        <p className="text-sm font-semibold text-gray-400">No recent messages</p>
+                        <p className="text-xs text-gray-300 mt-1">Your chats will appear here</p>
                       </div>
                     )}
+
                     <button
                       onClick={() => navigate(ROUTES.CHAT)}
-                      className="w-full mt-6 py-2.5 text-blue-600 text-sm font-bold bg-blue-50 hover:bg-blue-100 rounded-xl transition"
+                      className="w-full mt-5 py-2.5 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2"
                     >
-                      View All Messages
+                      View All Messages <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
+
               </div>
             </>
           )}

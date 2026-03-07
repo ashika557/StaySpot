@@ -3,18 +3,16 @@ import {
     Calendar,
     TrendingUp,
     DollarSign,
-    Search,
     ChevronLeft,
     ChevronRight,
-    MoreHorizontal,
-    CreditCard,
     Wallet,
     ArrowUpRight,
     ArrowDownRight,
-    Filter
+    Filter,
+    CreditCard,
 } from 'lucide-react';
 import Sidebar from './sidebar';
-import { API_ENDPOINTS, ROUTES, getMediaUrl } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 import { apiRequest } from '../utils/api';
 
 const OwnerPayments = ({ user, onLogout }) => {
@@ -72,177 +70,205 @@ const OwnerPayments = ({ user, onLogout }) => {
         }
     };
 
-    // Filtered logs count for display
     const totalLogs = logs.length;
     const indexOfLastLog = currentPage * logsPerPage;
     const indexOfFirstLog = indexOfLastLog - logsPerPage;
     const currentLogs = logs.slice(indexOfFirstLog, indexOfLastLog);
     const totalPages = Math.ceil(totalLogs / logsPerPage);
 
-    const StatCard = ({ title, value, subtext, icon: Icon, change, isMain }) => (
-        <div className={`${isMain ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'} p-6 rounded-2xl border ${isMain ? 'border-blue-500' : 'border-gray-100'} shadow-sm flex flex-col relative`}>
-            <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-xl ${isMain ? 'bg-white/20' : 'bg-blue-50'}`}>
-                    <Icon className={`w-5 h-5 ${isMain ? 'text-white' : 'text-blue-600'}`} />
-                </div>
-                {change !== undefined && (
-                    <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full ${change >= 0 ? (isMain ? 'bg-white/20 text-white' : 'bg-green-50 text-green-600') : 'bg-red-50 text-red-600'}`}>
-                        {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                        {change >= 0 ? `+${change}%` : `${change}%`}
-                    </div>
-                )}
-            </div>
-            <p className={`${isMain ? 'text-blue-100' : 'text-gray-500'} text-xs font-medium mb-1`}>{title}</p>
-            <h3 className="text-2xl font-bold mb-1">NPR {value.toLocaleString()}</h3>
-            <p className={`${isMain ? 'text-blue-200' : 'text-gray-400'} text-[10px]`}>{subtext}</p>
-            {isMain && (
-                <div className="absolute right-4 bottom-4">
-                    <TrendingUp className="w-12 h-12 text-white/10" />
-                </div>
-            )}
-        </div>
-    );
-
     const getStatusStyles = (status) => {
         switch (status) {
             case 'Paid':
             case 'Completed':
-                return 'bg-green-50 text-green-600';
+                return 'bg-green-50 text-green-600 border border-green-200';
             case 'Pending':
-                return 'bg-orange-50 text-orange-600';
+                return 'bg-orange-50 text-orange-500 border border-orange-200';
             case 'Overdue':
-                return 'bg-red-50 text-red-600';
+                return 'bg-red-50 text-red-500 border border-red-200';
             default:
-                return 'bg-gray-50 text-gray-500';
+                return 'bg-gray-50 text-gray-500 border border-gray-200';
+        }
+    };
+
+    const getStatusDot = (status) => {
+        switch (status) {
+            case 'Paid':
+            case 'Completed': return 'bg-green-500';
+            case 'Pending': return 'bg-orange-400';
+            case 'Overdue': return 'bg-red-500';
+            default: return 'bg-gray-400';
         }
     };
 
     const getPaymentMethodIcon = (method) => {
         if (!method) return null;
-        if (method.toLowerCase().includes('esewa')) return <img src="https://esewa.com.np/common/images/esewa_logo.png" className="w-5 h-5 object-contain" alt="eSewa" />;
-        if (method.toLowerCase().includes('khalti')) return <img src="https://khalti.com/static/img/logo1.png" className="w-5 h-5 object-contain" alt="Khalti" />;
+        if (method.toLowerCase().includes('esewa'))
+            return <img src="https://esewa.com.np/common/images/esewa_logo.png" className="w-5 h-5 object-contain" alt="eSewa" />;
+        if (method.toLowerCase().includes('khalti'))
+            return <img src="https://khalti.com/static/img/logo1.png" className="w-5 h-5 object-contain" alt="Khalti" />;
         return <Wallet className="w-4 h-4 text-blue-600" />;
     };
+
+    const statCards = [
+        {
+            label: 'TOTAL EARNINGS',
+            value: `NPR ${stats.all_time.earnings.toLocaleString()}`,
+            subtext: `Since ${stats.all_time.since}`,
+            icon: <DollarSign className="w-6 h-6 text-blue-500" />,
+            iconBg: 'bg-blue-50',
+            borderColor: 'border-t-blue-500',
+            valueColor: 'text-gray-900',
+        },
+        {
+            label: 'THIS MONTH',
+            value: `NPR ${stats.this_month.earnings.toLocaleString()}`,
+            subtext: `${stats.this_month.transactions} transactions`,
+            icon: <Calendar className="w-6 h-6 text-green-500" />,
+            iconBg: 'bg-green-50',
+            borderColor: 'border-t-green-500',
+            valueColor: 'text-gray-900',
+            change: stats.this_month.change,
+        },
+        {
+            label: 'LAST MONTH',
+            value: `NPR ${stats.last_month.earnings.toLocaleString()}`,
+            subtext: `${stats.last_month.transactions} transaction${stats.last_month.transactions !== 1 ? 's' : ''}`,
+            icon: <CreditCard className="w-6 h-6 text-orange-500" />,
+            iconBg: 'bg-orange-50',
+            borderColor: 'border-t-orange-500',
+            valueColor: stats.last_month.earnings > 0 ? 'text-orange-500' : 'text-gray-900',
+        },
+        {
+            label: 'TOTAL TRANSACTIONS',
+            value: `${totalLogs}`,
+            subtext: 'All payment records',
+            icon: <TrendingUp className="w-6 h-6 text-red-500" />,
+            iconBg: 'bg-red-50',
+            borderColor: 'border-t-red-500',
+            valueColor: 'text-gray-900',
+        },
+    ];
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-auto">
             <Sidebar user={user} />
-            <div className="flex-1 flex flex-col min-w-0">
+
+            <div className="flex-1 flex flex-col min-w-0 overflow-auto">
                 <main className="p-8">
-                    <div className="mb-8">
+
+                    {/* Page Header */}
+                    <div className="mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">Earnings & Payments</h2>
-                        <p className="text-gray-500">Track and manage your rental income</p>
+                        <p className="text-sm text-gray-500 mt-0.5">Track and manage your rental income</p>
                     </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <StatCard
-                            title="This Month"
-                            value={stats.this_month.earnings}
-                            subtext={`${stats.this_month.transactions} transactions`}
-                            icon={Calendar}
-                            change={stats.this_month.change}
-                        />
-                        <StatCard
-                            title="Last Month"
-                            value={stats.last_month.earnings}
-                            subtext={`${stats.last_month.transactions} transactions`}
-                            icon={Calendar}
-                            change={0.2}
-                        />
-                        <StatCard
-                            title="All-Time Earnings"
-                            value={stats.all_time.earnings}
-                            subtext={`Since ${stats.all_time.since}`}
-                            icon={TrendingUp}
-                            isMain={true}
-                        />
+                    {/* Stat Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                        {statCards.map((card, i) => (
+                            <div
+                                key={i}
+                                className={`bg-white rounded-xl border-t-4 ${card.borderColor} shadow-sm p-5 flex flex-col gap-3`}
+                            >
+                                <div className={`w-10 h-10 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+                                    {card.icon}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{card.label}</p>
+                                    <div className="flex items-end gap-2">
+                                        <p className={`text-2xl font-bold ${card.valueColor}`}>{card.value}</p>
+                                        {card.change !== undefined && (
+                                            <span className={`flex items-center gap-0.5 text-[10px] font-bold mb-0.5 ${card.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                {card.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                                {card.change >= 0 ? `+${card.change}%` : `${card.change}%`}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-0.5">{card.subtext}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Filter Bar */}
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6 flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Filters:</p>
-                        </div>
+                    {/* Payment Logs Panel */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 
-                        <div className="flex gap-4">
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] text-gray-400 font-bold ml-1">MONTH</label>
+                        {/* Panel Header with inline filters */}
+                        <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-base font-bold text-gray-900">Payment Directory</h3>
+                                <p className="text-xs text-gray-400 mt-0.5">{totalLogs} record{totalLogs !== 1 ? 's' : ''} found</p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-1.5 text-gray-400">
+                                    <Filter className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-semibold text-gray-400">Filters:</span>
+                                </div>
+
                                 <select
-                                    className="bg-gray-50 border border-transparent rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                                     value={filters.month}
                                     onChange={(e) => setFilters({ ...filters, month: e.target.value })}
                                 >
                                     {months.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
-                            </div>
 
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] text-gray-400 font-bold ml-1">YEAR</label>
                                 <select
-                                    className="bg-gray-50 border border-transparent rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                                     value={filters.year}
                                     onChange={(e) => setFilters({ ...filters, year: e.target.value })}
                                 >
                                     {years.map(y => <option key={y} value={y}>{y}</option>)}
                                 </select>
-                            </div>
 
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] text-gray-400 font-bold ml-1">ROOM</label>
                                 <select
-                                    className="bg-gray-50 border border-transparent rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                                     value={filters.room_id}
                                     onChange={(e) => setFilters({ ...filters, room_id: e.target.value })}
                                 >
-                                    <option value="All Rooms">All Rooms</option>
+                                    <option value="All Rooms">All Properties</option>
                                     {filters.rooms.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
                                 </select>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Payment Logs Section */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-gray-50">
-                            <h3 className="text-lg font-bold text-gray-900">Payment Logs</h3>
-                            <p className="text-xs text-gray-400 font-medium">Recent payment transactions</p>
-                        </div>
-
+                        {/* Table */}
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50/50 text-gray-400 text-xs font-bold uppercase tracking-wider">
-                                    <tr>
-                                        <th className="px-6 py-4">Date</th>
-                                        <th className="px-6 py-4">Tenant Name</th>
-                                        <th className="px-6 py-4">Room</th>
-                                        <th className="px-6 py-4">Payment Method</th>
-                                        <th className="px-6 py-4">Amount</th>
-                                        <th className="px-6 py-4">Status</th>
+                                <thead>
+                                    <tr className="bg-gray-50/60 border-b border-gray-100">
+                                        <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Date</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tenant</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Property</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Payment Method</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-12 text-center text-gray-400">
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                                    <p>Updating records...</p>
+                                            <td colSpan="6" className="px-6 py-16 text-center">
+                                                <div className="flex flex-col items-center gap-3 text-gray-400">
+                                                    <div className="w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                                    <p className="text-sm font-medium">Loading records...</p>
                                                 </div>
                                             </td>
                                         </tr>
                                     ) : currentLogs.length === 0 ? (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-12 text-center text-gray-400 font-medium">
-                                                No payment records found for this period.
+                                            <td colSpan="6" className="px-6 py-16 text-center">
+                                                <div className="flex flex-col items-center gap-2 text-gray-400">
+                                                    <DollarSign className="w-8 h-8 text-gray-200" />
+                                                    <p className="text-sm font-semibold text-gray-500">No payment records found</p>
+                                                    <p className="text-xs">Try adjusting your filters</p>
+                                                </div>
                                             </td>
                                         </tr>
                                     ) : (
                                         currentLogs.map((p) => (
-                                            <tr key={p.id} className="hover:bg-gray-50/50 transition">
-                                                <td className="px-6 py-4 text-sm text-gray-500 font-medium">
-                                                    {p.date}
-                                                </td>
+                                            <tr key={p.id} className="hover:bg-gray-50/70 transition-colors">
+                                                <td className="px-6 py-4 text-sm text-gray-500 font-medium">{p.date}</td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <img
@@ -250,23 +276,32 @@ const OwnerPayments = ({ user, onLogout }) => {
                                                             className="w-8 h-8 rounded-full object-cover border border-gray-100"
                                                             alt=""
                                                         />
-                                                        <p className="font-bold text-gray-900 text-sm">{p.tenant.full_name}</p>
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-gray-800">{p.tenant.full_name}</p>
+                                                            {p.tenant.email && (
+                                                                <p className="text-xs text-gray-400">{p.tenant.email}</p>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-gray-700 font-medium font-sans italic">
-                                                    {p.room}
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+                                                        <span className="text-sm text-gray-600 italic">{p.room}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2">
                                                         {getPaymentMethodIcon(p.payment_method)}
-                                                        <span className="text-xs text-gray-600 font-medium">{p.payment_method}</span>
+                                                        <span className="text-sm text-gray-600">{p.payment_method}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <p className="font-bold text-gray-900 text-sm">NPR {p.amount.toLocaleString()}</p>
+                                                    <p className="text-sm font-bold text-gray-900">NPR {p.amount.toLocaleString()}</p>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyles(p.status)}`}>
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${getStatusStyles(p.status)}`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(p.status)}`} />
                                                         {p.status}
                                                     </span>
                                                 </td>
@@ -277,42 +312,51 @@ const OwnerPayments = ({ user, onLogout }) => {
                             </table>
                         </div>
 
-                        {/* Pagination Footer */}
-                        <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between">
-                            <p className="text-xs text-gray-500 font-medium">
-                                Showing <span className="font-bold text-gray-900">{indexOfFirstLog + 1}</span> to <span className="font-bold text-gray-900">{Math.min(indexOfLastLog, totalLogs)}</span> of <span className="font-bold text-gray-900">{totalLogs}</span> entries
+                        {/* Pagination */}
+                        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                            <p className="text-xs text-gray-400 font-medium">
+                                Showing{' '}
+                                <span className="font-bold text-gray-700">{Math.min(indexOfFirstLog + 1, totalLogs)}</span>
+                                {' '}to{' '}
+                                <span className="font-bold text-gray-700">{Math.min(indexOfLastLog, totalLogs)}</span>
+                                {' '}of{' '}
+                                <span className="font-bold text-gray-700">{totalLogs}</span> records
                             </p>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
-                                    className="px-3 py-1.5 border border-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-50 transition text-xs font-bold text-gray-600"
+                                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 hover:bg-gray-50 transition"
                                 >
-                                    Previous
+                                    <ChevronLeft className="w-4 h-4" />
                                 </button>
-                                <div className="flex items-center gap-1">
-                                    {[...Array(totalPages)].map((_, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setCurrentPage(i + 1)}
-                                            className={`w-8 h-8 rounded-lg text-xs font-bold transition ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-gray-600 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {i + 1}
-                                        </button>
-                                    ))}
-                                </div>
+
+                                {[...Array(totalPages)].map((_, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => setCurrentPage(i + 1)}
+                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition ${
+                                            currentPage === i + 1
+                                                ? 'bg-blue-600 text-white shadow-sm'
+                                                : 'text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-1.5 border border-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-50 transition text-xs font-bold text-gray-600"
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-40 hover:bg-gray-50 transition"
                                 >
-                                    Next
+                                    <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                     </div>
+
                 </main>
             </div>
         </div>
