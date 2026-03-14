@@ -1,29 +1,25 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TenantSidebar from '../components/TenantSidebar';
 import {
-    Search,
-    ChevronDown,
-    CheckCircle2,
-    Clock,
-    Wallet,
-    CreditCard,
-    DollarSign,
-    Calendar,
-    AlertCircle,
-    ExternalLink,
-    Filter
+    Search, ChevronDown, CheckCircle2, Clock, Wallet,
+    CreditCard, DollarSign, Calendar, AlertCircle, ExternalLink, Filter
 } from 'lucide-react';
 import { paymentService } from '../services/tenantService';
 
 export default function TenantPayments({ user }) {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [timeFilter, setTimeFilter] = useState('All Time');
+
+    // banner shown during payment verification
     const [verificationMessage, setVerificationMessage] = useState(null);
 
-    // Safety guards to prevent infinite loops
+    // refs to prevent verifying the same payment twice on re-render
+    // (payment gateways redirect back to this page with ?pidx= in the URL)
     const isVerifyingRef = useRef(false);
     const hasProcessedCallbackRef = useRef(false);
 
@@ -39,37 +35,38 @@ export default function TenantPayments({ user }) {
         }
     };
 
-    // Initial load
     useEffect(() => {
         fetchPayments();
     }, []);
 
+    // handles redirect back from Khalti or eSewa after payment
     const handlePaymentCallback = useCallback(async () => {
-        // Prevent multiple simultaneous verification attempts
+        // skip if already verifying or already done
         if (isVerifyingRef.current || hasProcessedCallbackRef.current) return;
 
         const urlParams = new URLSearchParams(window.location.search);
-        const pidx = urlParams.get('pidx');
-        const purchaseOrderId = urlParams.get('purchase_order_id');
-        const encodedData = urlParams.get('data');
+        const pidx = urlParams.get('pidx');                   // Khalti param
+        const purchaseOrderId = urlParams.get('purchase_order_id'); // Khalti param
+        const encodedData = urlParams.get('data');            // eSewa param (base64)
 
         if (!pidx && !encodedData) return;
 
-        // Mark as processing and CLEAN URL IMMEDIATELY to stop the loop
         hasProcessedCallbackRef.current = true;
+        // remove tokens from URL so refresh doesn't re-trigger verification
         window.history.replaceState({}, document.title, window.location.pathname);
 
-        // Khalti Callback
+        // --- Khalti ---
         if (pidx) {
             try {
                 isVerifyingRef.current = true;
                 setVerificationMessage("Verifying your Khalti payment...");
 
+                // our internal DB ID is embedded in the order ID e.g. "StaySpot-42-..."
                 let paymentId = purchaseOrderId?.split('-')[1];
 
-                // Fallback for payment ID if missing from URL
+                // fallback: find the oldest pending payment if order ID is missing
                 if (!paymentId && payments.length > 0) {
-                    const pendingKhalti = payments.find(p => (p.status === 'Pending' || p.status === 'Overdue'));
+                    const pendingKhalti = payments.find(p => p.status === 'Pending' || p.status === 'Overdue');
                     if (pendingKhalti) paymentId = pendingKhalti.id;
                 }
 
@@ -81,7 +78,7 @@ export default function TenantPayments({ user }) {
                     } else {
                         setVerificationMessage(`Status: ${verifyResult.status || 'Done'}`);
                     }
-                    await fetchPayments(false);
+                    await fetchPayments(false); // silent refresh
                 }
             } catch (err) {
                 console.error('Khalti callback error:', err);
@@ -92,12 +89,13 @@ export default function TenantPayments({ user }) {
             }
         }
 
-        // eSewa Callback (v2)
+        // --- eSewa ---
         if (encodedData) {
             try {
                 isVerifyingRef.current = true;
                 setVerificationMessage("Verifying your eSewa payment...");
 
+                // eSewa sends a base64 encoded JSON string
                 const decodedString = atob(encodedData);
                 const responseData = JSON.parse(decodedString);
                 const transactionUuid = responseData.transaction_uuid;
@@ -124,12 +122,12 @@ export default function TenantPayments({ user }) {
         }
     }, [payments.length]);
 
-    // Handle callbacks when payments or URL changes
     useEffect(() => {
         handlePaymentCallback();
     }, [handlePaymentCallback]);
 
-    // Background auto-verify for both Khalti and eSewa
+    // auto-verify pending payments that already have a transaction_id
+    // handles the case where user closed the browser mid-redirect but payment went through
     useEffect(() => {
         const autoVerify = async () => {
             if (payments.length > 0 && !isVerifyingRef.current) {
@@ -148,7 +146,6 @@ export default function TenantPayments({ user }) {
                             } else if (p.payment_method === 'eSewa') {
                                 res = await paymentService.checkEsewaStatus(p.id, p.transaction_id);
                             }
-
                             if (res?.status === 'Payment verified successfully') changed = true;
                         } catch (e) {
                             console.error('Auto-verify failed for', p.id, e);
@@ -162,6 +159,7 @@ export default function TenantPayments({ user }) {
         autoVerify();
     }, [payments.length]);
 
+    // eSewa requires an HTML form POST — fetch() won't work with their API
     const handleEsewaPayment = async (payment) => {
         try {
             const params = await paymentService.getEsewaParams(payment.id);
@@ -181,6 +179,7 @@ export default function TenantPayments({ user }) {
                 transaction_uuid: params.transaction_uuid
             };
 
+            // build and submit an invisible form so browser does native POST
             const form = document.createElement('form');
             form.setAttribute('method', 'POST');
             form.setAttribute('action', esewaUrl);
@@ -201,6 +200,7 @@ export default function TenantPayments({ user }) {
         }
     };
 
+    // Khalti just needs a URL redirect, much simpler than eSewa
     const handleKhaltiPayment = async (payment) => {
         try {
             const response = await paymentService.initiateKhaltiPayment(payment.id, window.location.href);
@@ -215,17 +215,16 @@ export default function TenantPayments({ user }) {
         }
     };
 
-    // Filter payments
+    // filter payments based on search + status dropdown
     const filteredPayments = (payments || []).filter(payment => {
         const matchesSearch =
             payment.booking?.room?.owner?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             payment.payment_type?.toLowerCase().includes(searchTerm.toLowerCase());
-
         const matchesStatus = statusFilter === 'All Status' || payment.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
 
-    // Calculate summary stats
+    // summary card totals
     const totalPaid = (payments || [])
         .filter(p => p.status === 'Paid')
         .reduce((sum, p) => sum + parseFloat(p.amount), 0);
@@ -254,23 +253,26 @@ export default function TenantPayments({ user }) {
                     </div>
 
                     <div className="flex-1 overflow-auto p-8">
+
+                        {/* verification banner — only shown during/after gateway redirect */}
                         {verificationMessage && (
                             <div className="max-w-6xl mx-auto mb-6 bg-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse">
                                 <div className="flex items-center gap-3">
                                     <Clock className="animate-spin w-5 h-5 text-blue-100" />
                                     <span className="font-bold">{verificationMessage}</span>
                                 </div>
-                                <button
-                                    onClick={() => setVerificationMessage(null)}
-                                    className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition"
-                                >
+                                <button onClick={() => setVerificationMessage(null)} className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition">
                                     Dismiss
                                 </button>
                             </div>
                         )}
+
                         <div className="max-w-6xl mx-auto flex gap-8">
 
+                            {/* payment list */}
                             <div className="flex-1 space-y-6">
+
+                                {/* search + filter bar */}
                                 <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
                                     <div className="flex-1 relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -314,6 +316,7 @@ export default function TenantPayments({ user }) {
                                     </div>
                                 </div>
 
+                                {/* payment cards */}
                                 <div className="space-y-4">
                                     {loading ? (
                                         <div className="flex flex-col items-center justify-center py-20">
@@ -331,11 +334,9 @@ export default function TenantPayments({ user }) {
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-5">
-                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${payment.status === 'Paid' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'
-                                                            }`}>
+                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${payment.status === 'Paid' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
                                                             {payment.status === 'Paid' ? <CheckCircle2 className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
                                                         </div>
-
                                                         <div>
                                                             <h3 className="text-lg font-bold text-slate-900">
                                                                 {new Date(payment.due_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -346,11 +347,9 @@ export default function TenantPayments({ user }) {
                                                             </p>
                                                         </div>
                                                     </div>
-
                                                     <div className="text-right">
                                                         <p className="text-xl font-bold text-slate-900">NPR {parseFloat(payment.amount).toLocaleString()}</p>
-                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-2 ${payment.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                                            }`}>
+                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-2 ${payment.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                                                             {payment.status}
                                                         </span>
                                                     </div>
@@ -367,8 +366,8 @@ export default function TenantPayments({ user }) {
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 {payment.status === 'Paid' ? (
                                                                     <>
-                                                                        <div className={`w-5 h-5 rounded flex items-center justify-center ${payment.payment_method === 'eSewa' ? 'bg-green-500 text-white' : 'bg-purple-600 text-white'
-                                                                            }`}>
+                                                                        {/* eSewa = green, Khalti = purple */}
+                                                                        <div className={`w-5 h-5 rounded flex items-center justify-center ${payment.payment_method === 'eSewa' ? 'bg-green-500 text-white' : 'bg-purple-600 text-white'}`}>
                                                                             <CreditCard className="w-3 h-3" />
                                                                         </div>
                                                                         <p className="text-sm font-medium text-slate-700">{payment.payment_method}</p>
@@ -380,6 +379,7 @@ export default function TenantPayments({ user }) {
                                                         </div>
                                                     </div>
 
+                                                    {/* pay buttons only shown if payment is still owed */}
                                                     {(payment.status === 'Pending' || payment.status === 'Overdue') && (
                                                         <div className="flex gap-2">
                                                             <button
@@ -413,6 +413,7 @@ export default function TenantPayments({ user }) {
                                 </div>
                             </div>
 
+                            {/* right sidebar — summary cards */}
                             <div className="w-80 space-y-6">
                                 <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                                     <h2 className="text-lg font-bold text-slate-800 mb-6">Payment Summary</h2>
@@ -458,6 +459,7 @@ export default function TenantPayments({ user }) {
                                         </div>
                                     </div>
 
+                                    {/* quick pay — picks the first pending payment automatically */}
                                     <div className="mt-8 pt-8 border-t border-slate-100">
                                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Quick Pay With</h4>
                                         <div className="space-y-3">

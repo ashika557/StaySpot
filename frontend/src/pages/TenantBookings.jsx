@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom';
 const TenantBookings = ({ user }) => {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('All'); // All, Upcoming, Completed, Cancelled
+    const [activeTab, setActiveTab] = useState('All'); // All | Upcoming | Completed | Cancelled
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -22,7 +23,7 @@ const TenantBookings = ({ user }) => {
             const data = await bookingService.getAllBookings();
             setBookings(data);
         } catch (err) {
-            console.error(err);
+            console.error('Failed to grab bookings array', err);
         } finally {
             setLoading(false);
         }
@@ -32,13 +33,13 @@ const TenantBookings = ({ user }) => {
         if (!window.confirm("Are you sure you want to cancel this booking request?")) return;
         try {
             await bookingService.updateBookingStatus(id, 'Cancelled');
-            fetchBookings(); // Refresh list
+            fetchBookings(); // refresh list after cancel
         } catch (err) {
             alert("Failed to cancel booking");
         }
     };
 
-    // Filter bookings based on tab
+    // filter from one raw array instead of keeping multiple arrays in state
     const filteredBookings = bookings.filter(booking => {
         if (activeTab === 'All') return true;
         if (activeTab === 'Upcoming') return ['Pending', 'Confirmed', 'Active'].includes(booking.status);
@@ -57,6 +58,7 @@ const TenantBookings = ({ user }) => {
                     <p className="text-gray-500">Track your room requests and history</p>
                 </div>
 
+                {/* filter tabs */}
                 <div className="flex gap-2 mb-8">
                     {['All', 'Upcoming', 'Completed', 'Cancelled'].map(tab => (
                         <button
@@ -72,6 +74,7 @@ const TenantBookings = ({ user }) => {
                     ))}
                 </div>
 
+                {/* loading → empty → list */}
                 <div className="space-y-4">
                     {loading ? (
                         <div className="flex justify-center py-12">
@@ -98,22 +101,26 @@ const TenantBookings = ({ user }) => {
     );
 };
 
+// extracted to keep the parent component clean
 const BookingCard = ({ booking, onCancel, navigate }) => {
+
+    // fallback image if room has no photos
     const imageUrl = booking.room.images && booking.room.images.length > 0
         ? getMediaUrl(booking.room.images[0].image)
         : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop';
 
+    // maps backend status to badge color
     const getStatusColor = (status) => {
         switch (status) {
             case 'Confirmed': case 'Active': return 'bg-green-100 text-green-700';
             case 'Pending': return 'bg-yellow-100 text-yellow-700';
-            case 'Cancelled': return 'bg-red-100 text-red-700';
-            case 'Rejected': return 'bg-red-100 text-red-700';
+            case 'Cancelled': case 'Rejected': return 'bg-red-100 text-red-700';
             case 'Completed': return 'bg-gray-100 text-gray-700';
             default: return 'bg-gray-100 text-gray-700';
         }
     };
 
+    // creates a chat with the owner then redirects to chat page
     const handleMessageOwner = async () => {
         try {
             await chatService.startConversation(booking.room.owner.id);
@@ -126,6 +133,7 @@ const BookingCard = ({ booking, onCancel, navigate }) => {
 
     return (
         <div className="bg-white rounded-2xl p-4 flex gap-6 border border-gray-100 shadow-sm hover:shadow-md transition">
+
             <div className="w-48 h-32 rounded-xl overflow-hidden shrink-0">
                 <img src={imageUrl} alt={booking.room.title} className="w-full h-full object-cover" />
             </div>
@@ -134,6 +142,8 @@ const BookingCard = ({ booking, onCancel, navigate }) => {
                 <div className="flex justify-between items-start">
                     <div>
                         <h3 className="font-bold text-gray-900 text-lg">{booking.room.title}</h3>
+
+                        {/* owner avatar + name */}
                         <div className="flex items-center gap-2 mt-1">
                             <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 overflow-hidden">
                                 {booking.room.owner.profile_photo ? (
@@ -144,10 +154,13 @@ const BookingCard = ({ booking, onCancel, navigate }) => {
                             </div>
                             <div className="text-sm text-gray-500">Landlord: {booking.room.owner.full_name}</div>
                         </div>
+
                         <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                             <MapPin size={14} /> {booking.room.location}
                         </div>
                     </div>
+
+                    {/* show "Confirmed" instead of "Active" — friendlier for tenants */}
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getStatusColor(booking.status)}`}>
                         {booking.status === 'Active' ? 'Confirmed' : booking.status}
                     </span>
@@ -159,29 +172,22 @@ const BookingCard = ({ booking, onCancel, navigate }) => {
                     </div>
 
                     <div className="flex gap-3">
-                        <button
-                            onClick={handleMessageOwner}
-                            className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-bold hover:bg-blue-100 transition mr-auto"
-                        >
+                        <button onClick={handleMessageOwner} className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-bold hover:bg-blue-100 transition mr-auto">
                             Message Owner
                         </button>
 
-                        <button
-                            onClick={() => navigate(`/room/${booking.room.id}`)}
-                            className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-50 transition"
-                        >
+                        <button onClick={() => navigate(`/room/${booking.room.id}`)} className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-50 transition">
                             View Details
                         </button>
 
+                        {/* only show cancel if booking is still active */}
                         {['Pending', 'Confirmed', 'Active'].includes(booking.status) && (
-                            <button
-                                onClick={onCancel}
-                                className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition"
-                            >
+                            <button onClick={onCancel} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition">
                                 Cancel Booking
                             </button>
                         )}
 
+                        {/* TODO: hook up review submission */}
                         {booking.status === 'Completed' && (
                             <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">
                                 Leave Review
