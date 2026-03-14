@@ -61,106 +61,68 @@ function ForgotPassword() {
     }
   };
 
-  const S = {
-    page: {
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #e8eef8 0%, #f5f7fc 50%, #eaf0fb 100%)',
-      fontFamily: "'Segoe UI', sans-serif", padding: '20px'
-    },
-    layout: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: '860px', gap: '60px' },
-    left: { flex: 1, padding: '20px', maxWidth: '320px' },
-    leftTitle: { fontSize: '24px', fontWeight: 800, color: '#1a1a2e', marginBottom: '14px', letterSpacing: '-0.3px' },
-    leftDesc: { fontSize: '14px', color: '#6b7280', lineHeight: 1.7 },
-    card: {
-      background: 'white', borderRadius: '20px', padding: '40px 36px',
-      boxShadow: '0 8px 40px rgba(0,0,0,0.10)', width: '100%', maxWidth: '380px',
-      border: '2.5px solid #94a3b8'
-    },
-    iconCircle: {
-      width: '56px', height: '56px', borderRadius: '50%',
-      background: 'linear-gradient(135deg, #dbeafe, #eff6ff)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      margin: '0 auto 16px'
-    },
-    cardTitle: { fontSize: '20px', fontWeight: 800, color: '#1a1a2e', textAlign: 'center', marginBottom: '6px' },
-    cardDesc: { fontSize: '13px', color: '#9ca3af', textAlign: 'center', marginBottom: '24px', lineHeight: 1.6 },
-    tabRow: { display: 'flex', gap: '0', marginBottom: '20px', border: '1.5px solid #e5e7eb', borderRadius: '9px', overflow: 'hidden' },
-    tab: (active) => ({
-      flex: 1, padding: '9px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
-      background: active ? '#2563eb' : 'white', color: active ? 'white' : '#6b7280',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s'
-    }),
-    label: { fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' },
-    inputWrap: { position: 'relative', marginBottom: '18px' },
-    inputIcon: { position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' },
-    input: { width: '100%', padding: '11px 14px 11px 38px', fontSize: '14px', border: '1.5px solid #e5e7eb', borderRadius: '8px', outline: 'none', boxSizing: 'border-box', color: '#111827', background: 'white' },
-    btn: (disabled) => ({
-      width: '100%', padding: '12px', fontSize: '14px', fontWeight: 700,
-      background: disabled ? '#93c5fd' : '#2563eb', color: 'white', border: 'none',
-      borderRadius: '8px', cursor: disabled ? 'not-allowed' : 'pointer',
-      marginBottom: '14px', transition: 'background 0.2s'
-    }),
-    backLink: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '13px', color: '#2563eb', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', width: '100%' },
-    msgBox: (type) => ({
-      padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px',
-      background: type === 'success' ? '#f0fdf4' : '#fef2f2',
-      color: type === 'success' ? '#16a34a' : '#b91c1c',
-      border: type === 'success' ? '1px solid #bbf7d0' : '1px solid #fecaca'
-    }),
-    footer: { textAlign: 'center', marginTop: '28px', fontSize: '13px', color: '#9ca3af' },
-    footerLink: { color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'block', marginTop: '4px' }
-  };
-
   return (
-    <div style={S.page}>
-      <div style={S.layout}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-gray-50 to-blue-50 font-sans p-5 relative">
+      <div className="flex items-center justify-center w-full max-w-[860px] gap-8 md:gap-16 flex-col md:flex-row">
 
         {/* LEFT */}
-        <div style={S.left}>
-          <div style={S.leftTitle}>Forgot Your Password?</div>
-          <p style={S.leftDesc}>
+        <div className="flex-1 p-5 max-w-[320px] text-center md:text-left">
+          <div className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">Forgot Your Password?</div>
+          <p className="text-sm text-gray-500 leading-relaxed">
             No worries! It happens to the best of us. Enter your email or phone number and we'll help you reset your password quickly and securely.
           </p>
         </div>
 
         {/* CARD */}
-        <div style={S.card}>
+        <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-[380px] border-2 border-gray-100">
 
           {step === 'input' && (
             <>
               {/* Key icon */}
-              <div style={S.iconCircle}>
+              <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="7.5" cy="15.5" r="5.5"/>
                   <path d="M21 2l-9.6 9.6M15.5 7.5l3 3"/>
                 </svg>
               </div>
 
-              <div style={S.cardTitle}>Reset Password</div>
-              <p style={S.cardDesc}>Enter your email or phone number to receive a reset link</p>
+              <div className="text-xl font-extrabold text-gray-900 text-center mb-1.5">Reset Password</div>
+              <p className="text-sm text-gray-400 text-center mb-6 leading-relaxed">Enter your email or phone number to receive a reset link</p>
 
               {/* Tabs */}
-              <div style={S.tabRow}>
-                <button type="button" style={S.tab(inputType === 'email')} onClick={() => handleTabSwitch('email')}>
+              <div className="flex mb-6 border-2 border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                <button 
+                  type="button" 
+                  className={`flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors ${inputType === 'email' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`} 
+                  onClick={() => handleTabSwitch('email')}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
                   Email
                 </button>
-                <button type="button" style={S.tab(inputType === 'phone')} onClick={() => handleTabSwitch('phone')}>
+                <button 
+                  type="button" 
+                  className={`flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors ${inputType === 'phone' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`} 
+                  onClick={() => handleTabSwitch('phone')}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.34 2.18 2 2 0 012.32.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.16 6.16l1.27-.77a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.5v1.42z" strokeLinecap="round"/></svg>
                   Phone
                 </button>
               </div>
 
-              {message.text && <div style={S.msgBox(message.type)}>{message.text}</div>}
+              {message.text && (
+                <div className={`px-4 py-3 rounded-lg text-sm mb-4 font-medium border ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                  {message.text}
+                </div>
+              )}
 
-              <form onSubmit={handleSubmit}>
-                <div>
-                  <label style={S.label}>{inputType === 'email' ? 'Email Address' : 'Phone Number'}</label>
-                  <div style={S.inputWrap}>
-                    <span style={S.inputIcon}>
+              <form onSubmit={handleSubmit} className="flex flex-col">
+                <div className="mb-5">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">{inputType === 'email' ? 'Email Address' : 'Phone Number'}</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                       {inputType === 'email'
-                        ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
-                        : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.34 2.18 2 2 0 012.32.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.16 6.16l1.27-.77a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.5v1.42z" strokeLinecap="round"/></svg>
+                        ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.34 2.18 2 2 0 012.32.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.16 6.16l1.27-.77a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.5v1.42z" strokeLinecap="round"/></svg>
                       }
                     </span>
                     <input
@@ -169,19 +131,21 @@ function ForgotPassword() {
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={inputType === 'email' ? 'Enter your email address' : 'Enter your phone number'}
                       required
-                      style={S.input}
-                      onFocus={e => e.target.style.borderColor = '#2563eb'}
-                      onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                      className="w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white border-gray-200 focus:border-blue-600 placeholder:text-gray-400"
                     />
                   </div>
                 </div>
 
-                <button type="submit" disabled={isSubmitting || !inputValue} style={S.btn(isSubmitting || !inputValue)}>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting || !inputValue} 
+                  className={`w-full py-3 text-sm font-bold text-white rounded-lg transition-all mb-4 shadow-sm ${isSubmitting || !inputValue ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 shadow-blue-600/20 hover:shadow-lg'}`}
+                >
                   {isSubmitting ? 'Sending...' : 'Send Reset Link'}
                 </button>
               </form>
 
-              <button onClick={() => navigate(ROUTES.LOGIN)} style={S.backLink}>
+              <button onClick={() => navigate(ROUTES.LOGIN)} className="w-full flex items-center justify-center gap-1.5 text-sm text-blue-600 font-bold hover:text-blue-700 transition-colors">
                 ← Back to Login
               </button>
             </>
@@ -189,40 +153,46 @@ function ForgotPassword() {
 
           {step === 'otp' && (
             <>
-              <div style={S.iconCircle}>
+              <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
                   <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>
                 </svg>
               </div>
 
-              <div style={S.cardTitle}>Enter OTP</div>
-              <p style={S.cardDesc}>We sent a 6-digit code to<br /><strong style={{ color: '#1a1a2e' }}>{inputValue}</strong></p>
+              <div className="text-xl font-extrabold text-gray-900 text-center mb-1.5">Enter OTP</div>
+              <p className="text-sm text-gray-400 text-center mb-6 leading-relaxed">
+                We sent a 6-digit code to<br /><strong className="text-gray-900 font-semibold">{inputValue}</strong>
+              </p>
 
-              {message.text && <div style={S.msgBox(message.type)}>{message.text}</div>}
+              {message.text && (
+                <div className={`px-4 py-3 rounded-lg text-sm mb-4 font-medium border ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                  {message.text}
+                </div>
+              )}
 
-              <form onSubmit={handleVerifyOtp}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+              <form onSubmit={handleVerifyOtp} className="flex flex-col">
+                <div className="flex justify-center mb-2">
                   <input
-                    type="text" maxLength="6" value={otp}
+                    type="text" 
+                    maxLength="6" 
+                    value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="000000" autoFocus
-                    style={{
-                      width: '170px', padding: '14px', fontSize: '26px', fontWeight: 800,
-                      textAlign: 'center', letterSpacing: '0.3em',
-                      border: '2px solid #2563eb', borderRadius: '12px', outline: 'none',
-                      color: '#1a1a2e', background: '#f8f9ff', boxSizing: 'border-box'
-                    }}
+                    placeholder="000000" 
+                    autoFocus
+                    className="w-[170px] p-3 text-2xl font-extrabold text-center tracking-[0.3em] border-2 border-blue-600 rounded-xl outline-none text-gray-900 bg-blue-50/50"
                   />
                 </div>
-                <p style={{ fontSize: '11px', color: '#2563eb', textAlign: 'center', marginBottom: '18px' }}>
-                  (Check Terminal for code)
-                </p>
+                <p className="text-xs text-blue-600 font-semibold text-center mb-5">(Check Terminal for code)</p>
 
-                <button type="submit" disabled={isSubmitting || otp.length !== 6} style={S.btn(isSubmitting || otp.length !== 6)}>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting || otp.length !== 6} 
+                  className={`w-full py-3 text-sm font-bold text-white rounded-lg transition-all mb-4 shadow-sm ${isSubmitting || otp.length !== 6 ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 shadow-blue-600/20 hover:shadow-lg'}`}
+                >
                   {isSubmitting ? 'Verifying...' : 'Verify & Reset Password'}
                 </button>
 
-                <button type="button" onClick={() => setStep('input')} style={S.backLink}>
+                <button type="button" onClick={() => setStep('input')} className="w-full flex items-center justify-center gap-1.5 text-sm text-blue-600 font-bold hover:text-blue-700 transition-colors">
                   ← Back
                 </button>
               </form>
@@ -232,9 +202,9 @@ function ForgotPassword() {
       </div>
 
       {/* Footer */}
-      <div style={{ position: 'absolute', bottom: '24px', width: '100%', textAlign: 'center' }}>
-        <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>Need help?</p>
-        <a href="mailto:support@stayspot.com" style={{ color: '#2563eb', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
+      <div className="absolute bottom-6 w-full text-center">
+        <p className="text-sm text-gray-400 m-0">Need help?</p>
+        <a href="mailto:support@stayspot.com" className="text-blue-600 font-bold text-sm hover:underline">
           Contact Support
         </a>
       </div>

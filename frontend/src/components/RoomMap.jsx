@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { GoogleMap, Marker, InfoWindow, StandaloneSearchBox } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import { CONFIG } from '../constants/config';
-import { School, MapPin, Coffee, ShoppingCart, Hospital, Building, Landmark, Navigation2, Info } from 'lucide-react';
+import { School, MapPin, Coffee, ShoppingCart, Hospital, Building, Landmark, Navigation2, Info, Search } from 'lucide-react';
 
 const mapContainerStyle = {
     width: '100%',
@@ -23,7 +23,7 @@ const categories = [
     { id: 'store', label: 'Stores', icon: <ShoppingCart className="w-4 h-4" />, color: 'bg-amber-500' }
 ];
 
-const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null }) => {
+const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searchCoords = null }) => {
     const { isLoaded } = useMapContext();
     const [internalSelectedRoom, setInternalSelectedRoom] = useState(null);
     const [workplace, setWorkplace] = useState(null);
@@ -50,6 +50,38 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null }) => 
     const onMapLoad = (mapInstance) => setMap(mapInstance);
     const onSearchLoad = (ref) => searchBoxRef.current = ref;
 
+    // React to searchCoords from parent Filter Box
+    useEffect(() => {
+        if (map && searchCoords) {
+            map.panTo(searchCoords);
+            map.setZoom(14);
+        }
+    }, [map, searchCoords]);
+
+    // Auto-fit bounds when room list shrinks/grows from filters
+    useEffect(() => {
+        if (map && rooms && rooms.length > 0 && !selectedRoom && !workplace) {
+            const bounds = new window.google.maps.LatLngBounds();
+            let validRooms = [];
+            
+            rooms.forEach(room => {
+                if (room.latitude && room.longitude) {
+                    bounds.extend({ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) });
+                    validRooms.push(room);
+                }
+            });
+
+            if (validRooms.length === 1) {
+                // If only 1 room is found, pan directly and set a comfortable zoom
+                map.panTo({ lat: parseFloat(validRooms[0].latitude), lng: parseFloat(validRooms[0].longitude) });
+                map.setZoom(16);
+            } else if (validRooms.length > 1) {
+                // If multiple rooms, fit all of them on screen
+                map.fitBounds(bounds);
+            }
+        }
+    }, [map, rooms, selectedRoom, workplace]);
+
     const onPlacesChanged = () => {
         const places = searchBoxRef.current.getPlaces();
         if (places && places.length > 0) {
@@ -67,18 +99,23 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null }) => 
         }
     };
 
-    const searchNearby = (room, category) => {
-        if (!map || !window.google || !room) return;
+    const searchNearby = (room, categoryOrKeyword, isKeyword = false) => {
+        if (!map || !window.google || !room || !categoryOrKeyword) return;
 
-        setActiveCategory(category);
+        setActiveCategory(categoryOrKeyword);
         const roomLocation = new window.google.maps.LatLng(parseFloat(room.latitude), parseFloat(room.longitude));
 
         const service = new window.google.maps.places.PlacesService(map);
         const request = {
             location: roomLocation,
-            radius: '1000',
-            type: [category]
+            radius: isKeyword ? '2000' : '1000'
         };
+        
+        if (isKeyword) {
+            request.keyword = categoryOrKeyword;
+        } else {
+            request.type = [categoryOrKeyword];
+        }
 
         service.nearbySearch(request, (results, status) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
@@ -195,6 +232,15 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null }) => 
                             )
                         ))}
 
+                        {searchCoords && (
+                            <Marker
+                                position={searchCoords}
+                                icon={{
+                                    url: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
+                                }}
+                            />
+                        )}
+
                         {nearbyPlaces?.map((place) => (
                             <Marker
                                 key={place.id}
@@ -254,11 +300,11 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null }) => 
 
                     {/* Nearby Category Picker Overlay */}
                     {selectedRoom && (
-                        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-white/50 gap-2 z-[1000] animate-in slide-in-from-top duration-500">
+                        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-white/50 gap-2 z-[1000] animate-in slide-in-from-top duration-500">
                             {categories.map((cat) => (
                                 <button
                                     key={cat.id}
-                                    onClick={() => searchNearby(selectedRoom, cat.id)}
+                                    onClick={() => searchNearby(selectedRoom, cat.id, false)}
                                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 ${activeCategory === cat.id
                                         ? `${cat.color} text-white shadow-lg`
                                         : 'bg-white text-gray-600 hover:bg-gray-100'
@@ -268,6 +314,24 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null }) => 
                                     <span className="text-xs font-extrabold">{cat.label}</span>
                                 </button>
                             ))}
+                            
+                            {/* Custom Search Input */}
+                            <div className="flex items-center bg-white/80 rounded-xl border border-gray-200 overflow-hidden ml-2 h-10">
+                                <input 
+                                    type="text"
+                                    placeholder="Type anything (e.g. Gym)"
+                                    className="w-36 px-3 py-2 text-xs font-bold text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value.trim()) {
+                                            searchNearby(selectedRoom, e.target.value.trim(), true);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                />
+                                <div className="px-3 text-gray-400 bg-gray-50 h-full flex items-center border-l border-gray-200">
+                                    <Search className="w-3.5 h-3.5" />
+                                </div>
+                            </div>
                         </div>
                     )}
 

@@ -155,172 +155,175 @@ function Register({ onLogin }) {
     }
   };
 
-  // red border on error, normal otherwise
-  const inputStyle = (hasError) => ({
-    width: '100%', padding: '11px 14px 11px 38px', fontSize: '14px',
-    border: hasError ? '1.5px solid #fa5252' : '1.5px solid #e8eaf0',
-    borderRadius: '10px', outline: 'none', boxSizing: 'border-box',
-    color: '#1a1a2e', background: '#fafbff'
-  });
-  const labelStyle = { fontSize: '13px', fontWeight: 600, color: '#444', display: 'block', marginBottom: '6px' };
-  const iconWrap = { position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#bbb', pointerEvents: 'none' };
-
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f4ff', fontFamily: "'Segoe UI', sans-serif", padding: '20px' }}>
-      <div style={{ display: 'flex', width: '100%', maxWidth: '940px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', minHeight: '580px' }}>
+    <div className="min-h-screen flex items-center justify-center bg-blue-50 font-sans p-5">
+      <div className="flex w-full max-w-[940px] rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.12)] min-h-[580px] bg-white">
 
-        {/* LEFT PANEL - branding, doesn't change between steps */}
-        <div style={{ width: '42%', background: 'linear-gradient(145deg, #3b5bdb 0%, #4c6ef5 60%, #5c7cfa 100%)', padding: '48px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+        {/* LEFT PANEL */}
+        <div className="hidden md:flex w-[42%] flex-col justify-between bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500 p-12 relative overflow-hidden">
           {/* decorative background circles */}
-          <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-          <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5" />
 
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '48px' }}>
-              <div style={{ width: '36px', height: '36px', backgroundColor: 'white', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <div className="z-10">
+            <div className="flex items-center gap-3 mb-12">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" fill="#3b5bdb" />
                   <rect x="9" y="13" width="6" height="8" rx="1" fill="white" />
                 </svg>
               </div>
-              <span style={{ color: 'white', fontWeight: 700, fontSize: '18px' }}>Stay Spot</span>
+              <span className="text-white font-extrabold text-xl tracking-tight">Stay Spot</span>
             </div>
 
-            <h1 style={{ color: 'white', fontSize: '28px', fontWeight: 800, lineHeight: 1.25, marginBottom: '14px', letterSpacing: '-0.5px' }}>
+            <h1 className="text-white text-3xl font-extrabold leading-[1.2] mb-4 tracking-tight">
               Join Smart Room<br />Renting Community
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '14px', lineHeight: 1.6, marginBottom: '36px' }}>
+            <p className="text-white/80 text-sm leading-relaxed mb-8">
               Connect with verified owners and tenants. Find your perfect space or list your property with ease.
             </p>
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '12px' }}>🏠 Join 50,000+ users already on RoomRent</div>
+          <div className="text-white/60 text-xs z-10 font-medium tracking-wide">🏠 Join 50,000+ users already on RoomRent</div>
         </div>
 
-        {/* RIGHT PANEL - changes based on step */}
-        <div style={{ flex: 1, backgroundColor: 'white', padding: '40px 48px', display: 'flex', flexDirection: 'column', justifyContent: 'center', overflowY: 'auto' }}>
+        {/* RIGHT PANEL */}
+        <div className="flex-1 bg-white p-8 md:p-12 flex flex-col justify-center overflow-y-auto">
 
-          {/*registration form */}
+          {/* registration form */}
           {step === 'form' && (
             <div>
-              <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a2e', marginBottom: '6px' }}>Create Account</h2>
-              <p style={{ fontSize: '14px', color: '#888', marginBottom: '24px' }}>Sign up to get started with Stay Spot</p>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Create Account</h2>
+              <p className="text-sm text-gray-500 mb-6">Sign up to get started with Stay Spot</p>
 
               {errorMessage && (
-                <div style={{ background: '#fff5f5', border: '1px solid #ffc9c9', color: '#c92a2a', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-4 font-medium mt-2">
                   {errorMessage}
                 </div>
               )}
               {successMessage && (
-                <div style={{ background: '#f3fff3', border: '1px solid #b2f2bb', color: '#2f9e44', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-4 font-medium mt-2">
                   {successMessage}
                 </div>
               )}
 
-              <form onSubmit={handleRequestOtp}>
+              <form onSubmit={handleRequestOtp} className="flex flex-col gap-4">
                 {/* full name */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={labelStyle}>Full Name</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={iconWrap}>👤</span>
-                    <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="John Doe" style={inputStyle(!!errors.full_name)} />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">👤</span>
+                    <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="John Doe" 
+                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.full_name ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
                   </div>
-                  {errors.full_name && <p style={{ color: '#fa5252', fontSize: '12px', marginTop: '4px' }}>{errors.full_name}</p>}
+                  {errors.full_name && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.full_name}</p>}
                 </div>
 
                 {/* email */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={labelStyle}>Email Address</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={iconWrap}>✉️</span>
-                    <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" style={inputStyle(!!errors.email)} />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">✉️</span>
+                    <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" 
+                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
                   </div>
-                  {errors.email && <p style={{ color: '#fa5252', fontSize: '12px', marginTop: '4px' }}>{errors.email}</p>}
+                  {errors.email && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.email}</p>}
                 </div>
 
                 {/* phone */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={labelStyle}>Phone Number</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={iconWrap}>📞</span>
-                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+977-9800000000" style={inputStyle(!!errors.phone)} />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone Number</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">📞</span>
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+977-9800000000" 
+                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
                   </div>
-                  {errors.phone && <p style={{ color: '#fa5252', fontSize: '12px', marginTop: '4px' }}>{errors.phone}</p>}
+                  {errors.phone && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.phone}</p>}
                 </div>
 
                 {/* password */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={labelStyle}>Password</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={iconWrap}>🔒</span>
-                    <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Min. 8 characters" style={inputStyle(!!errors.password)} />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">🔒</span>
+                    <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Min. 8 characters" 
+                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
                   </div>
-                  {errors.password && <p style={{ color: '#fa5252', fontSize: '12px', marginTop: '4px' }}>{errors.password}</p>}
+                  {errors.password && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.password}</p>}
                 </div>
 
                 {/* confirm password */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={labelStyle}>Confirm Password</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={iconWrap}>🔒</span>
-                    <input type="password" name="confirm_password" value={formData.confirm_password} onChange={handleChange} placeholder="Repeat your password" style={inputStyle(!!errors.confirm_password)} />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">🔒</span>
+                    <input type="password" name="confirm_password" value={formData.confirm_password} onChange={handleChange} placeholder="Repeat your password" 
+                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.confirm_password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
                   </div>
-                  {errors.confirm_password && <p style={{ color: '#fa5252', fontSize: '12px', marginTop: '4px' }}>{errors.confirm_password}</p>}
+                  {errors.confirm_password && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.confirm_password}</p>}
                 </div>
 
                 {/* role dropdown */}
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>I am a...</label>
-                  <select name="role" value={formData.role} onChange={handleChange} style={{ ...inputStyle(false), paddingLeft: '14px' }}>
-                    <option value="Tenant">Tenant (looking for a room)</option>
-                    <option value="Owner">Owner (listing a room)</option>
-                  </select>
+                <div className="mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">I am a...</label>
+                  <div className="relative">
+                    <select name="role" value={formData.role} onChange={handleChange} 
+                            className="w-full py-2.5 px-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white border-gray-200 focus:border-blue-600 appearance-none">
+                      <option value="Tenant">Tenant (looking for a room)</option>
+                      <option value="Owner">Owner (listing a room)</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                  </div>
                 </div>
 
-                <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', backgroundColor: loading ? '#a5b4fc' : '#3b5bdb', color: 'white', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                <button type="submit" disabled={loading} 
+                        className={`w-full py-3 mt-2 text-sm font-bold text-white rounded-lg transition-all shadow-[0_4px_14px_rgba(37,99,235,0.35)] ${loading ? 'bg-indigo-300 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-blue-500 hover:-translate-y-0.5 hover:shadow-lg'}`}>
                   {loading ? 'Sending OTP...' : 'Continue →'}
                 </button>
               </form>
 
-              <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#888' }}>
+              <div className="text-center mt-6 text-sm text-gray-500">
                 Already have an account?{' '}
-                <Link to={ROUTES.LOGIN} style={{ color: '#3b5bdb', fontWeight: 600, textDecoration: 'none' }}>Sign In</Link>
-              </p>
+                <Link to={ROUTES.LOGIN} className="text-blue-600 font-bold hover:text-blue-700 transition-colors">Sign In</Link>
+              </div>
             </div>
           )}
 
-          {/*OTP verification */}
+          {/* OTP verification */}
           {step === 'email_otp' && (
             <div>
-              <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a2e', marginBottom: '6px' }}>Check Your Email</h2>
-              <p style={{ fontSize: '14px', color: '#888', marginBottom: '24px' }}>
-                We sent a 6-digit code to <strong>{formData.email}</strong>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Check Your Email</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                We sent a 6-digit code to <strong className="text-gray-800">{formData.email}</strong>
               </p>
 
               {errorMessage && (
-                <div style={{ background: '#fff5f5', border: '1px solid #ffc9c9', color: '#c92a2a', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-4 font-medium">
                   {errorMessage}
                 </div>
               )}
               {successMessage && (
-                <div style={{ background: '#f3fff3', border: '1px solid #b2f2bb', color: '#2f9e44', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-4 font-medium">
                   {successMessage}
                 </div>
               )}
 
-              <form onSubmit={handleVerifyOtp}>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>Enter Verification Code</label>
+              <form onSubmit={handleVerifyOtp} className="flex flex-col">
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Enter Verification Code</label>
                   <input
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
                     placeholder="123456"
                     maxLength={6}
-                    style={{ ...inputStyle(false), paddingLeft: '14px', letterSpacing: '8px', fontSize: '22px', textAlign: 'center' }}
+                    className="w-full py-3.5 px-4 text-2xl font-bold tracking-[0.5em] text-center rounded-xl outline-none transition-colors border-2 bg-gray-50 focus:bg-white border-blue-400 focus:border-blue-600"
                   />
                 </div>
 
-                <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', backgroundColor: loading ? '#a5b4fc' : '#3b5bdb', color: 'white', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '14px' }}>
+                <button type="submit" disabled={loading} 
+                        className={`w-full py-3 text-sm font-bold text-white rounded-lg transition-all shadow-[0_4px_14px_rgba(37,99,235,0.35)] mb-4 ${loading ? 'bg-indigo-300 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-blue-500 hover:-translate-y-0.5 hover:shadow-lg'}`}>
                   {loading ? 'Verifying...' : 'Verify Email'}
                 </button>
 
@@ -329,26 +332,33 @@ function Register({ onLogin }) {
                   type="button"
                   onClick={handleRequestOtp}
                   disabled={resendTimer > 0}
-                  style={{ width: '100%', padding: '11px', backgroundColor: 'transparent', color: resendTimer > 0 ? '#bbb' : '#3b5bdb', border: '1.5px solid', borderColor: resendTimer > 0 ? '#ddd' : '#3b5bdb', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: resendTimer > 0 ? 'not-allowed' : 'pointer' }}
+                  className={`w-full py-2.5 text-sm font-bold border-2 rounded-lg transition-colors ${resendTimer > 0 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-blue-600 text-blue-600 hover:bg-blue-50'}`}
                 >
                   {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
                 </button>
               </form>
 
-              <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#888' }}>
+              <div className="text-center mt-5 text-sm text-gray-500">
                 Wrong email?{' '}
-                <span onClick={() => setStep('form')} style={{ color: '#3b5bdb', fontWeight: 600, cursor: 'pointer' }}>Go Back</span>
-              </p>
+                <button onClick={() => setStep('form')} className="text-blue-600 font-bold hover:text-blue-700 transition-colors">Go Back</button>
+              </div>
             </div>
           )}
 
-          {/*success, auto redirects to login */}
+          {/* success, auto redirects to login */}
           {step === 'success' && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
-              <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a2e', marginBottom: '10px' }}>You're In!</h2>
-              <p style={{ fontSize: '14px', color: '#888', marginBottom: '6px' }}>Your account has been created successfully.</p>
-              <p style={{ fontSize: '13px', color: '#aaa' }}>Redirecting to login in 2 seconds...</p>
+            <div className="text-center py-8 flex flex-col items-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                <span className="text-4xl">✅</span>
+              </div>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2 tracking-tight">You're In!</h2>
+              <p className="text-sm text-gray-600 mb-6 font-medium">Your account has been created successfully.</p>
+              <div className="inline-block px-4 py-2 bg-gray-100 rounded-lg">
+                <p className="text-xs text-gray-500 font-semibold flex items-center gap-2">
+                  <svg className="animate-spin h-3 w-3 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  Redirecting to login...
+                </p>
+              </div>
             </div>
           )}
 

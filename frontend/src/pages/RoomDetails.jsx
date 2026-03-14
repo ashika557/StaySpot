@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation, Info, Cigarette, Dog, Users, Beer, UtensilsCrossed, Zap, Droplets, Car, Layout, ChefHat, MessageCircle } from 'lucide-react';
 import { GoogleMap, Marker, Circle } from '@react-google-maps/api';
@@ -37,8 +37,11 @@ const RoomDetails = ({ user }) => {
     const [visitTime, setVisitTime] = useState('');
     const [visitNote, setVisitNote] = useState('');
 
+    // allows the map instance to be panned programmatically
+    const mapRef = useRef(null);
+    
     // prevents double view-count in React 18 StrictMode (runs effects twice in dev)
-    const viewTracked = React.useRef(false);
+    const viewTracked = useRef(false);
 
     // ask OpenStreetMap what's within 2km of the room's coordinates
     const fetchCurrentlyNearbyPlaces = async (lat, lng) => {
@@ -480,22 +483,54 @@ const RoomDetails = ({ user }) => {
                                         <GoogleMap
                                             mapContainerStyle={{ width: '100%', height: '100%' }}
                                             center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                            zoom={14}
-                                            options={{ disableDefaultUI: true, zoomControl: true, scrollwheel: false }}
+                                            zoom={16}
+                                            onLoad={(map) => {
+                                                mapRef.current = map; // Store map instance
+                                                setTimeout(() => {
+                                                    map.panTo({ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) });
+                                                }, 100);
+                                            }}
+                                            options={{ 
+                                                disableDefaultUI: true, 
+                                                zoomControl: true, 
+                                                scrollwheel: false,
+                                                styles: [
+                                                    {
+                                                        "featureType": "poi",
+                                                        "elementType": "labels",
+                                                        "stylers": [{ "visibility": "off" }]
+                                                    }
+                                                ]
+                                            }}
                                         >
-                                            {/* main room pin */}
-                                            <Marker position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }} icon={getIcon('main')} label={getLabel('main')} zIndex={100} />
-
+                                            {/* main room pin - Use standard Google icon for reliability */}
+                                            <Marker 
+                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }} 
+                                                icon={{
+                                                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                                                    scaledSize: new window.google.maps.Size(40, 40)
+                                                }}
+                                                zIndex={100} 
+                                            />
+                                            
                                             {/* 2km search radius ring */}
                                             <Circle
                                                 center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
                                                 radius={2000}
                                                 options={{ fillColor: '#3B82F6', fillOpacity: 0.08, strokeColor: '#3B82F6', strokeOpacity: 0.3, strokeWeight: 1, clickable: false }}
                                             />
-
-                                            {/* nearby place pins from OpenStreetMap */}
+                                            
+                                            {/* nearby place pins */}
                                             {nearbyPlaces.map(place => (
-                                                <Marker key={place.id} position={{ lat: place.lat, lng: place.lon }} icon={getIcon(place.type)} label={getLabel(place.type)} title={place.name} />
+                                                <Marker 
+                                                    key={place.id} 
+                                                    position={{ lat: place.lat, lng: place.lon }} 
+                                                    icon={{
+                                                        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                                                        scaledSize: new window.google.maps.Size(30, 30)
+                                                    }}
+                                                    title={place.name} 
+                                                />
                                             ))}
                                         </GoogleMap>
                                     </div>

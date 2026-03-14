@@ -79,129 +79,140 @@ function Login({ onLogin }) {
       setErrorMessage('Network error. Make sure the backend is running.');
     } finally {
       setLoading(false); // Stop loading spinner
-    }
-  };
-
-  // 7. Inline styles for the page, separated to keep JSX clean
-  const S = {
-    page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4ff', fontFamily: "'Segoe UI', sans-serif", padding: '20px' },
-    card: { display: 'flex', width: '100%', maxWidth: '940px', minHeight: '580px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' },
-    left: { width: '42%', background: 'linear-gradient(145deg, #3b5bdb 0%, #4c6ef5 60%, #5c7cfa 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 40px', textAlign: 'center', position: 'relative', overflow: 'hidden' },
-    leftCircle1: { position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' },
-    leftCircle2: { position: 'absolute', bottom: '-40px', left: '-40px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' },
-    leftDesc: { color: 'rgba(255,255,255,0.75)', fontSize: '14px', lineHeight: 1.6 },
-    right: { flex: 1, background: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px' },
-    heading: { fontSize: '24px', fontWeight: 800, color: '#1a1a2e', marginBottom: '4px', letterSpacing: '-0.4px' },
-    subheading: { fontSize: '14px', color: '#888', marginBottom: '28px' },
-    label: { display: 'block', fontSize: '13px', fontWeight: 600, color: '#444', marginBottom: '6px' },
-    inputWrap: { position: 'relative', marginBottom: '4px' },
-    inputIcon: { position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#bbb', pointerEvents: 'none' },
-    inputIconRight: { position: 'absolute', right: '13px', top: '50%', transform: 'translateY(-50%)', color: '#bbb', cursor: 'pointer', background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center' },
-    input: (err) => ({ width: '100%', padding: '11px 14px 11px 38px', fontSize: '14px', border: err ? '1.5px solid #fa5252' : '1.5px solid #e8eaf0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box', color: '#1a1a2e', background: '#fafbff', transition: 'border 0.15s' }),
-    errText: { color: '#fa5252', fontSize: '12px', marginTop: '4px' },
-    forgotRow: { display: 'flex', justifyContent: 'flex-end', marginBottom: '20px', marginTop: '6px' },
-    forgotLink: { fontSize: '13px', color: '#3b5bdb', fontWeight: 600, textDecoration: 'none' },
-    signinBtn: (loading) => ({ width: '100%', padding: '13px', fontSize: '14px', fontWeight: 700, background: loading ? '#748ffc' : 'linear-gradient(135deg, #3b5bdb, #4c6ef5)', color: 'white', border: 'none', borderRadius: '10px', cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '18px', transition: 'background 0.2s', boxShadow: '0 4px 14px rgba(59,91,219,0.35)' }),
-    signupRow: { textAlign: 'center', fontSize: '13px', color: '#888' },
-    signupLink: { color: '#3b5bdb', fontWeight: 700, textDecoration: 'none' },
-    errorBox: { background: '#fff0f0', border: '1px solid #ffc9c9', color: '#c92a2a', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', marginBottom: '14px' },
-    roleRow: { display: 'flex', gap: '10px', marginBottom: '18px' },
-    roleBtn: (active) => ({ flex: 1, padding: '9px', borderRadius: '8px', border: active ? '2px solid #3b5bdb' : '1.5px solid #e8eaf0', background: active ? '#f0f4ff' : 'white', color: active ? '#3b5bdb' : '#666', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s' }),
+    } // stop loading
   };
 
   return (
-    <div style={S.page}>
-      <div style={S.card}>
+    <div className="min-h-screen flex items-center justify-center bg-blue-50 font-sans p-5">
+      <div className="flex w-full max-w-[940px] min-h-[580px] rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.12)] bg-white">
+        
         {/* LEFT: Branding info */}
-        <div style={S.left}>
-          <div style={S.leftCircle1} />
-          <div style={S.leftCircle2} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '13px', marginBottom: '20px' }}>
-            <div style={{ width: '48px', height: '48px', backgroundColor: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {/* Home icon */}
+        <div className="w-[42%] hidden md:flex flex-col items-center justify-center p-12 text-center relative overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500">
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5" />
+          
+          <div className="flex items-center gap-3 mb-5 z-10">
+            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
                 <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" fill="#3b5bdb" />
                 <rect x="9" y="13" width="6" height="8" rx="1" fill="white" />
               </svg>
             </div>
-            <span style={{ color: 'white', fontWeight: 800, fontSize: '22px', letterSpacing: '-0.3px' }}>Stay Spot</span>
+            <span className="text-white font-extrabold text-2xl tracking-tight">Stay Spot</span>
           </div>
-          <p style={S.leftDesc}>Find your perfect room or manage your properties with our intelligent platform. Connect tenants and owners seamlessly.</p>
+          <p className="text-white/80 text-sm leading-relaxed z-10">
+            Find your perfect room or manage your properties with our intelligent platform. Connect tenants and owners seamlessly.
+          </p>
         </div>
 
         {/* RIGHT: Login form */}
-        <div style={S.right}>
-          <div style={S.heading}>Welcome Back</div>
-          <div style={S.subheading}>Sign in to your account</div>
+        <div className="flex-1 bg-white flex flex-col justify-center px-8 md:px-12 py-10 relative">
+          <div className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Welcome Back</div>
+          <div className="text-sm text-gray-500 mb-7">Sign in to your account</div>
 
           {/* Role selector buttons */}
-          <div style={S.roleRow}>
+          <div className="flex gap-3 mb-5">
             {['Tenant', 'Owner'].map(r => (
-              <button key={r} type="button" style={S.roleBtn(formData.role === r)} onClick={() => setFormData(p => ({ ...p, role: r }))}>
+              <button
+                key={r}
+                type="button"
+                className={`flex-1 py-2.5 rounded-lg border-2 text-sm font-bold transition-all duration-150 ${
+                  formData.role === r 
+                    ? 'border-blue-600 bg-blue-50 text-blue-600' 
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-blue-200'
+                }`}
+                onClick={() => setFormData(p => ({ ...p, role: r }))}
+              >
                 {r}
               </button>
             ))}
           </div>
 
           {/* Show API errors */}
-          {errorMessage && <div style={S.errorBox}>{errorMessage}</div>}
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-4">
+              {errorMessage}
+            </div>
+          )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="flex flex-col">
             {/* Email field */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={S.label}>Email or Phone</label>
-              <div style={S.inputWrap}>
-                <span style={S.inputIcon}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email or Phone</label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
                 </span>
-                <input name="email" type="text" value={formData.email} onChange={handleChange}
+                <input 
+                  name="email" 
+                  type="text" 
+                  value={formData.email} 
+                  onChange={handleChange}
                   placeholder="Enter email or phone number"
-                  style={S.input(errors.email)} 
-                  onFocus={e => e.target.style.borderColor = '#3b5bdb'}
-                  onBlur={e => e.target.style.borderColor = errors.email ? '#fa5252' : '#e8eaf0'}
+                  className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${
+                    errors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'
+                  }`}
                 />
               </div>
-              {errors.email && <p style={S.errText}>{errors.email}</p>}
+              {errors.email && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.email}</p>}
             </div>
 
             {/* Password field */}
-            <div style={{ marginBottom: '4px' }}>
-              <label style={S.label}>Password</label>
-              <div style={S.inputWrap}>
-                <span style={S.inputIcon}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <div className="mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                 </span>
-                <input name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleChange}
+                <input 
+                  name="password" 
+                  type={showPassword ? 'text' : 'password'} 
+                  value={formData.password} 
+                  onChange={handleChange}
                   placeholder="Enter your password"
-                  style={{ ...S.input(errors.password), paddingRight: '40px' }}
-                  onFocus={e => e.target.style.borderColor = '#3b5bdb'}
-                  onBlur={e => e.target.style.borderColor = errors.password ? '#fa5252' : '#e8eaf0'}
+                  className={`w-full py-2.5 pl-10 pr-10 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${
+                    errors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'
+                  }`}
                 />
                 {/* Toggle password visibility */}
-                <button type="button" style={S.inputIconRight} onClick={() => setShowPassword(p => !p)}>
+                <button 
+                  type="button" 
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  onClick={() => setShowPassword(p => !p)}
+                >
                   {showPassword
-                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   }
                 </button>
               </div>
-              {errors.password && <p style={S.errText}>{errors.password}</p>}
+              {errors.password && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.password}</p>}
             </div>
 
             {/* Forgot password */}
-            <div style={S.forgotRow}>
-              <Link to={ROUTES.FORGOT_PASSWORD} style={S.forgotLink}>Forgot your password?</Link>
+            <div className="flex justify-end mb-6 mt-1">
+              <Link to={ROUTES.FORGOT_PASSWORD} className="text-sm text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+                Forgot your password?
+              </Link>
             </div>
 
             {/* Submit button */}
-            <button type="submit" disabled={loading} style={S.signinBtn(loading)}>
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className={`w-full py-3 text-sm font-bold text-white rounded-lg transition-all duration-200 mb-5 shadow-[0_4px_14px_rgba(37,99,235,0.35)] ${
+                loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-blue-500 hover:shadow-lg hover:-translate-y-0.5'
+              }`}
+            >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
 
             {/* Signup link */}
-            <div style={S.signupRow}>
+            <div className="text-center text-sm text-gray-500">
               Don't have an account?{' '}
-              <Link to={ROUTES.REGISTER} style={S.signupLink}>Sign up here</Link>
+              <Link to={ROUTES.REGISTER} className="text-blue-600 font-bold hover:text-blue-700 transition-colors">
+                Sign up here
+              </Link>
             </div>
           </form>
         </div>

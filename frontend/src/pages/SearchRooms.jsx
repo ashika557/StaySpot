@@ -355,17 +355,17 @@ const SearchRooms = ({ user }) => {
                             </div>
                         </div>
 
-                        {/* Map — col 7 */}
                         <div className="col-span-7 flex flex-col">
                             <div className="flex items-center gap-2 mb-4">
                                 <h3 className="text-base font-bold text-gray-900">Interactive Map</h3>
                                 <span className="text-xs text-gray-400 font-medium">Click a pin to explore</span>
                             </div>
-                            <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm flex-1" style={{ minHeight: '660px' }}>
+                            <div className="rounded-2xl border border-gray-100 shadow-sm flex-1" style={{ minHeight: '660px' }}>
                                 <RoomMap
                                     rooms={rooms}
                                     externalSelectedRoom={selectedRoom}
                                     onRoomClick={setSelectedRoom}
+                                    searchCoords={searchCoords}
                                 />
                             </div>
                         </div>
@@ -493,16 +493,6 @@ function RoomCard({ room, navigate, isSelected, onClick }) {
                             by <span className="font-semibold text-gray-600">{room.owner?.full_name || 'Unknown'}</span>
                         </p>
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (room.owner?.id) navigate(`/messages?userId=${room.owner.id}`);
-                                }}
-                                title="Message Owner"
-                                className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:bg-blue-600 hover:text-white border border-gray-200 hover:border-blue-600 transition"
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                            </button>
                             <Link
                                 to={`/room/${room.id}`}
                                 onClick={(e) => e.stopPropagation()}
