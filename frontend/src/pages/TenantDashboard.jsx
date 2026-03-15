@@ -168,7 +168,7 @@ export default function TenantDashboard({ user }) {
           <div className="mb-8 flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-400 font-medium mb-0.5">{getGreeting()},</p>
-              <h2 className="text-2xl font-bold text-gray-900">{user?.full_name || 'Welcome back'} 👋</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{user?.full_name || 'Welcome back'} </h2>
               <p className="text-sm text-gray-400 mt-0.5">Here's what's happening with your stay today.</p>
             </div>
             {pendingPayments.length > 0 && (
@@ -581,7 +581,7 @@ function SuggestedRoomsSection({ rooms }) {
   );
 }
 
-/* ─── Room Card ──────────────────────────────────────────── */
+/*Room Card */
 function RoomCard({ room }) {
   const navigate = useNavigate();
   const imageUrl = room.images?.length > 0

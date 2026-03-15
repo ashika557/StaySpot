@@ -160,7 +160,7 @@ export default function OwnerDashboard({ user, onLogout }) {
               {/* Page Header */}
               <div className="mb-8">
                 <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-                  Welcome back, {user?.full_name?.split(' ')[0] || 'Owner'} 👋
+                  Welcome back, {user?.full_name?.split(' ')[0] || 'Owner'} 
                 </h1>
                 <p className="text-sm text-gray-400 mt-1">Here's what's happening with your properties today.</p>
               </div>
