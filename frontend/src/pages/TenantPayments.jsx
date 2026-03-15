@@ -107,9 +107,11 @@ export default function TenantPayments({ user }) {
                     if (verifyResult.status === 'Payment verified successfully') {
                         setVerificationMessage("eSewa Payment Verified!");
                         alert("Success! Your eSewa payment has been verified.");
+                    } else {
+                        alert(`Verification failed: ${verifyResult.error || 'Unknown error'}`);
                     }
                 } else {
-                    alert(`eSewa status: ${responseData.status || 'Unknown'}`);
+                    alert(`eSewa status: ${responseData.status || 'Unknown'}. Payment was not completed.`);
                 }
                 await fetchPayments(false);
             } catch (err) {

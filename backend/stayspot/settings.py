@@ -189,8 +189,10 @@ DEFAULT_FROM_EMAIL = 'noreply@stayspot.com'
 FRONTEND_URL = 'http://localhost:3000'
 
 # eSewa Configuration (UAT/Sandbox defaults)
-ESEWA_SECRET_KEY = os.environ.get('ESEWA_SECRET_KEY', '')
+# IMPORTANT: ESEWA_SECRET_KEY must be set in your .env file for signatures to work!
+ESEWA_SECRET_KEY = os.environ.get('ESEWA_SECRET_KEY', '8g7h9z9876nd97y') # Replace with your test key if not in .env
 ESEWA_PRODUCT_CODE = os.environ.get('ESEWA_PRODUCT_CODE', 'EPAYTEST')
+# eSewa v2 Sandbox (UAT/RC)
 ESEWA_GATEWAY_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
 
 # Khalti Configuration (Sandbox)

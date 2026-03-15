@@ -49,7 +49,12 @@ const SearchRooms = ({ user }) => {
     const onPlaceChanged = () => {
         if (autocomplete) {
             const place = autocomplete.getPlace();
-            if (!place.geometry?.location) return;
+            if (!place.geometry?.location) {
+                const manualValue = searchInputValue;
+                setFilters(prev => ({ ...prev, location: manualValue }));
+                setSearchCoords(null);
+                return;
+            }
             const lat = place.geometry.location.lat();
             const lng = place.geometry.location.lng();
             setSearchCoords({ lat, lng });
@@ -93,10 +98,30 @@ const SearchRooms = ({ user }) => {
 
     useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
+    const handleLocationInputChange = (e) => {
+        const val = e.target.value;
+        setSearchInputValue(val);
+        // Sync filter immediately and clear coords for manual entries
+        setFilters(prev => ({ ...prev, location: val }));
+        if (searchCoords) setSearchCoords(null);
+    };
+
+    const handleLocationKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            // No need to manually fetch, useEffect watches filters
+            console.log("Searching for:", searchInputValue);
+        }
+    };
+
     const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
     const handleFacilityChange = (f) => setFilters(prev => ({
         ...prev, facilities: { ...prev.facilities, [f]: !prev.facilities[f] }
     }));
+
+    const handleApplyFilters = () => {
+        // No need to manually fetch, useEffect watches filters
+        console.log("Applying all filters");
+    };
 
     const resetFilters = () => {
         setFilters({
@@ -164,7 +189,8 @@ const SearchRooms = ({ user }) => {
                                             type="text"
                                             placeholder="Search location..."
                                             value={searchInputValue}
-                                            onChange={(e) => setSearchInputValue(e.target.value)}
+                                            onChange={handleLocationInputChange}
+                                            onKeyDown={handleLocationKeyDown}
                                             className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition"
                                         />
                                     </div>
@@ -304,7 +330,7 @@ const SearchRooms = ({ user }) => {
                                 >
                                     <RotateCcw className="w-3.5 h-3.5" /> Reset
                                 </button>
-                                <button onClick={fetchRooms}
+                                <button onClick={handleApplyFilters}
                                     className="flex items-center gap-2 px-7 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-200 transition"
                                 >
                                     <Search className="w-3.5 h-3.5" /> Apply Filters

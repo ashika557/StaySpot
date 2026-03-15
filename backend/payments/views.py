@@ -105,9 +105,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
             print(f"DEBUG: Verifying message: {message_str}")
             
             secret_key = settings.ESEWA_SECRET_KEY
-            expected_sig = base64.b64encode(
-                hmac.new(secret_key.encode(), message_str.encode(), hashlib.sha256).digest()
-            ).decode()
+            if not secret_key:
+                print("WARNING: ESEWA_SECRET_KEY is not set. Verification will likely fail.")
+
+            # HMAC requires the key and message as bytes, then we base64 encode the digest
+            hmac_obj = hmac.new(secret_key.encode(), message_str.encode(), hashlib.sha256)
+            expected_sig = base64.b64encode(hmac_obj.digest()).decode()
             
             print(f"DEBUG: Expected signature: {expected_sig}")
             print(f"DEBUG: Received signature: {resp_sig}")
@@ -122,12 +125,15 @@ class PaymentViewSet(viewsets.ModelViewSet):
                  print(f"DEBUG: Status is {esewa_status}, not COMPLETE or SUCCESS")
                  return Response({'error': f'Payment status is {esewa_status}'}, status=status.HTTP_400_BAD_REQUEST)
 
-            transaction_id = response_data.get('transaction_code')
+            esewa_transaction_code = response_data.get('transaction_code')
             
             payment.status = 'Paid'
             payment.paid_date = timezone.now().date()
             payment.payment_method = 'eSewa'
-            payment.transaction_id = transaction_id
+            # We keep the transaction_id as the UUID for lookup consistency, 
+            # but we can append or store the esewa code if needed.
+            # Here we'll store the esewa code as the definitive transaction reference.
+            payment.transaction_id = esewa_transaction_code
             payment.save()
             # Update Related Statuses
             booking = payment.booking
@@ -416,7 +422,7 @@ def owner_financial_dashboard(request):
             'this_month': {
                 'earnings': this_month_earnings,
                 'transactions': this_month_count,
-                'change': round(this_month_change, 1)
+                'change': round(float(this_month_change), 1)
             },
             'last_month': {
                 'earnings': last_month_earnings,
