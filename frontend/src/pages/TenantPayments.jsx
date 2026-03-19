@@ -17,10 +17,11 @@ export default function TenantPayments({ user }) {
 
     // banner shown during payment verification
     const [verificationMessage, setVerificationMessage] = useState(null);
+    const [verificationStatus, setVerificationStatus] = useState('loading'); // 'loading', 'success', 'error'
 
     // refs to prevent verifying the same payment twice on re-render
     // (payment gateways redirect back to this page with ?pidx= in the URL)
-    const isVerifyingRef = useRef(false);
+    const isAutoVerifyingRef = useRef(false);
     const hasProcessedCallbackRef = useRef(false);
 
     const fetchPayments = async (showLoading = true) => {
@@ -41,8 +42,8 @@ export default function TenantPayments({ user }) {
 
     // handles redirect back from Khalti or eSewa after payment
     const handlePaymentCallback = useCallback(async () => {
-        // skip if already verifying or already done
-        if (isVerifyingRef.current || hasProcessedCallbackRef.current) return;
+        // skip if already done
+        if (hasProcessedCallbackRef.current) return;
 
         const urlParams = new URLSearchParams(window.location.search);
         const pidx = urlParams.get('pidx');                   // Khalti param
@@ -58,68 +59,101 @@ export default function TenantPayments({ user }) {
         // --- Khalti ---
         if (pidx) {
             try {
-                isVerifyingRef.current = true;
                 setVerificationMessage("Verifying your Khalti payment...");
 
                 // our internal DB ID is embedded in the order ID e.g. "StaySpot-42-..."
                 let paymentId = purchaseOrderId?.split('-')[1];
 
-                // fallback: find the oldest pending payment if order ID is missing
-                if (!paymentId && payments.length > 0) {
-                    const pendingKhalti = payments.find(p => p.status === 'Pending' || p.status === 'Overdue');
+                // fallback: fetch payments from backend if order ID is missing and state is empty
+                if (!paymentId) {
+                    let currentPayments = payments;
+                    if (currentPayments.length === 0) {
+                        currentPayments = await paymentService.getAllPayments();
+                    }
+                    const pendingKhalti = currentPayments.find(p => p.status === 'Pending' || p.status === 'Overdue');
                     if (pendingKhalti) paymentId = pendingKhalti.id;
                 }
 
                 if (paymentId) {
                     const verifyResult = await paymentService.verifyKhaltiPayment(paymentId, pidx);
                     if (verifyResult.status === 'Payment verified successfully') {
+                        setVerificationStatus('success');
                         setVerificationMessage("Payment Verified Successfully!");
-                        alert("Success! Your Khalti payment has been verified.");
                     } else {
+                        setVerificationStatus('error');
                         setVerificationMessage(`Status: ${verifyResult.status || 'Done'}`);
                     }
                     await fetchPayments(false); // silent refresh
+                } else {
+                    setVerificationStatus('error');
+                    setVerificationMessage("Khalti returned successfully, but we could not find which pending payment this belongs to!");
                 }
             } catch (err) {
                 console.error('Khalti callback error:', err);
-                setVerificationMessage(`Verification failed: ${err.message}`);
+                setVerificationStatus('error');
+                setVerificationMessage(`Khalti verification failed: ${err.message}`);
             } finally {
-                isVerifyingRef.current = false;
-                setTimeout(() => setVerificationMessage(null), 3000);
+                setTimeout(() => setVerificationMessage(null), 8000);
             }
         }
 
         // --- eSewa ---
         if (encodedData) {
             try {
-                isVerifyingRef.current = true;
                 setVerificationMessage("Verifying your eSewa payment...");
 
-                // eSewa sends a base64 encoded JSON string
-                const decodedString = atob(encodedData);
+                // Fix base64 format (eSewa sometimes uses base64url or truncates padding, and URL decodes + into spaces)
+                let safeData = encodedData.replace(/-/g, '+').replace(/_/g, '/').replace(/ /g, '+');
+                while (safeData.length % 4 !== 0) { safeData += '='; }
+                
+                const decodedString = atob(safeData);
                 const responseData = JSON.parse(decodedString);
-                const transactionUuid = responseData.transaction_uuid;
-                const paymentId = transactionUuid.split('-')[1];
+                
+                const transactionUuid = responseData.transaction_uuid || '';
+                let paymentId = transactionUuid.split('-')[1];
+
+                // fallback: fetch payments from backend if order ID is missing and state is empty
+                if (!paymentId) {
+                    let currentPayments = payments;
+                    if (currentPayments.length === 0) {
+                        currentPayments = await paymentService.getAllPayments();
+                    }
+                    const pendingEsewa = currentPayments.find(p => p.status === 'Pending' || p.status === 'Overdue');
+                    if (pendingEsewa) paymentId = pendingEsewa.id;
+                }
+
                 const status = responseData.status?.toUpperCase();
 
-                if (status === 'COMPLETE' || status === 'SUCCESS') {
-                    const verifyResult = await paymentService.verifyEsewaPayment(paymentId, encodedData);
-                    if (verifyResult.status === 'Payment verified successfully') {
-                        setVerificationMessage("eSewa Payment Verified!");
-                        alert("Success! Your eSewa payment has been verified.");
+                if (paymentId) {
+                    if (status === 'COMPLETE' || status === 'SUCCESS') {
+                        // Pass safeData (which has fixed padding & spaces mapped to +) to prevent Python crashes!
+                        const verifyResult = await paymentService.verifyEsewaPayment(paymentId, safeData);
+                        if (verifyResult.status === 'Payment verified successfully' || verifyResult.status === 'Paid') {
+                            setVerificationStatus('success');
+                            setVerificationMessage("eSewa Payment Verified Successfully!");
+                        } else if (verifyResult.error) {
+                            setVerificationStatus('error');
+                            setVerificationMessage(`Verification failed: ${verifyResult.error}`);
+                        } else {
+                            setVerificationStatus('success');
+                            setVerificationMessage("eSewa payment recorded successfully.");
+                        }
                     } else {
-                        alert(`Verification failed: ${verifyResult.error || 'Unknown error'}`);
+                        setVerificationStatus('error');
+                        setVerificationMessage(`eSewa payment was not completed. Status: ${responseData.status || 'Unknown'}`);
                     }
                 } else {
-                    alert(`eSewa status: ${responseData.status || 'Unknown'}. Payment was not completed.`);
+                    setVerificationStatus('error');
+                    setVerificationMessage("eSewa returned successfully, but we could not find which pending payment this belongs to!");
                 }
+                
                 await fetchPayments(false);
             } catch (err) {
                 console.error('eSewa callback error:', err);
-                alert("eSewa verification failed.");
+                setVerificationStatus('error');
+                setVerificationMessage("eSewa verification failed. Please contact support.");
             } finally {
-                isVerifyingRef.current = false;
-                setTimeout(() => setVerificationMessage(null), 3000);
+                setTimeout(() => setVerificationMessage(null), 8000);
             }
         }
     }, [payments.length]);
@@ -132,13 +166,13 @@ export default function TenantPayments({ user }) {
     // handles the case where user closed the browser mid-redirect but payment went through
     useEffect(() => {
         const autoVerify = async () => {
-            if (payments.length > 0 && !isVerifyingRef.current) {
+            if (payments.length > 0 && !isAutoVerifyingRef.current) {
                 const pending = payments.filter(
                     p => (p.status === 'Pending' || p.status === 'Overdue') && p.transaction_id
                 );
 
                 if (pending.length > 0) {
-                    isVerifyingRef.current = true;
+                    isAutoVerifyingRef.current = true;
                     let changed = false;
                     for (const p of pending) {
                         try {
@@ -153,7 +187,7 @@ export default function TenantPayments({ user }) {
                             console.error('Auto-verify failed for', p.id, e);
                         }
                     }
-                    isVerifyingRef.current = false;
+                    isAutoVerifyingRef.current = false;
                     if (changed) fetchPayments(false);
                 }
             }
@@ -166,19 +200,23 @@ export default function TenantPayments({ user }) {
         try {
             const params = await paymentService.getEsewaParams(payment.id);
             const esewaUrl = params.esewa_url;
+            
+            // Force the redirect to the current domain + path to prevent environment mismatches
+            const successUrl = `${window.location.origin}/tenant/payments`;
+            const failureUrl = `${window.location.origin}/tenant/payments`;
 
             const formFields = {
                 amount: params.amount,
-                failure_url: params.failure_url,
-                product_delivery_charge: params.product_delivery_charge,
-                product_service_charge: params.product_service_charge,
-                product_code: params.product_code,
-                signature: params.signature,
-                signed_field_names: params.signed_field_names,
-                success_url: params.success_url,
                 tax_amount: params.tax_amount,
                 total_amount: params.total_amount,
-                transaction_uuid: params.transaction_uuid
+                transaction_uuid: params.transaction_uuid,
+                product_code: params.product_code,
+                product_service_charge: params.product_service_charge,
+                product_delivery_charge: params.product_delivery_charge,
+                success_url: successUrl,
+                failure_url: failureUrl,
+                signed_field_names: params.signed_field_names,
+                signature: params.signature
             };
 
             // build and submit an invisible form so browser does native POST
@@ -205,7 +243,8 @@ export default function TenantPayments({ user }) {
     // Khalti just needs a URL redirect, much simpler than eSewa
     const handleKhaltiPayment = async (payment) => {
         try {
-            const response = await paymentService.initiateKhaltiPayment(payment.id, window.location.href);
+            const returnUrl = `${window.location.origin}/tenant/payments`;
+            const response = await paymentService.initiateKhaltiPayment(payment.id, returnUrl);
             if (response.payment_url) {
                 window.location.href = response.payment_url;
             } else {
@@ -258,13 +297,38 @@ export default function TenantPayments({ user }) {
 
                         {/* verification banner — only shown during/after gateway redirect */}
                         {verificationMessage && (
-                            <div className="max-w-6xl mx-auto mb-6 bg-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse">
-                                <div className="flex items-center gap-3">
-                                    <Clock className="animate-spin w-5 h-5 text-blue-100" />
-                                    <span className="font-bold">{verificationMessage}</span>
+                            <div className={`max-w-6xl mx-auto mb-6 p-5 rounded-2xl shadow-xl flex items-center justify-between border-l-4 transition-all duration-500 animate-in slide-in-from-top-4 ${
+                                verificationStatus === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-emerald-100' :
+                                verificationStatus === 'error' ? 'bg-rose-50 border-rose-500 text-rose-900 shadow-rose-100' :
+                                'bg-blue-50 border-blue-500 text-blue-900 shadow-blue-100'
+                            }`}>
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                        verificationStatus === 'success' ? 'bg-emerald-100 text-emerald-600' :
+                                        verificationStatus === 'error' ? 'bg-rose-100 text-rose-600' :
+                                        'bg-blue-100 text-blue-600'
+                                    }`}>
+                                        {verificationStatus === 'success' ? <CheckCircle2 className="w-6 h-6" /> :
+                                         verificationStatus === 'error' ? <AlertCircle className="w-6 h-6" /> :
+                                         <Clock className="w-6 h-6 animate-spin" />}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-sm uppercase tracking-wider opacity-60">
+                                            {verificationStatus === 'loading' ? 'Verifying...' : 
+                                             verificationStatus === 'success' ? 'Payment Success' : 'Payment Issue'}
+                                        </h4>
+                                        <span className="text-base font-medium">{verificationMessage}</span>
+                                    </div>
                                 </div>
-                                <button onClick={() => setVerificationMessage(null)} className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition">
-                                    Dismiss
+                                <button 
+                                    onClick={() => setVerificationMessage(null)} 
+                                    className={`p-2 rounded-xl transition-colors ${
+                                        verificationStatus === 'success' ? 'hover:bg-emerald-100 text-emerald-400' :
+                                        verificationStatus === 'error' ? 'hover:bg-rose-100 text-rose-400' :
+                                        'hover:bg-blue-100 text-blue-400'
+                                    }`}
+                                >
+                                    <Search className="w-5 h-5 rotate-45" /> {/* Use as close icon */}
                                 </button>
                             </div>
                         )}
@@ -475,7 +539,7 @@ export default function TenantPayments({ user }) {
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-[#60BB46]/10 rounded-lg flex items-center justify-center">
-                                                        <div className="w-6 h-6 bg-[#60BB46] rounded flex items-center justify-center text-white text-[10px] font-bold">e</div>
+                                                        <div className="w-6 h-6 bg-[#60BB46] rounded flex items-center justify-center text-white text-[13px] font-extrabold">e</div>
                                                     </div>
                                                     <span className="text-sm font-bold text-slate-700">eSewa</span>
                                                 </div>
@@ -492,7 +556,7 @@ export default function TenantPayments({ user }) {
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-[#5D2E8E]/10 rounded-lg flex items-center justify-center">
-                                                        <div className="w-6 h-6 bg-[#5D2E8E] rounded flex items-center justify-center text-white text-[10px] font-bold">K</div>
+                                                        <div className="w-6 h-6 bg-[#5D2E8E] rounded flex items-center justify-center text-white text-[13px] font-extrabold">K</div>
                                                     </div>
                                                     <span className="text-sm font-bold text-slate-700">Khalti</span>
                                                 </div>

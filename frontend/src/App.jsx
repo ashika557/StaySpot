@@ -137,14 +137,14 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
                 />
               ) : user ? (
                 <Navigate
-                  to={
+                  to={`${
                     user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                       user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
                         ROUTES.TENANT_DASHBOARD
-                  }
+                  }${location.search}`}
                 />
               ) : (
-                <Navigate to={ROUTES.LOGIN} />
+                <Navigate to={`${ROUTES.LOGIN}${location.search}`} />
               )
             }
           />
@@ -154,11 +154,11 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
             path={ROUTES.LOGIN}
             element={
               user ? (
-                <Navigate to={
+                <Navigate to={`${
                   user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                     user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
                       ROUTES.TENANT_DASHBOARD
-                } />
+                }${location.search}`} />
               ) : (
                 <Login onLogin={handleLogin} />
               )
@@ -169,11 +169,11 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
             path={ROUTES.REGISTER}
             element={
               user ? (
-                <Navigate to={
+                <Navigate to={`${
                   user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                     user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
                       ROUTES.TENANT_DASHBOARD
-                } />
+                }${location.search}`} />
               ) : (
                 <Register onLogin={handleLogin} />
               )
@@ -186,77 +186,77 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
 
           <Route
             path={ROUTES.TENANT_SEARCH}
-            element={user && user.role === 'Tenant' ? <SearchRooms user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Tenant' ? <SearchRooms user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.TENANT_DASHBOARD}
-            element={user && user.role === 'Tenant' ? <TenantDashboard user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Tenant' ? <TenantDashboard user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.TENANT_BOOKINGS}
-            element={user && user.role === 'Tenant' ? <TenantBookings user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Tenant' ? <TenantBookings user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.TENANT_VISITS}
-            element={user && user.role === 'Tenant' ? <TenantVisits user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Tenant' ? <TenantVisits user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.TENANT_PAYMENTS}
-            element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           {/* Fallback for Khalti Redirection */}
           <Route
             path="/payments/khalti_callback/"
-            element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Tenant' ? <TenantPayments user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.TENANT_COMPLAINTS}
-            element={user && user.role === 'Tenant' ? <ComplaintsReviews user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Tenant' ? <ComplaintsReviews user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.ROOM_DETAILS}
-            element={user ? <RoomDetails user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user ? <RoomDetails user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
 
           <Route
             path={ROUTES.OWNER_DASHBOARD}
-            element={user && user.role === 'Owner' ? <OwnerDashboard user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Owner' ? <OwnerDashboard user={user} onLogout={handleLogout} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.OWNER_ROOMS}
-            element={user && user.role === 'Owner' ? <OwnerRooms user={user} refreshUser={refreshUser} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Owner' ? <OwnerRooms user={user} refreshUser={refreshUser} onLogout={handleLogout} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.OWNER_BOOKINGS}
-            element={user && user.role === 'Owner' ? <OwnerBookings user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Owner' ? <OwnerBookings user={user} onLogout={handleLogout} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path="/owner/visits"
-            element={user && user.role === 'Owner' ? <OwnerVisitRequests user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Owner' ? <OwnerVisitRequests user={user} onLogout={handleLogout} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.OWNER_TENANTS}
-            element={user && user.role === 'Owner' ? <OwnerTenants user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Owner' ? <OwnerTenants user={user} onLogout={handleLogout} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.OWNER_PAYMENTS}
-            element={user && user.role === 'Owner' ? <OwnerPayments user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Owner' ? <OwnerPayments user={user} onLogout={handleLogout} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
 
           <Route
             path={ROUTES.OWNER_MAINTENANCE}
-            element={user && user.role === 'Owner' ? <OwnerMaintenance user={user} onLogout={handleLogout} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user && user.role === 'Owner' ? <OwnerMaintenance user={user} onLogout={handleLogout} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.CHAT}
-            element={user ? <Chat user={user} /> : <Navigate to={ROUTES.LOGIN} />}
+            element={user ? <Chat user={user} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
           <Route
             path={ROUTES.PROFILE}
             element={user ? <Profile user={user} refreshUser={refreshUser} onUpdateUser={(updatedUser) => {
               setUser(updatedUser);
               localStorage.setItem('user', JSON.stringify(updatedUser));
-            }} /> : <Navigate to={ROUTES.LOGIN} />}
+            }} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
 
           <Route

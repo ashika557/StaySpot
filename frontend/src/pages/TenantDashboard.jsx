@@ -24,65 +24,16 @@ export default function TenantDashboard({ user }) {
   useEffect(() => { fetchDashboardData(); }, []);
 
   const handlePaymentCallback = useCallback(async () => {
-    if (isVerifyingRef.current || hasProcessedCallbackRef.current) return;
     const urlParams = new URLSearchParams(window.location.search);
     const pidx = urlParams.get('pidx');
-    const purchaseOrderId = urlParams.get('purchase_order_id');
     const encodedData = urlParams.get('data');
-    const status = urlParams.get('status');
     const paymentIdLegacy = urlParams.get('payment_id');
-    const method = urlParams.get('method');
-    if (!pidx && !encodedData && !(status === 'success' && paymentIdLegacy)) return;
-    hasProcessedCallbackRef.current = true;
-    window.history.replaceState({}, document.title, window.location.pathname);
-    if (pidx) {
-      try {
-        isVerifyingRef.current = true;
-        setVerificationMessage("Verifying your Khalti payment...");
-        let paymentId = purchaseOrderId?.split('-')[1] || paymentIdLegacy;
-        if (paymentId) {
-          const verifyResult = await paymentService.verifyKhaltiPayment(paymentId, pidx);
-          if (verifyResult.status === 'Payment verified successfully') {
-            alert("Success! Your Khalti payment has been verified.");
-            await paymentService.generateMonthlyRents();
-            fetchDashboardData();
-          }
-        }
-      } catch (err) { console.error('Khalti callback error:', err); }
-      finally { isVerifyingRef.current = false; setVerificationMessage(null); }
+    
+    // If we detect any payment callback tokens on the dashboard, instantly push them to the payments page
+    if (pidx || encodedData || paymentIdLegacy) {
+      navigate(`/tenant/payments${window.location.search}`);
     }
-    if (encodedData) {
-      try {
-        isVerifyingRef.current = true;
-        setVerificationMessage("Verifying your eSewa payment...");
-        const decodedString = atob(encodedData);
-        const responseData = JSON.parse(decodedString);
-        const transactionUuid = responseData.transaction_uuid;
-        const paymentId = transactionUuid.split('-')[1];
-        const esewaStatus = responseData.status?.toUpperCase();
-        if (esewaStatus === 'COMPLETE' || esewaStatus === 'SUCCESS') {
-          const verifyResult = await paymentService.verifyEsewaPayment(paymentId, encodedData);
-          if (verifyResult.status === 'Payment verified successfully') {
-            alert("Success! Your eSewa payment has been verified.");
-            await paymentService.generateMonthlyRents();
-            fetchDashboardData();
-          }
-        } else { alert(`eSewa status: ${responseData.status || 'Unknown'}`); }
-      } catch (err) { console.error('eSewa callback error:', err); alert("eSewa verification failed."); }
-      finally { isVerifyingRef.current = false; setVerificationMessage(null); }
-    }
-    if (status === 'success' && paymentIdLegacy && method === 'esewa' && !encodedData) {
-      try {
-        isVerifyingRef.current = true;
-        setVerificationMessage("Verifying payment...");
-        const refId = urlParams.get('refId') || urlParams.get('oid');
-        await paymentService.verifyEsewaPayment(paymentIdLegacy, refId);
-        alert("eSewa payment verified successfully!");
-        fetchDashboardData();
-      } catch (err) { console.error(err); }
-      finally { isVerifyingRef.current = false; setVerificationMessage(null); }
-    } else if (status === 'failure') { alert("Payment failed."); }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => { handlePaymentCallback(); }, [handlePaymentCallback]);
 
@@ -391,6 +342,11 @@ function PaymentRemindersCard({ payments }) {
   const handleEsewaPayment = async (payment) => {
     try {
       const params = await paymentService.getEsewaParams(payment.id);
+      
+      // Force the redirect to the current domain + path to prevent environment mismatches
+      params.success_url = `${window.location.origin}/tenant/payments`;
+      params.failure_url = `${window.location.origin}/tenant/payments`;
+
       const form = document.createElement('form');
       form.setAttribute('method', 'POST');
       form.setAttribute('action', params.esewa_url);
@@ -410,7 +366,8 @@ function PaymentRemindersCard({ payments }) {
   const handleKhaltiPayment = async (payment) => {
     try {
       const { paymentService: ps } = await import('../services/tenantService');
-      const response = await ps.initiateKhaltiPayment(payment.id, window.location.href);
+      const returnUrl = `${window.location.origin}/tenant/payments`;
+      const response = await ps.initiateKhaltiPayment(payment.id, returnUrl);
       if (response.payment_url) window.location.href = response.payment_url;
       else throw new Error("Payment URL not received");
     } catch (error) { alert('Failed to initiate Khalti payment. Please try again.'); }

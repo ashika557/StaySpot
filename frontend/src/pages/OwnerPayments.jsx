@@ -102,11 +102,29 @@ const OwnerPayments = ({ user, onLogout }) => {
 
     const getPaymentMethodIcon = (method) => {
         if (!method) return null;
-        if (method.toLowerCase().includes('esewa'))
-            return <img src="https://esewa.com.np/common/images/esewa_logo.png" className="w-5 h-5 object-contain" alt="eSewa" />;
-        if (method.toLowerCase().includes('khalti'))
-            return <img src="https://khalti.com/static/img/logo1.png" className="w-5 h-5 object-contain" alt="Khalti" />;
-        return <Wallet className="w-4 h-4 text-blue-600" />;
+        const normalizedMethod = method.toLowerCase();
+        
+        if (normalizedMethod.includes('esewa')) {
+            return (
+                <div className="w-6 h-6 bg-[#60BB46] rounded-md flex items-center justify-center text-white text-[13px] font-extrabold shadow-sm" title="eSewa">
+                    e
+                </div>
+            );
+        }
+        
+        if (normalizedMethod.includes('khalti')) {
+            return (
+                <div className="w-6 h-6 bg-[#5D2E8E] rounded-md flex items-center justify-center text-white text-[13px] font-extrabold shadow-sm" title="Khalti">
+                    K
+                </div>
+            );
+        }
+        
+        return (
+            <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-blue-600 shadow-sm">
+                <Wallet className="w-3 h-3" />
+            </div>
+        );
     };
 
     const statCards = [
