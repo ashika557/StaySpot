@@ -62,7 +62,7 @@ export default function OwnerMaintenance({ user, onLogout }) {
     const getStatusStyles = (status) => {
         switch (status) {
             case 'Resolved': return 'bg-green-50 text-green-600 border-green-100';
-            case 'Investigating': return 'bg-blue-50 text-blue-600 border-blue-100';
+            case 'Checking': return 'bg-blue-50 text-blue-600 border-blue-100';
             default: return 'bg-orange-50 text-orange-600 border-orange-100';
         }
     };
@@ -100,7 +100,7 @@ export default function OwnerMaintenance({ user, onLogout }) {
                                     />
                                 </div>
                                 <div className="flex items-center bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
-                                    {['All', 'Pending', 'Investigating', 'Resolved'].map(status => (
+                                    {['All', 'Pending', 'Checking', 'Resolved'].map(status => (
                                         <button
                                             key={status}
                                             onClick={() => setStatusFilter(status)}
@@ -187,18 +187,18 @@ export default function OwnerMaintenance({ user, onLogout }) {
                                             <div className="flex items-center gap-2">
                                                 {req.status === 'Pending' && (
                                                     <button
-                                                        onClick={() => handleStatusUpdate(req.id, 'Investigating')}
+                                                        onClick={() => handleStatusUpdate(req.id, 'Checking')}
                                                         disabled={updatingId === req.id}
                                                         className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
                                                     >
                                                         {updatingId === req.id ? (
                                                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                                         ) : <>
-                                                            <Clock size={14} /> Start Investigation
+                                                            <Clock size={14} /> Start Working
                                                         </>}
                                                     </button>
                                                 )}
-                                                {req.status === 'Investigating' && (
+                                                {req.status === 'Checking' && (
                                                     <button
                                                         onClick={() => handleStatusUpdate(req.id, 'Resolved')}
                                                         disabled={updatingId === req.id}

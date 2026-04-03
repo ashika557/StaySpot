@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
 import {
     Search, ChevronDown, CheckCircle2, Clock, Wallet,
-    CreditCard, DollarSign, Calendar, AlertCircle, ExternalLink, Filter
+    CreditCard, DollarSign, Calendar, AlertCircle, ExternalLink, Filter, XCircle
 } from 'lucide-react';
 import { paymentService } from '../services/tenantService';
 
 export default function TenantPayments({ user }) {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const location = useLocation();
 
     // filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All Status');
     const [timeFilter, setTimeFilter] = useState('All Time');
-
     // banner shown during payment verification
     const [verificationMessage, setVerificationMessage] = useState(null);
     const [verificationStatus, setVerificationStatus] = useState('loading'); // 'loading', 'success', 'error'
@@ -126,25 +127,24 @@ export default function TenantPayments({ user }) {
 
                 if (paymentId) {
                     if (status === 'COMPLETE' || status === 'SUCCESS') {
-                        // Pass safeData (which has fixed padding & spaces mapped to +) to prevent Python crashes!
                         const verifyResult = await paymentService.verifyEsewaPayment(paymentId, safeData);
                         if (verifyResult.status === 'Payment verified successfully' || verifyResult.status === 'Paid') {
                             setVerificationStatus('success');
                             setVerificationMessage("eSewa Payment Verified Successfully!");
                         } else if (verifyResult.error) {
                             setVerificationStatus('error');
-                            setVerificationMessage(`Verification failed: ${verifyResult.error}`);
+                            setVerificationMessage(`eSewa Verification failed: ${verifyResult.error}`);
                         } else {
                             setVerificationStatus('success');
-                            setVerificationMessage("eSewa payment recorded successfully.");
+                            setVerificationMessage("eSewa payment recorded succesfully.");
                         }
                     } else {
                         setVerificationStatus('error');
-                        setVerificationMessage(`eSewa payment was not completed. Status: ${responseData.status || 'Unknown'}`);
+                        setVerificationMessage(`eSewa payment failed. Status: ${responseData.status || 'Unknown'}`);
                     }
                 } else {
                     setVerificationStatus('error');
-                    setVerificationMessage("eSewa returned successfully, but we could not find which pending payment this belongs to!");
+                    setVerificationMessage("eSewa ID mismatch error. Please contact support.");
                 }
                 
                 await fetchPayments(false);
@@ -156,11 +156,11 @@ export default function TenantPayments({ user }) {
                 setTimeout(() => setVerificationMessage(null), 8000);
             }
         }
-    }, [payments.length]);
+    }, [payments.length, location.search]);
 
     useEffect(() => {
         handlePaymentCallback();
-    }, [handlePaymentCallback]);
+    }, [location.search, handlePaymentCallback]);
 
     // auto-verify pending payments that already have a transaction_id
     // handles the case where user closed the browser mid-redirect but payment went through
@@ -236,7 +236,8 @@ export default function TenantPayments({ user }) {
             form.submit();
         } catch (error) {
             console.error('Error initiating eSewa payment:', error);
-            alert('Failed to initiate payment. Please try again.');
+            setVerificationStatus('error');
+            setVerificationMessage('Failed to initiate payment. Please try again.');
         }
     };
 
@@ -252,7 +253,8 @@ export default function TenantPayments({ user }) {
             }
         } catch (error) {
             console.error('Error initiating Khalti payment:', error);
-            alert('Failed to initiate Khalti payment. Please try again.');
+            setVerificationStatus('error');
+            setVerificationMessage('Failed to initiate Khalti payment. Please try again.');
         }
     };
 

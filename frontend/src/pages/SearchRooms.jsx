@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Search, MapPin, Star, ChevronDown, RotateCcw,
     ChevronRight, MessageCircle, SlidersHorizontal,
-    Map, Wifi, Car, Droplets, UtensilsCrossed, Sofa, PawPrint, Home
+    Map as MapIcon, Wifi, Car, Droplets, UtensilsCrossed, Sofa, PawPrint, Home
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Autocomplete } from '@react-google-maps/api';
@@ -58,20 +58,43 @@ const SearchRooms = ({ user }) => {
             const lat = place.geometry.location.lat();
             const lng = place.geometry.location.lng();
             setSearchCoords({ lat, lng });
-            const name = place.formatted_address || place.name;
-            setSearchInputValue(name);
-            setFilters(prev => ({ ...prev, location: name }));
-            if (mapRef.current) { mapRef.current.panTo({ lat, lng }); mapRef.current.setZoom(14); }
+
+            // Extract just the city/town name for better database matching
+            let cityName = '';
+            if (place.address_components) {
+                // Try to find locality, then sublocality, then administrative_area_level_2
+                const locality = place.address_components.find(c => c.types.includes('locality'));
+                const sublocality = place.address_components.find(c => c.types.includes('sublocality'));
+                const admin2 = place.address_components.find(c => c.types.includes('administrative_area_level_2'));
+                
+                cityName = (locality || sublocality || admin2)?.long_name || place.name;
+            } else {
+                cityName = place.name;
+            }
+
+            const fullName = place.formatted_address || place.name;
+            setSearchInputValue(fullName);
+            // Use extracted city name for filtering, but keep full name in input
+            setFilters(prev => ({ ...prev, location: cityName }));
+            
+            if (mapRef.current) { 
+                mapRef.current.panTo({ lat, lng }); 
+                mapRef.current.setZoom(14); 
+            }
         }
     };
 
     const fetchRooms = useCallback(async () => {
         try {
             setLoading(true);
-            const radius = filters.distance.includes('km')
-                ? parseFloat(filters.distance)
-                : parseFloat(filters.distance) / 1000;
+            let radius = 5; // Default 5km
+            if (filters.distance) {
+                radius = filters.distance.includes('km')
+                    ? parseFloat(filters.distance)
+                    : parseFloat(filters.distance) / 1000;
+            }
             const apiFilters = {
+                // Always send location text search to help backend match by name as well
                 location: filters.location,
                 min_price: filters.min_price,
                 max_price: filters.max_price,
@@ -94,7 +117,7 @@ const SearchRooms = ({ user }) => {
         } finally {
             setLoading(false);
         }
-    }, [filters, searchCoords]);
+    }, [filters.location, filters.min_price, filters.max_price, filters.gender_preference, filters.room_type, filters.distance, filters.facilities, searchCoords]);
 
     useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
@@ -106,10 +129,27 @@ const SearchRooms = ({ user }) => {
         if (searchCoords) setSearchCoords(null);
     };
 
+    const handleGeocode = useCallback(async (address) => {
+        if (!window.google || !address) return;
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ address }, (results, status) => {
+            if (status === 'OK' && results[0]) {
+                const { lat, lng } = results[0].geometry.location;
+                const coords = { lat: lat(), lng: lng() };
+                setSearchCoords(coords);
+                if (mapRef.current) {
+                    mapRef.current.panTo(coords);
+                    mapRef.current.setZoom(14);
+                }
+            }
+        });
+    }, []);
+
     const handleLocationKeyDown = (e) => {
         if (e.key === 'Enter') {
-            // No need to manually fetch, useEffect watches filters
-            console.log("Searching for:", searchInputValue);
+            if (!searchCoords && searchInputValue) {
+                handleGeocode(searchInputValue);
+            }
         }
     };
 
@@ -119,8 +159,9 @@ const SearchRooms = ({ user }) => {
     }));
 
     const handleApplyFilters = () => {
-        // No need to manually fetch, useEffect watches filters
-        console.log("Applying all filters");
+        if (!searchCoords && filters.location) {
+            handleGeocode(filters.location);
+        }
     };
 
     const resetFilters = () => {

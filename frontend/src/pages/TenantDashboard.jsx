@@ -15,54 +15,22 @@ export default function TenantDashboard({ user }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [recentChats, setRecentChats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [verificationMessage, setVerificationMessage] = useState(null);
   const navigate = useNavigate();
 
   const isVerifyingRef = useRef(false);
   const hasProcessedCallbackRef = useRef(false);
 
-  useEffect(() => { fetchDashboardData(); }, []);
-
-  const handlePaymentCallback = useCallback(async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const pidx = urlParams.get('pidx');
-    const encodedData = urlParams.get('data');
-    const paymentIdLegacy = urlParams.get('payment_id');
-    
-    // If we detect any payment callback tokens on the dashboard, instantly push them to the payments page
-    if (pidx || encodedData || paymentIdLegacy) {
-      navigate(`/tenant/payments${window.location.search}`);
+  useEffect(() => {
+    // Nuclear Failsafe: If we land on dashboard (even for a second) with tokens, instantly move away
+    const search = window.location.search;
+    if (search.includes('pidx=') || search.includes('data=') || search.includes('oid=')) {
+      navigate(`${ROUTES.TENANT_PAYMENTS}${search}`, { replace: true });
+      return;
     }
+    fetchDashboardData();
   }, [navigate]);
 
-  useEffect(() => { handlePaymentCallback(); }, [handlePaymentCallback]);
-
-  useEffect(() => {
-    const autoVerify = async () => {
-      if (dashboardData?.payment_reminders?.length > 0 && !isVerifyingRef.current) {
-        const pending = dashboardData.payment_reminders.filter(
-          p => (p.status === 'Pending' || p.status === 'Overdue') && p.transaction_id
-        );
-        if (pending.length > 0) {
-          isVerifyingRef.current = true;
-          let changed = false;
-          for (const p of pending) {
-            try {
-              let res;
-              if (p.payment_method === 'Khalti') res = await paymentService.verifyKhaltiPayment(p.id, p.transaction_id);
-              else if (p.payment_method === 'eSewa') res = await paymentService.checkEsewaStatus(p.id, p.transaction_id);
-              if (res?.status === 'Payment verified successfully') changed = true;
-            } catch (e) { }
-          }
-          isVerifyingRef.current = false;
-          if (changed) fetchDashboardData();
-        }
-      }
-    };
-    const interval = setInterval(autoVerify, 30000);
-    if (dashboardData) autoVerify();
-    return () => clearInterval(interval);
-  }, [dashboardData?.payment_reminders]);
+  // Removed redundant autoVerify logic - handled in TenantPayments.jsx
 
   const fetchDashboardData = async () => {
     try {
@@ -107,13 +75,6 @@ export default function TenantDashboard({ user }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-auto">
         <main className="p-8">
 
-          {/* Verification Banner */}
-          {verificationMessage && (
-            <div className="mb-6 bg-blue-600 text-white px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-3 animate-pulse">
-              <Clock className="w-4 h-4 text-blue-200 animate-spin" />
-              <span className="font-semibold text-sm">{verificationMessage}</span>
-            </div>
-          )}
 
           {/* Page Header */}
           <div className="mb-8 flex items-start justify-between">

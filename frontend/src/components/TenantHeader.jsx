@@ -44,7 +44,7 @@ export default function TenantHeader({ user }) {
 
             {/* Right Side */}
             <div className="flex items-center gap-4 flex-shrink-0">
-                <NotificationBell user={user} />
+                <NotificationBell user={user} isDark={false} />
                 {user && (
                     <Link to={ROUTES.PROFILE} className="flex items-center gap-2 group">
                         <img

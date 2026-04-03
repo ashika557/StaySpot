@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Send, Paperclip, MoreVertical, Phone, Video, Smile, ArrowLeft, Check, CheckCheck } from 'lucide-react';
+import { Search, Send, Paperclip, MoreVertical, Smile, ArrowLeft, Check, CheckCheck } from 'lucide-react';
 import { chatService } from '../services/chatService';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ROUTES, getMediaUrl } from '../constants/api';
@@ -21,7 +21,6 @@ const Chat = ({ user }) => {
     const [uploading, setUploading] = useState(false);
 
     const fileInputRef = useRef(null);    // to click the hidden file input programmatically
-    const messagesEndRef = useRef(null);  // to auto-scroll to bottom on new message
 
     useEffect(() => {
         if (!user) return;
@@ -36,12 +35,22 @@ const Chat = ({ user }) => {
         return () => { chatService.disconnect(); };
     }, [user, location.search]);
 
+    const lastAutoStart = useRef(null);
+
     // creates a conversation if one doesn't exist, then opens it
     const handleAutoStartChat = async (userId) => {
+        // Prevent double runs for the same userId
+        if (lastAutoStart.current === userId) return;
+        lastAutoStart.current = userId;
+
         try {
+            console.log(`Auto-starting chat with user: ${userId}`);
             const data = await chatService.startConversation(userId);
-            setActiveChat(data);
-            fetchConversations();
+            if (data && data.id) {
+                setActiveChat(data);
+                // Also trigger a refresh of the conversations list so it shows in sidebar
+                await fetchConversations();
+            }
         } catch (error) {
             console.error('Failed to auto-start chat:', error);
         }
@@ -70,10 +79,29 @@ const Chat = ({ user }) => {
         }
     }, [activeChat, user.id]);
 
+    const scrollContainerRef = useRef(null);
+    const isFirstLoad = useRef(true);
+
     // scroll to bottom whenever messages change
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (messages.length > 0 && scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            if (isFirstLoad.current) {
+                container.scrollTop = container.scrollHeight;
+                isFirstLoad.current = false;
+            } else {
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
     }, [messages]);
+
+    // reset first load flag when switching conversations
+    useEffect(() => {
+        isFirstLoad.current = true;
+    }, [activeChat]);
 
     const fetchConversations = async () => {
         try {
@@ -125,11 +153,11 @@ const Chat = ({ user }) => {
     const isOwner = user?.role === 'Owner';
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex bg-gray-50 min-h-screen">
             {isOwner ? <OwnerSidebar user={user} /> : <TenantSidebar user={user} />}
 
-            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-                <div className="bg-white w-full max-w-6xl h-[85vh] rounded-2xl shadow-xl overflow-hidden flex transition-all duration-300">
+            <div className="flex-1 flex flex-col items-center justify-center p-4">
+                <div className="bg-white w-full max-w-6xl h-[75vh] rounded-2xl shadow-xl overflow-hidden flex transition-all duration-300">
 
                     {/* left sidebar — conversation list, hidden on mobile if a chat is open */}
                     <div className={`w-full md:w-1/3 bg-white border-r border-gray-100 flex flex-col ${activeChat ? 'hidden md:flex' : 'flex'}`}>
@@ -228,7 +256,7 @@ const Chat = ({ user }) => {
                                 </div>
 
                                 {/* messages */}
-                                <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 custom-scrollbar space-y-4">
+                                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 bg-gray-50/50 custom-scrollbar space-y-4">
                                     {messages.map((msg, index) => {
                                         // check both sender and sender_id to handle different backend serializations
                                         const isMe = msg.sender === user.id || msg.sender_id === user.id;
@@ -276,8 +304,6 @@ const Chat = ({ user }) => {
                                             </div>
                                         );
                                     })}
-                                    {/* invisible div at the bottom — scroll target */}
-                                    <div ref={messagesEndRef} />
                                 </div>
 
                                 {/* message input */}

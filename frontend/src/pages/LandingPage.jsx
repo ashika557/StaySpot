@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Map, Calendar, MessageSquare, Star, CreditCard, MapPin, Shield, Zap, Twitter, Facebook, Linkedin } from 'lucide-react';
+import { Home, Map as MapIcon, Calendar, MessageSquare, Star, CreditCard, MapPin, Shield, Zap, Twitter, Facebook, Linkedin } from 'lucide-react';
 import Footer from '../components/Footer';
 
 // This is the main landing page for StaySpot. 
@@ -9,57 +9,48 @@ export default function StaySpotLanding({ onGetStarted, onSignIn, user }) {
   const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#f0f7ff] relative overflow-hidden">
+      {/* Attractive background decorative elements */}
+      <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-blue-200/20 blur-[120px] rounded-full pointer-events-none z-0"></div>
+      <div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-blue-300/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
+
       {/* Top Navigation Bar */}
-      <header className="border-b">
+      <header className="border-b bg-white relative z-20">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Logo and name */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-              <Home className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Home className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold">StaySpot</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-800">StaySpot</span>
           </div>
           
-          {/* Navigation links (hidden on small screens) */}
-          <nav className="hidden md:flex gap-8">
-            <a href="#" className="text-gray-600">Home</a>
-            <a href="#" className="text-gray-600">About</a>
-            <a href="#" className="text-gray-600">Features</a>
-            <a href="#" className="text-gray-600">Contact</a>
-          </nav>
-          
-          {/* Login / Dashboard buttons */}
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             {!user ? (
-              // If nobody is logged in, show Sign In and Get Started
               <>
                 <button
-                  className="px-4 py-2 text-blue-600"
+                  className="px-6 py-2.5 text-blue-600 font-semibold hover:bg-blue-50 rounded-xl transition-colors"
                   onClick={() => {
                     if (onSignIn) onSignIn();
-                    navigate('/login'); // Go to login page
+                    navigate('/login');
                   }}
                 >
                   Sign In
                 </button>
                 <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 hover:shadow-blue-500/40 transition-all active:scale-95"
                   onClick={() => {
                     if (onGetStarted) onGetStarted();
-                    navigate('/register'); // Go to register page
+                    navigate('/register');
                   }}
                 >
                   Get Started
                 </button>
               </>
             ) : (
-              // If user is logged in, show button to go to their dashboard
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold"
+                className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95"
                 onClick={() => {
                   if (onGetStarted) onGetStarted();
-                  // Go to owner dashboard if role is Owner, else go to tenant dashboard
                   navigate(user.role === 'Owner' ? '/owner/dashboard' : '/tenant/dashboard');
                 }}
               >
@@ -71,54 +62,43 @@ export default function StaySpotLanding({ onGetStarted, onSignIn, user }) {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-blue-700 text-white py-20">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex-1">
-            <h1 className="text-5xl font-bold mb-4">StaySpot</h1>
-            <p className="text-xl">Smart, transparent, and modern room-renting in Nepal.</p>
+      <section className="bg-gradient-to-r from-blue-700 to-blue-600 text-white py-28 relative z-10">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-16">
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-6xl md:text-7xl font-black mb-8 tracking-tighter leading-none">StaySpot</h1>
+            <p className="text-2xl text-blue-50 max-w-lg leading-relaxed font-medium">Smart, transparent, and modern room-renting experience in Nepal.</p>
           </div>
-          <div className="hidden md:block">
-            {/* Example image of a room */}
-            <img src="https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=400&h=300&fit=crop" alt="room" className="w-80 h-64 rounded-xl" />
+          <div className="hidden md:block flex-1">
+            <div className="relative">
+              <div className="absolute -inset-4 bg-blue-400/20 blur-2xl rounded-full"></div>
+              <img src="https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=800&h=600&fit=crop" alt="room" className="relative w-full max-w-md h-auto rounded-3xl shadow-2xl border-8 border-white/10" />
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Mission Section */}
-      <section className="py-16">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          {/* Small icon on top */}
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <MapPin className="w-8 h-8 text-blue-600" />
-          </div>
-          <h2 className="text-3xl font-bold mb-4">Our Mission</h2>
-          <p className="text-gray-600">StaySpot makes room renting simple with smart search, interactive maps, secure chat, digital payments, and reliable owner-tenant connections.</p>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-24 bg-white/80 backdrop-blur-sm shadow-sm border-y border-blue-50 relative z-10">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-2">What We Provide</h2>
-            <p className="text-gray-600">All the tools you need for modern room renting</p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-black text-slate-900 mb-4">What We Provide</h2>
+            <p className="text-slate-500 text-lg">All the tools you need for modern room renting</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Looping through features instead of writing each one separately */}
+          <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: Home, title: 'Smart Search Filters', desc: 'Filter rooms by location, price, amenities easily.' },
-              { icon: Map, title: 'Interactive Map View', desc: 'See available rooms on a map and find the best location.' },
-              { icon: Calendar, title: 'Online Booking & Visits', desc: 'Book rooms and schedule visits without hassle.' },
-              { icon: MessageSquare, title: 'Secure Chat', desc: 'Chat safely with property owners.' },
-              { icon: Star, title: 'Reviews & Ratings', desc: 'Check honest reviews from previous tenants.' },
-              { icon: CreditCard, title: 'Online Payments', desc: 'Pay online safely with automated reminders.' }
+              { icon: Home, title: 'Smart Search Filters', desc: 'Filter rooms by location, price, and amenities with ease.' },
+              { icon: MapIcon, title: 'Map-Based View', desc: 'Interactive map results to find the perfect location.' },
+              { icon: Calendar, title: 'Bookings & Visits', desc: 'Schedule visits and book rooms instantly.' },
+              { icon: MessageSquare, title: 'Secure Communication', desc: 'Chat directly and safely with property owners.' },
+              { icon: Star, title: 'Transparent Reviews', desc: 'Honest ratings from verified previous tenants.' },
+              { icon: CreditCard, title: 'Digital Payments', desc: 'Secure online payments with automatic receipts.' }
             ].map((item, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <item.icon className="w-6 h-6 text-blue-600" />
+              <div key={i} className="bg-white p-8 rounded-3xl shadow-sm border border-blue-50 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-2 group">
+                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-600 transition-colors duration-300">
+                  <item.icon className="w-7 h-7 text-blue-600 group-hover:text-white transition-colors duration-300" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
+                <h3 className="text-xl font-bold mb-3 text-slate-800">{item.title}</h3>
+                <p className="text-slate-600 leading-relaxed font-medium">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -126,70 +106,55 @@ export default function StaySpotLanding({ onGetStarted, onSignIn, user }) {
       </section>
 
       {/* Why Choose Section */}
-      <section className="py-16">
+      <section className="py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-2">Why Choose StaySpot</h2>
-            <p className="text-gray-600">Three reasons why our platform is trusted</p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-black text-slate-900 mb-4">Why Choose StaySpot</h2>
+            <p className="text-slate-500 text-lg">Three reasons why our platform is trusted</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-12">
             {[
-              { icon: MapPin, title: 'Verified Rooms', desc: 'All listings are checked to make sure they are real.' },
-              { icon: Shield, title: 'Safe Communication', desc: 'Your privacy is protected when messaging.' },
-              { icon: Zap, title: 'Fast & Transparent', desc: 'Quick bookings with no hidden fees.' }
+              { icon: MapPin, title: 'Verified Listings', desc: 'Every property is verified for your peace of mind.' },
+              { icon: Shield, title: 'Secure Platform', desc: 'Your data and payments are always protected.' },
+              { icon: Zap, title: 'Instant Booking', desc: 'Speedy process from search to moving in.' }
             ].map((item, i) => (
-              <div key={i} className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <item.icon className="w-8 h-8 text-blue-600" />
+              <div key={i} className="bg-white/50 backdrop-blur-sm p-10 rounded-3xl border border-white text-center hover:bg-white transition-all duration-300">
+                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8">
+                  <item.icon className="w-10 h-10 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
+                <h3 className="text-2xl font-bold mb-4 text-slate-800">{item.title}</h3>
+                <p className="text-slate-600 leading-relaxed text-lg">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Story Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6 flex items-center gap-12">
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold mb-4">Our Story</h2>
-            <p className="text-gray-600 mb-4">StaySpot started because finding a good rental in Nepal was hard. Old methods were slow and unsafe.</p>
-            <p className="text-gray-600 mb-4">We made a digital platform to connect tenants and owners with trust, security, and ease.</p>
-            <p className="text-gray-600">Now, StaySpot is helping people find rooms faster and smarter in Nepal.</p>
-          </div>
-          <div className="hidden md:block flex-1">
-            <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=500&h=400&fit=crop" alt="team" className="rounded-xl" />
-          </div>
-        </div>
-      </section>
-
       {/* How It Works Section */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-2">How It Works</h2>
-            <p className="text-gray-600">Four simple steps to get your room</p>
+      <section className="py-24 relative z-10 bg-slate-900 text-white rounded-[3rem] mx-6 mb-24 overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-3xl -mr-32 -mt-32"></div>
+        <div className="max-w-7xl mx-auto px-8 relative z-10">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-black mb-4">How It Works</h2>
+            <p className="text-slate-400 text-lg">Four simple steps to get your room</p>
           </div>
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-4 gap-12">
             {[
-              { num: '1', title: 'Search & Filter', desc: 'Use filters to find rooms in your budget' },
-              { num: '2', title: 'View & Compare', desc: 'Check rooms on a map and compare details' },
-              { num: '3', title: 'Book or Visit', desc: 'Book online or visit the room' },
-              { num: '4', title: 'Move In', desc: 'Complete payment and settle in easily' }
+              { num: '1', title: 'Find Your Spot', desc: 'Use smart filters to find rooms that fit your needs.' },
+              { num: '2', title: 'Schedule Visit', desc: 'Visit the room or view verified high-quality media.' },
+              { num: '3', title: 'Direct Booking', desc: 'Pay securely and book your room in minutes.' },
+              { num: '4', title: 'Welcome Home', desc: 'Complete the process digitally and move in easily.' }
             ].map((item, i) => (
-              <div key={i} className="text-center">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">{item.num}</div>
-                <h3 className="font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-600 text-sm">{item.desc}</p>
+              <div key={i} className="text-center group">
+                <div className="w-20 h-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 text-3xl font-black shadow-xl shadow-blue-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">{item.num}</div>
+                <h3 className="font-bold text-xl mb-4">{item.title}</h3>
+                <p className="text-slate-400 leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
       
-      {/* Footer */}
       <Footer />
     </div>
   );

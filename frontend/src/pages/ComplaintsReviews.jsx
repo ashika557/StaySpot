@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Star, CheckCircle, Clock, Upload, Send, MessageSquare, ChevronRight, MapPin, Edit2, Trash2, X } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { AlertTriangle, Star, CheckCircle, Clock, Upload, Send, MessageSquare, ChevronRight, MapPin, Edit2, Trash2, X, Loader } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
 import complaintService from '../services/complaintService';
@@ -34,9 +35,9 @@ export default function ComplaintsReviews({ user }) {
     const [submittingComplaint, setSubmittingComplaint] = useState(false);
     const [submittingReview, setSubmittingReview] = useState(false);
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const preSelectedRoomId = queryParams.get('roomId');
 
     const fetchData = async () => {
         try {
@@ -49,13 +50,10 @@ export default function ComplaintsReviews({ user }) {
             setComplaints(complaintsData);
             setBookings(bookingsData.filter(b => ['Confirmed', 'Active', 'Completed'].includes(b.status)));
 
-            // Get all reviews for current user
-            // We can filter by tenant id in the reviews list if backend supports it 
-            // otherwise fetch all and filter or add an endpoint
             const response = await apiRequest(API_ENDPOINTS.REVIEWS);
             if (response.ok) {
                 const allReviews = await response.json();
-                setReviews(allReviews.filter(r => r.tenant.id === user.id));
+                setReviews(allReviews.filter(r => r.tenant?.id === user.id));
             }
         } catch (err) {
             console.error("Failed to fetch page data", err);
@@ -63,6 +61,23 @@ export default function ComplaintsReviews({ user }) {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        if (preSelectedRoomId && bookings.length > 0) {
+            const booking = bookings.find(b => b.room?.id === parseInt(preSelectedRoomId));
+            if (booking) {
+                setComplaintForm(prev => ({
+                    ...prev,
+                    ownerId: booking.room.owner?.id || '',
+                    roomId: booking.room.id
+                }));
+            }
+        }
+    }, [preSelectedRoomId, bookings]);
 
     const handleComplaintSubmit = async (e) => {
         e.preventDefault();
@@ -177,10 +192,11 @@ export default function ComplaintsReviews({ user }) {
 
     if (loading) {
         return (
-            <div className="flex h-screen bg-gray-50">
+            <div className="flex min-h-screen bg-gray-50">
                 <TenantSidebar user={user} />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                    <Loader className="w-8 h-8 animate-spin text-blue-600" />
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest animate-pulse">Gathering history data...</p>
                 </div>
             </div>
         );
@@ -246,11 +262,15 @@ export default function ComplaintsReviews({ user }) {
                                                 required
                                             >
                                                 <option value="">Select owner/room</option>
-                                                {bookings.map(b => (
-                                                    <option key={b.id} value={`${b.room?.owner?.id}-${b.room?.id}`}>
-                                                        {b.room?.owner?.full_name || 'Unknown Owner'} - {b.room?.title || 'Unknown Room'}
-                                                    </option>
-                                                ))}
+                                                {bookings.length > 0 ? (
+                                                    bookings.map(b => (
+                                                        <option key={b.id} value={`${b.room?.owner?.id}-${b.room?.id}`}>
+                                                            {b.room?.owner?.full_name || 'Owner'} - {b.room?.title || 'Room'}
+                                                        </option>
+                                                    ))
+                                                ) : (
+                                                    <option disabled>No active bookings found</option>
+                                                )}
                                             </select>
                                         </div>
 
@@ -285,7 +305,7 @@ export default function ComplaintsReviews({ user }) {
 
                                         <button
                                             type="submit"
-                                            disabled={submittingComplaint}
+                                            disabled={submittingComplaint || bookings.length === 0}
                                             className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             <Send size={18} />

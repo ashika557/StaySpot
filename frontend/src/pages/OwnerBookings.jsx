@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Calendar, Clock, ChevronDown, BookOpen, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { 
+  Check, X, Calendar, Clock, ChevronDown, 
+  BookOpen, AlertCircle, CheckCircle, XCircle, 
+  User, ShieldCheck, Mail, Phone, BadgeCheck, 
+  Eye, ArrowRight, TrendingUp, Filter, Loader, Search, ExternalLink
+} from 'lucide-react';
 import OwnerSidebar from '../components/OwnerSidebar';
 import { bookingService } from '../services/bookingService';
 import { getMediaUrl } from '../constants/api';
@@ -17,20 +22,15 @@ const OwnerBookings = ({ user, onLogout }) => {
             setLoading(true);
             const data = await bookingService.getAllBookings();
             setBookings(data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
     };
 
     const handleUpdateStatus = async (id, status) => {
         try {
             await bookingService.updateBookingStatus(id, status);
             fetchBookings();
-        } catch (err) {
-            alert(`Failed to ${status.toLowerCase()} booking`);
-        }
+        } catch (err) { console.error(err); }
     };
 
     const stats = {
@@ -54,9 +54,9 @@ const OwnerBookings = ({ user, onLogout }) => {
             <div className="flex h-screen bg-gray-50">
                 <OwnerSidebar user={user} />
                 <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-400 font-medium text-sm">Loading bookings...</p>
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-10 h-10 border-[3px] border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-sm text-gray-400 font-medium">Loading bookings...</p>
                     </div>
                 </div>
             </div>
@@ -64,22 +64,24 @@ const OwnerBookings = ({ user, onLogout }) => {
     }
 
     return (
-        <div className="flex bg-gray-50 min-h-screen">
+        <div className="flex bg-gray-50 min-h-screen font-inter overflow-hidden">
             <OwnerSidebar user={user} />
 
             <div className="flex-1 flex flex-col overflow-auto">
-                <div className="p-8">
+                <div className="p-8 max-w-7xl mx-auto w-full">
 
                     {/* Header */}
-                    <div className="flex justify-between items-center mb-8">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
                         <div>
-                            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Bookings</h1>
-                            <p className="text-sm text-gray-400 mt-1">Manage tenant booking requests and history</p>
+                            <h1 className="text-2xl font-bold text-gray-900">Booking Requests</h1>
+                            <p className="text-sm text-gray-400 mt-0.5">Manage room booking requests from tenants</p>
                         </div>
-                        <div className="flex gap-3">
+
+                        <div className="flex items-center gap-3">
                             <div className="relative">
+                                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                                 <select
-                                    className="appearance-none pl-4 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 text-gray-600 font-medium transition cursor-pointer"
+                                    className="appearance-none pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all cursor-pointer shadow-sm"
                                     value={filterRoom}
                                     onChange={(e) => setFilterRoom(e.target.value)}
                                 >
@@ -88,11 +90,11 @@ const OwnerBookings = ({ user, onLogout }) => {
                                         <option key={title} value={title}>{title}</option>
                                     ))}
                                 </select>
-                                <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
                             <div className="relative">
+                                <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                                 <select
-                                    className="appearance-none pl-4 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 text-gray-600 font-medium transition cursor-pointer"
+                                    className="appearance-none pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all cursor-pointer shadow-sm"
                                     value={filterStatus}
                                     onChange={(e) => setFilterStatus(e.target.value)}
                                 >
@@ -101,29 +103,24 @@ const OwnerBookings = ({ user, onLogout }) => {
                                     <option value="Confirmed">Approved</option>
                                     <option value="Rejected">Rejected</option>
                                 </select>
-                                <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
                         </div>
                     </div>
 
-                    {/* Stat Cards */}
-                    <div className="grid grid-cols-4 gap-5 mb-8">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         {[
-                            { label: 'Total Requests', value: stats.total, icon: <BookOpen className="w-5 h-5" />, iconBg: '#eff6ff', iconColor: '#2563eb', accent: '#2563eb', valColor: '#111827' },
-                            { label: 'Pending', value: stats.pending, icon: <Clock className="w-5 h-5" />, iconBg: '#fff7ed', iconColor: '#ea580c', accent: '#ea580c', valColor: '#ea580c' },
-                            { label: 'Approved', value: stats.approved, icon: <CheckCircle className="w-5 h-5" />, iconBg: '#f0fdf4', iconColor: '#16a34a', accent: '#16a34a', valColor: '#16a34a' },
-                            { label: 'Rejected', value: stats.rejected, icon: <XCircle className="w-5 h-5" />, iconBg: '#fef2f2', iconColor: '#dc2626', accent: '#dc2626', valColor: '#dc2626' },
+                            { label: 'Total Bookings', value: stats.total, icon: <BookOpen />, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
+                            { label: 'Pending', value: stats.pending, icon: <Clock />, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
+                            { label: 'Approved', value: stats.approved, icon: <CheckCircle />, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+                            { label: 'Rejected', value: stats.rejected, icon: <XCircle />, iconBg: 'bg-rose-50', iconColor: 'text-rose-600' },
                         ].map((card, i) => (
-                            <div key={i} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200"
-                                style={{ borderTop: `3px solid ${card.accent}` }}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                                        style={{ background: card.iconBg, color: card.iconColor }}>
-                                        {card.icon}
-                                    </div>
+                            <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all duration-200">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-4 ${card.iconBg}`}>
+                                    {React.cloneElement(card.icon, { className: `w-4 h-4 ${card.iconColor}` })}
                                 </div>
-                                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">{card.label}</p>
-                                <p className="text-3xl font-extrabold" style={{ color: card.valColor }}>{card.value}</p>
+                                <p className="text-xs text-gray-400 font-medium mb-0.5">{card.label}</p>
+                                <p className="text-xl font-bold text-gray-900">{card.value}</p>
                             </div>
                         ))}
                     </div>
@@ -132,12 +129,12 @@ const OwnerBookings = ({ user, onLogout }) => {
                     {pendingRequests.length > 0 && (
                         <div className="mb-8">
                             <div className="flex items-center gap-3 mb-5">
-                                <h2 className="text-base font-extrabold text-gray-900">Pending Requests</h2>
-                                <span className="px-2.5 py-0.5 bg-orange-100 text-orange-600 text-xs font-bold rounded-full">
-                                    {pendingRequests.length} awaiting
+                                <h2 className="text-base font-bold text-gray-900">New Requests</h2>
+                                <span className="px-2.5 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold rounded-full border border-amber-100">
+                                    {pendingRequests.length} waiting
                                 </span>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {pendingRequests.map(booking => (
                                     <RequestCard
                                         key={booking.id}
@@ -150,32 +147,31 @@ const OwnerBookings = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* History */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    {/* Booking History */}
+                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
                             <div>
-                                <h2 className="text-base font-extrabold text-gray-900">Recent Booking History</h2>
-                                <p className="text-xs text-gray-400 mt-0.5">All past and active bookings</p>
+                                <h2 className="text-base font-bold text-gray-900">Booking History</h2>
+                                <p className="text-xs text-gray-400 mt-0.5">All bookings and their current status</p>
                             </div>
-                            <span className="text-xs font-bold text-gray-400">{history.length} records</span>
+                            <span className="text-xs font-medium text-gray-500 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-lg">
+                                {history.length} entries
+                            </span>
                         </div>
                         <div className="divide-y divide-gray-50">
                             {history.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                                    <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                        <BookOpen className="w-7 h-7 text-gray-300" />
+                                    <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <Search className="w-6 h-6 text-gray-300" />
                                     </div>
-                                    <p className="text-sm font-semibold text-gray-400">No booking history yet</p>
-                                    <p className="text-xs text-gray-300 mt-1">Approved and rejected bookings will appear here</p>
+                                    <p className="text-sm font-medium text-gray-500">No history found</p>
+                                    <p className="text-xs text-gray-400 mt-1">Processed bookings will appear here</p>
                                 </div>
                             ) : (
-                                history.map(booking => (
-                                    <HistoryRow key={booking.id} booking={booking} />
-                                ))
+                                history.map(booking => <HistoryRow key={booking.id} booking={booking} />)
                             )}
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -183,82 +179,62 @@ const OwnerBookings = ({ user, onLogout }) => {
 };
 
 const RequestCard = ({ booking, onApprove, onReject }) => (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
-        {/* Card top accent */}
-        <div className="h-1 w-full bg-orange-400" />
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+        <div className="h-1 w-full bg-amber-400/40"></div>
+
         <div className="p-5">
-            <div className="flex justify-between items-start mb-4">
-                <span className="bg-orange-50 text-orange-600 border border-orange-100 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide">
-                    Pending
+            <div className="flex justify-between items-start mb-5">
+                <span className="bg-amber-50 text-amber-600 border border-amber-100 px-2.5 py-1 rounded-lg text-[10px] font-bold">
+                    Pending Approval
                 </span>
-                <Clock size={14} className="text-gray-300 mt-1" />
+                <Clock className="w-4 h-4 text-gray-300" />
             </div>
 
-            {/* Tenant Info */}
-            <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 overflow-hidden ring-2 ring-white shadow flex-shrink-0">
-                    {booking.tenant.profile_photo ? (
-                        <img src={getMediaUrl(booking.tenant.profile_photo)} alt={booking.tenant.full_name} className="w-full h-full object-cover" />
-                    ) : (
-                        <span className="text-sm">{booking.tenant.full_name[0]}</span>
-                    )}
+            <div className="flex items-center gap-3 mb-5">
+                <div className="relative flex-shrink-0">
+                    <img
+                        src={booking.tenant.profile_photo ? getMediaUrl(booking.tenant.profile_photo) : `https://ui-avatars.com/api/?name=${booking.tenant.full_name}&background=4f46e5&color=fff&bold=true`}
+                        className="w-11 h-11 rounded-full object-cover border border-gray-100"
+                        alt=""
+                    />
                 </div>
-                <div>
-                    <h3 className="font-bold text-gray-900 text-sm">{booking.tenant.full_name}</h3>
-                    <p className="text-xs text-blue-600 font-semibold">{booking.room.title}</p>
-                </div>
-            </div>
-
-            {/* Date */}
-            <div className="flex items-center gap-2 mb-4 p-2.5 bg-blue-50 rounded-xl">
-                <Calendar size={13} className="text-blue-500 flex-shrink-0" />
-                <span className="text-xs font-bold text-blue-700">{booking.start_date} → {booking.end_date}</span>
-            </div>
-
-            {/* Contact */}
-            <div className="space-y-2 mb-4 pb-4 border-b border-gray-50">
-                <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center text-[9px] font-bold text-gray-400">@</span>
-                    <span className="text-xs text-gray-500 truncate">{booking.tenant.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center text-[9px] font-bold text-gray-400">#</span>
-                    <span className="text-xs text-gray-500">{booking.tenant.phone || 'No phone'}</span>
+                <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 truncate">{booking.tenant.full_name}</h3>
+                    <p className="text-xs text-indigo-500 font-medium truncate mt-0.5">{booking.room.title}</p>
                 </div>
             </div>
 
-            {/* ID Document */}
-            <div className="mb-5">
-                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Citizenship / ID</span>
-                {booking.tenant.identity_document ? (
-                    <div className="relative group cursor-pointer overflow-hidden rounded-xl bg-gray-100 aspect-video border border-gray-100">
-                        <img
-                            src={getMediaUrl(booking.tenant.identity_document)}
-                            alt="ID Document"
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                        <a href={getMediaUrl(booking.tenant.identity_document)} target="_blank" rel="noreferrer"
-                            className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <span className="text-white text-[11px] font-bold border border-white/50 px-3 py-1.5 rounded-lg">View Document</span>
-                        </a>
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3 mb-5">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className="text-xs text-gray-500">Booking Date</span>
                     </div>
-                ) : (
-                    <div className="flex items-center gap-2 p-2.5 bg-red-50 rounded-xl border border-red-100">
-                        <AlertCircle size={12} className="text-red-400 flex-shrink-0" />
-                        <span className="text-[11px] text-red-400 font-medium">No document uploaded</span>
+                    <span className="text-xs font-semibold text-gray-700">{booking.start_date}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-xs text-gray-500">Identity</span>
                     </div>
-                )}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${booking.tenant.is_identity_verified ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
+                        {booking.tenant.is_identity_verified ? 'Verified' : 'Unverified'}
+                    </span>
+                </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-2">
-                <button onClick={onApprove}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm shadow-green-200">
-                    <Check size={13} /> Approve
+            <div className="grid grid-cols-2 gap-2">
+                <button
+                    onClick={onApprove}
+                    className="py-2.5 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-gray-800 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                    <CheckCircle className="w-3.5 h-3.5" /> Approve
                 </button>
-                <button onClick={onReject}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm shadow-red-200">
-                    <X size={13} /> Reject
+                <button
+                    onClick={onReject}
+                    className="py-2.5 bg-white border border-rose-200 text-rose-500 rounded-lg text-xs font-bold hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                    <XCircle className="w-3.5 h-3.5" /> Reject
                 </button>
             </div>
         </div>
@@ -266,48 +242,43 @@ const RequestCard = ({ booking, onApprove, onReject }) => (
 );
 
 const HistoryRow = ({ booking }) => {
-    const getStatusConfig = (s) => {
-        if (s === 'Confirmed' || s === 'Active') return { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', label: 'Confirmed' };
-        if (s === 'Rejected') return { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', label: 'Rejected' };
-        if (s === 'Cancelled') return { bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', label: 'Cancelled' };
-        return { bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', label: s };
-    };
-
-    const cfg = getStatusConfig(booking.status);
+    const isApproved = booking.status === 'Confirmed' || booking.status === 'Active';
+    const isRejected = booking.status === 'Rejected' || booking.status === 'Cancelled';
 
     return (
-        <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/70 transition group">
-            {/* Tenant */}
-            <div className="flex items-center gap-3 min-w-0 w-48">
-                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500 text-sm overflow-hidden ring-2 ring-white shadow-sm flex-shrink-0">
-                    {booking.tenant.profile_photo ? (
-                        <img src={getMediaUrl(booking.tenant.profile_photo)} alt={booking.tenant.full_name} className="w-full h-full object-cover" />
-                    ) : (
-                        <span>{booking.tenant.full_name[0]}</span>
-                    )}
-                </div>
+        <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-all group">
+            <div className="flex items-center gap-4 w-64">
+                <img
+                    src={booking.tenant.profile_photo ? getMediaUrl(booking.tenant.profile_photo) : `https://ui-avatars.com/api/?name=${booking.tenant.full_name}&background=f3f4f6&color=94a3b8&bold=true`}
+                    className="w-10 h-10 rounded-full object-cover border border-gray-100 group-hover:scale-105 transition-transform flex-shrink-0"
+                    alt=""
+                />
                 <div className="min-w-0">
-                    <p className="font-bold text-gray-900 text-sm truncate">{booking.tenant.full_name}</p>
-                    <p className="text-xs text-gray-400 truncate">{booking.room.title}</p>
+                    <p className="text-sm font-bold text-gray-900 truncate">{booking.tenant.full_name}</p>
+                    <p className="text-xs text-gray-400 font-medium truncate mt-0.5">{booking.room.title}</p>
                 </div>
             </div>
 
-            {/* Date range */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">
-                <Calendar size={12} className="text-gray-400 flex-shrink-0" />
-                <span className="text-xs font-semibold text-gray-600">{booking.start_date} – {booking.end_date}</span>
+            <div className="hidden lg:flex flex-col items-center">
+                <p className="text-[10px] text-gray-400 mb-1">Stay Duration</p>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg">
+                    <span className="text-xs font-semibold text-gray-600">{booking.start_date}</span>
+                    <ArrowRight className="w-3 h-3 text-gray-300" />
+                    <span className="text-xs font-semibold text-gray-600">{booking.end_date}</span>
+                </div>
             </div>
 
-            {/* Status badge */}
-            <span className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide"
-                style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
-                {cfg.label}
-            </span>
-
-            {/* Date & email */}
-            <div className="text-right w-36">
-                <p className="text-xs font-semibold text-gray-500">{new Date(booking.updated_at).toLocaleDateString()}</p>
-                <p className="text-[11px] text-gray-400 truncate mt-0.5">{booking.tenant.email}</p>
+            <div className="flex flex-col items-end gap-1">
+                <span className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${
+                    isApproved ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    isRejected ? 'bg-rose-50 text-rose-500 border-rose-100' :
+                    'bg-gray-50 text-gray-400 border-gray-100'
+                }`}>
+                    {booking.status === 'Active' ? 'Confirmed' : booking.status}
+                </span>
+                <p className="text-[10px] text-gray-400">
+                    {new Date(booking.updated_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
             </div>
         </div>
     );

@@ -1,60 +1,59 @@
 import React from 'react';
-import { Home, Twitter, Facebook, Linkedin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Home, Twitter, Facebook, Linkedin } from 'lucide-react';
 import { ROUTES } from '../constants/api';
 
 const Footer = () => {
     return (
-        <footer className="bg-gray-900 text-white py-12 mt-auto">
+        <footer className="bg-[#0f172a] text-white pt-20 pb-10 mt-auto">
             <div className="max-w-7xl mx-auto px-6">
-                <div className="grid md:grid-cols-4 gap-8">
-                    <div>
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                                <Home className="w-5 h-5 text-white" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-20">
+                    {/* Brand Section */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                <Home className="w-6 h-6 text-white" />
                             </div>
-                            <span className="text-xl font-bold">STAYSPOT</span>
+                            <span className="text-2xl font-bold tracking-tight">STAYSPOT</span>
                         </div>
-                        <p className="text-gray-400 text-sm mb-4">Modern room renting, digital booking, and secure for everyone.</p>
-                        <div className="flex gap-3">
-                            <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                                <Twitter className="w-5 h-5" />
-                            </a>
-                            <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                                <Facebook className="w-5 h-5" />
-                            </a>
-                            <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                                <Linkedin className="w-5 h-5" />
-                            </a>
+                        <p className="text-slate-400 text-lg leading-relaxed">
+                            Simplifying room renting across Nepal with trust and security.
+                        </p>
+                    </div>
+                    
+                    {/* For Tenants */}
+                    <div>
+                        <h4 className="font-bold text-lg mb-6 text-white uppercase tracking-wider">For Renters</h4>
+                        <div className="flex flex-col gap-4 text-slate-400">
+                            <Link to={ROUTES.TENANT_SEARCH} className="hover:text-blue-400 transition-colors">Search Rooms</Link>
+                            <Link to={ROUTES.TENANT_DASHBOARD} className="hover:text-blue-400 transition-colors">My Dashboard</Link>
+                            <Link to={ROUTES.TENANT_BOOKINGS} className="hover:text-blue-400 transition-colors">My Bookings</Link>
                         </div>
                     </div>
+
+                    {/* For Owners */}
                     <div>
-                        <h4 className="font-semibold mb-4 text-white">Quick Links</h4>
-                        <div className="space-y-2 text-sm text-gray-400">
-                            <Link to={ROUTES.HOME} className="block hover:text-blue-400 transition-colors">Home</Link>
-                            <Link to="#" className="block hover:text-blue-400 transition-colors">About</Link>
-                            <Link to="#" className="block hover:text-blue-400 transition-colors">Features</Link>
-                            <Link to="#" className="block hover:text-blue-400 transition-colors">Contact</Link>
+                        <h4 className="font-bold text-lg mb-6 text-white uppercase tracking-wider">For Room Owners</h4>
+                        <div className="flex flex-col gap-4 text-slate-400">
+                            <Link to={ROUTES.OWNER_DASHBOARD} className="hover:text-blue-400 transition-colors">My Dashboard</Link>
+                            <Link to={ROUTES.OWNER_ROOMS} className="hover:text-blue-400 transition-colors">My Rooms</Link>
+                            <Link to={ROUTES.OWNER_PAYMENTS} className="hover:text-blue-400 transition-colors">My Income</Link>
                         </div>
                     </div>
+
+                    {/* Support & Contacts */}
                     <div>
-                        <h4 className="font-semibold mb-4 text-white">Support</h4>
-                        <div className="space-y-2 text-sm text-gray-400">
-                            <Link to="#" className="block hover:text-blue-400 transition-colors">About Us</Link>
-                            <Link to="#" className="block hover:text-blue-400 transition-colors">Privacy Policy</Link>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold mb-4 text-white">Contact Info</h4>
-                        <div className="space-y-2 text-sm text-gray-400">
-                            <p>hello@stayspot.com</p>
-                            <p>+977 9800000000</p>
+                        <h4 className="font-bold text-lg mb-6 text-white uppercase tracking-wider">Support</h4>
+                        <div className="flex flex-col gap-4 text-slate-400">
+                            <p className="flex items-center gap-2 hover:text-blue-400 transition-colors cursor-pointer">hello@stayspot.com</p>
+                            <p className="flex items-center gap-2 hover:text-blue-400 transition-colors cursor-pointer">+977 9800000000</p>
                             <p>Kathmandu, Nepal</p>
                         </div>
                     </div>
                 </div>
-                <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-                    © {new Date().getFullYear()} STAYSPOT. All rights reserved.
+                
+                <div className="border-t border-slate-800/50 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-500 text-sm">
+                    <p>© {new Date().getFullYear()} STAYSPOT. All rights reserved.</p>
                 </div>
             </div>
         </footer>

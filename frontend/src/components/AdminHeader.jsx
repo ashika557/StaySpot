@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Bell, User, ChevronDown } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 import { getMediaUrl } from '../constants/api';
 
 export default function AdminHeader({ user }) {
@@ -17,10 +18,7 @@ export default function AdminHeader({ user }) {
             </div>
 
             <div className="flex items-center gap-6">
-                <button className="relative p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
-                </button>
+                <NotificationBell user={user} isDark={true} />
 
                 <div className="h-8 w-[1px] bg-gray-100 mx-2"></div>
 

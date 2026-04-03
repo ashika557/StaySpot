@@ -58,8 +58,16 @@ const complaintService = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || error.message || 'Failed to update complaint');
+            let errorText = 'Failed to update complaint';
+            try {
+                const errorTextRaw = await response.text();
+                const error = JSON.parse(errorTextRaw);
+                errorText = error.detail || error.message || error.error || error.non_field_errors?.[0] || (typeof error === 'object' ? Object.values(error)[0] : '') || errorTextRaw || 'Failed to update complaint';
+                if (Array.isArray(errorText)) errorText = errorText[0];
+            } catch (e) {
+                console.error("Failed to parse JSON in complaintService:", e);
+            }
+            throw new Error(errorText);
         }
 
         return await response.json();

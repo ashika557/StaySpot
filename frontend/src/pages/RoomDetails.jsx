@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation, Info, Cigarette, Dog, Users, Beer, UtensilsCrossed, Zap, Droplets, Car, Layout, ChefHat, MessageCircle } from 'lucide-react';
-import { GoogleMap, Marker, Circle } from '@react-google-maps/api';
+import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation, Info, Cigarette, Dog, Users, Beer, UtensilsCrossed, Zap, Droplets, Car, Layout, ChefHat, MessageCircle, Route, Timer, AlertTriangle } from 'lucide-react';
+import { GoogleMap, Marker, Circle, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import OwnerSidebar from '../components/OwnerSidebar';
 import TenantSidebar from '../components/TenantSidebar';
@@ -21,10 +21,17 @@ const RoomDetails = ({ user }) => {
 
     // room data
     const [room, setRoom] = useState(null);
+    const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0); // which thumbnail is selected
     const [nearbyPlaces, setNearbyPlaces] = useState([]);        // fetched from OpenStreetMap
+    const [nearbyLoading, setNearbyLoading] = useState(false);   // loading status for nearby places
+
+    // directions data
+    const [userLocation, setUserLocation] = useState(null);
+    const [directionsResponse, setDirectionsResponse] = useState(null);
+    const [routeInfo, setRouteInfo] = useState({ distance: '', duration: '' });
 
     // booking modal
     const [showBookingModal, setShowBookingModal] = useState(false);
@@ -36,45 +43,108 @@ const RoomDetails = ({ user }) => {
     const [visitDate, setVisitDate] = useState('');
     const [visitTime, setVisitTime] = useState('');
     const [visitNote, setVisitNote] = useState('');
+    const [canMessageOrReport, setCanMessageOrReport] = useState(false);
 
     // allows the map instance to be panned programmatically
     const mapRef = useRef(null);
+
+    const checkUserRelationship = async () => {
+        if (!user || user.role !== 'Tenant' || !id) return;
+        try {
+            const [visits, bookings] = await Promise.all([
+                visitService.getMyVisits(),
+                bookingService.getAllBookings()
+            ]);
+            
+            const hasAcceptedVisit = visits.some(v => v.room?.id === parseInt(id) && v.status === 'Scheduled');
+            const hasConfirmedBooking = bookings.some(b => b.room?.id === parseInt(id) && ['Confirmed', 'Active', 'Completed'].includes(b.status));
+            
+            setCanMessageOrReport(hasAcceptedVisit || hasConfirmedBooking);
+        } catch (error) {
+            console.error("Error checking user relationship:", error);
+        }
+    };
     
     // prevents double view-count in React 18 StrictMode (runs effects twice in dev)
     const viewTracked = useRef(false);
 
+    // Get user's current location for directions
+    useEffect(() => {
+        if (navigator.geolocation && isLoaded) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                },
+                (err) => console.log('Current location not available for directions'),
+                { enableHighAccuracy: true }
+            );
+        }
+    }, [isLoaded]);
+
+    // Calculate directions when room and user location are both available
+    useEffect(() => {
+        if (room?.latitude && userLocation && window.google) {
+            const directionsService = new window.google.maps.DirectionsService();
+            directionsService.route(
+                {
+                    origin: userLocation,
+                    destination: { lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) },
+                    travelMode: window.google.maps.TravelMode.DRIVING
+                },
+                (result, status) => {
+                    if (status === window.google.maps.DirectionsStatus.OK) {
+                        setDirectionsResponse(result);
+                        setRouteInfo({
+                            distance: result.routes[0].legs[0].distance.text,
+                            duration: result.routes[0].legs[0].duration.text
+                        });
+                    }
+                }
+            );
+        }
+    }, [room, userLocation]);
+
     // ask OpenStreetMap what's within 2km of the room's coordinates
     const fetchCurrentlyNearbyPlaces = async (lat, lng) => {
-        const query = `
-            [out:json];
-            (
-              node["amenity"="restaurant"](around:2000, ${lat}, ${lng});
-              node["amenity"="cafe"](around:2000, ${lat}, ${lng});
-              node["amenity"="hospital"](around:2000, ${lat}, ${lng});
-              node["amenity"="school"](around:2000, ${lat}, ${lng});
-              node["shop"="supermarket"](around:2000, ${lat}, ${lng});
-              node["shop"="mall"](around:2000, ${lat}, ${lng});
-            );
-            out body 20;
-        `;
-        try {
-            const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
-            const data = await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
-            // clean up the messy OSM response into a simple array
-            const places = data.elements.map(element => ({
+        try {
+            setNearbyLoading(true);
+            const query = `[out:json][timeout:15];(node["amenity"~"restaurant|cafe|hospital|school|university|pharmacy"](around:2000, ${lat}, ${lng});node["shop"~"supermarket|mall|bakery"](around:2000, ${lat}, ${lng}););out body 15;`;
+
+            const response = await fetch('https://overpass-api.de/api/interpreter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `data=${encodeURIComponent(query)}`,
+                signal: controller.signal
+            });
+
+            if (!response.ok) throw new Error("Overpass API failed");
+
+            const data = await response.json();
+            clearTimeout(timeoutId);
+
+            const places = (data.elements || []).map(element => ({
                 id: element.id,
-                name: element.tags.name || 'Unknown Place',
+                name: element.tags.name || element.tags.description || 'Nearby Amenity',
                 lat: element.lat,
                 lon: element.lon,
                 type: element.tags.amenity || element.tags.shop || 'unknown',
-                address: element.tags['addr:street'] ? `${element.tags['addr:street']}, ${element.tags['addr:city'] || ''}` : 'Nearby',
-                rating: (Math.random() * 2 + 3).toFixed(1) // placeholder rating
-            }));
+                address: element.tags['addr:street'] ? `${element.tags['addr:street']}, ${element.tags['addr:city'] || ''}` : 'Nearby Area',
+                rating: (Math.random() * 2 + 3).toFixed(1)
+            })).filter(place => place.name !== 'Nearby Amenity');
 
             setNearbyPlaces(places);
         } catch (error) {
-            console.error("Error fetching nearby places:", error);
+            console.warn("Fetch timeout or OSM failure:", error);
+            setNearbyPlaces([]);
+        } finally {
+            setNearbyLoading(false);
+            clearTimeout(timeoutId);
         }
     };
 
@@ -83,6 +153,12 @@ const RoomDetails = ({ user }) => {
             setLoading(true);
             const data = await roomService.getRoomById(id);
             setRoom(data);
+            try {
+                const reviewsData = await roomService.getRoomReviews(id);
+                setReviews(reviewsData);
+            } catch (err) {
+                console.error("Failed to load reviews:", err);
+            }
 
             // once we have coords, fetch what's nearby
             if (data.latitude && data.longitude) {
@@ -106,7 +182,10 @@ const RoomDetails = ({ user }) => {
     useEffect(() => {
         viewTracked.current = false;
         fetchRoomDetails();
-    }, [id]);
+        if (id && user) {
+            checkUserRelationship();
+        }
+    }, [id, user?.id]);
 
     const handleBooking = async (e) => {
         e.preventDefault();
@@ -344,8 +423,8 @@ const RoomDetails = ({ user }) => {
                                         </span>
                                         <div className="flex items-center gap-1 text-yellow-500">
                                             <Star className="w-4 h-4 fill-current" />
-                                            <span className="text-sm font-bold text-gray-900">4.8</span>
-                                            <span className="text-gray-400 text-xs">(24 reviews)</span>
+                                            <span className="text-sm font-bold text-gray-900">{room.average_rating > 0 ? Number(room.average_rating).toFixed(1) : 'New'}</span>
+                                            <span className="text-gray-400 text-xs">({room.review_count || 0} reviews)</span>
                                         </div>
                                     </div>
                                     <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">{room.title}</h1>
@@ -436,6 +515,42 @@ const RoomDetails = ({ user }) => {
                                 ))}
                             </div>
                         </div>
+
+                        {reviews.length > 0 && (
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                                <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                    <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                                    Real Tenant Reviews
+                                </h3>
+                                <div className="space-y-6">
+                                    {reviews.map((review) => (
+                                        <div key={review.id} className="pb-6 border-b border-gray-50 last:border-0 last:pb-0">
+                                            <div className="flex items-center gap-4 mb-3">
+                                                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold overflow-hidden border border-gray-100">
+                                                    {review.tenant?.profile_photo ? (
+                                                        <img src={getMediaUrl(review.tenant.profile_photo)} alt="Reviewer" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-5 h-5" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-gray-900">{review.tenant?.full_name || 'Anonymous Tenant'}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <div className="flex text-yellow-400">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'fill-current' : 'text-gray-200'}`} />
+                                                            ))}
+                                                        </div>
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{new Date(review.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-gray-600 leading-relaxed pl-14">{review.comment}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* RIGHT COLUMN - action buttons + map */}
@@ -443,12 +558,22 @@ const RoomDetails = ({ user }) => {
                         {/* sticky action card */}
                         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
                             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold text-gray-400">
-                                    {room.owner_name ? room.owner_name[0] : <User className="w-6 h-6" />}
+                                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm flex items-center justify-center bg-blue-50 text-blue-600 font-bold text-xl">
+                                    {room.owner?.profile_photo ? (
+                                        <img 
+                                            src={getMediaUrl(room.owner.profile_photo)} 
+                                            alt={room.owner.full_name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        room.owner?.full_name ? room.owner.full_name[0] : <User className="w-6 h-6" />
+                                    )}
                                 </div>
-                                <div>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Listed by</p>
-                                    <p className="font-bold text-gray-900">{room.owner_name || 'Owner'}</p>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Listed by</p>
+                                    <p className="font-bold text-gray-900 truncate" title={room.owner?.full_name}>
+                                        {room.owner?.full_name || 'Room Owner'}
+                                    </p>
                                 </div>
                             </div>
 
@@ -466,11 +591,19 @@ const RoomDetails = ({ user }) => {
                                     <ShieldCheck className="w-5 h-5 text-gray-400" />
                                     Schedule Visit
                                 </button>
-                                {/* passes owner ID so chat opens with the right person */}
-                                <button onClick={() => room.owner?.id && navigate(`/messages?userId=${room.owner.id}`)} className="w-full py-4 bg-blue-50 text-blue-700 border-2 border-blue-100 font-bold rounded-2xl hover:bg-blue-100 hover:border-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm">
-                                    <MessageCircle className="w-5 h-5" />
-                                    Message Owner
-                                </button>
+                                 {canMessageOrReport && (
+                                    <>
+                                        {/* passes owner ID so chat opens with the right person */}
+                                        <button onClick={() => room.owner?.id && navigate(`/chat?userId=${room.owner.id}`)} className="w-full py-4 bg-blue-50 text-blue-700 border-2 border-blue-100 font-bold rounded-2xl hover:bg-blue-100 hover:border-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm">
+                                            <MessageCircle className="w-5 h-5" />
+                                            Message Owner
+                                        </button>
+                                        <button onClick={() => room.id && navigate('/complaints-reviews?roomId=' + room.id)} className="w-full py-4 bg-orange-50 text-orange-700 border-2 border-orange-100 font-bold rounded-2xl hover:bg-orange-100 Transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                            <AlertTriangle className="w-5 h-5 text-orange-400" />
+                                            Report Room Issue
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -483,11 +616,12 @@ const RoomDetails = ({ user }) => {
                                         <GoogleMap
                                             mapContainerStyle={{ width: '100%', height: '100%' }}
                                             center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
-                                            zoom={16}
+                                            zoom={14}
                                             onLoad={(map) => {
                                                 mapRef.current = map; // Store map instance
                                                 setTimeout(() => {
                                                     map.panTo({ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) });
+                                                    map.setZoom(14);
                                                 }, 100);
                                             }}
                                             options={{ 
@@ -503,22 +637,54 @@ const RoomDetails = ({ user }) => {
                                                 ]
                                             }}
                                         >
-                                            {/* main room pin - Use standard Google icon for reliability */}
-                                            <Marker 
-                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }} 
-                                                icon={{
-                                                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                                                    scaledSize: new window.google.maps.Size(40, 40)
-                                                }}
-                                                zIndex={100} 
-                                            />
-                                            
                                             {/* 2km search radius ring */}
                                             <Circle
                                                 center={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
                                                 radius={2000}
-                                                options={{ fillColor: '#3B82F6', fillOpacity: 0.08, strokeColor: '#3B82F6', strokeOpacity: 0.3, strokeWeight: 1, clickable: false }}
+                                                options={{ 
+                                                    fillColor: '#3B82F6', 
+                                                    fillOpacity: 0.15, 
+                                                    strokeColor: '#2563EB', 
+                                                    strokeOpacity: 0.5, 
+                                                    strokeWeight: 2, 
+                                                    clickable: false
+                                                }}
                                             />
+
+                                            {/* main room pin (default red) */}
+                                            <Marker 
+                                                position={{ lat: parseFloat(room.latitude), lng: parseFloat(room.longitude) }}
+                                                title="Room Location"
+                                            />
+
+                                            {/* user position pin */}
+                                            {userLocation && (
+                                                Math.abs(userLocation.lat - parseFloat(room.latitude)) > 0.0001 || 
+                                                Math.abs(userLocation.lng - parseFloat(room.longitude)) > 0.0001
+                                            ) && (
+                                                <Marker
+                                                    position={userLocation}
+                                                    icon={{
+                                                        url: 'https://maps.google.com/mapfiles/ms/icons/blue-pushpin.png'
+                                                    }}
+                                                />
+                                            )}
+
+                                            {/* road route renderer */}
+                                            {directionsResponse && (
+                                                <DirectionsRenderer
+                                                    directions={directionsResponse}
+                                                    options={{
+                                                        preserveViewport: true,
+                                                        polylineOptions: {
+                                                            strokeColor: '#2563eb',
+                                                            strokeOpacity: 0.8,
+                                                            strokeWeight: 6,
+                                                        },
+                                                        markerOptions: { visible: false } 
+                                                    }}
+                                                />
+                                            )}
                                             
                                             {/* nearby place pins */}
                                             {nearbyPlaces.map(place => (
@@ -526,13 +692,39 @@ const RoomDetails = ({ user }) => {
                                                     key={place.id} 
                                                     position={{ lat: place.lat, lng: place.lon }} 
                                                     icon={{
-                                                        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                                                        scaledSize: new window.google.maps.Size(30, 30)
+                                                        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
                                                     }}
-                                                    title={place.name} 
+                                                    title={place.name}
                                                 />
                                             ))}
                                         </GoogleMap>
+
+                                        {/* Floating Route Summary Overlay */}
+                                        {routeInfo.distance && (
+                                            <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/50 flex items-center justify-between animate-in slide-in-from-bottom duration-500 z-10">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                                                        <Route className="w-5 h-5 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Road Route</p>
+                                                        <h4 className="font-bold text-gray-900 text-xs">From Current Location</h4>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right">
+                                                        <div className="flex items-center gap-1.5 justify-end">
+                                                            <Navigation className="w-3 h-3 text-blue-500" />
+                                                            <span className="text-sm font-black text-blue-600">{routeInfo.distance}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 justify-end mt-0.5">
+                                                            <Timer className="w-3 h-3 text-emerald-500" />
+                                                            <span className="text-[10px] font-bold text-emerald-600">{routeInfo.duration}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* list version of the map pins */}
@@ -554,7 +746,7 @@ const RoomDetails = ({ user }) => {
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex justify-between items-start">
-                                                                <h5 className="font-bold text-gray-900 text-xs truncate">{place.name}</h5>
+                                                                 <h5 className="font-bold text-gray-900 text-xs truncate">{place.name}</h5>
                                                                 {place.rating && (
                                                                     <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded text-[9px] font-bold">
                                                                         <Star className="w-2.5 h-2.5 fill-current" />
@@ -567,9 +759,13 @@ const RoomDetails = ({ user }) => {
                                                         </div>
                                                     </div>
                                                 ))
+                                            ) : nearbyLoading ? (
+                                                <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic animate-pulse">Scanning surrounding hubs...</p>
+                                                </div>
                                             ) : (
                                                 <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic animate-pulse">Scanning area...</p>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic">No nearby places detected</p>
                                                 </div>
                                             )}
                                         </div>

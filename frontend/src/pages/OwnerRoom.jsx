@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { Home, Users, TrendingUp, Eye, Search, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin, Star, Calendar, DollarSign, LayoutGrid, ArrowRight } from 'lucide-react';
+import { Home, Users, TrendingUp, Eye, Search, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin, Star, Calendar, DollarSign, LayoutGrid, ArrowRight, Navigation, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
 import { ROUTES, getMediaUrl } from '../constants/api';
@@ -30,6 +30,9 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
     description: '', amenities: '',
     ac: false, tv: false, cctv: false
   });
+
+  const [statusModal, setStatusModal] = React.useState(null);
+  const [loadingModal, setLoadingModal] = React.useState(false);
 
   React.useEffect(() => {
     fetchRooms();
@@ -80,8 +83,26 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
   };
 
   const handleImageSelect = (e) => setSelectedImages(Array.from(e.target.files));
-  const handleMapClick = () => setShowMapSelector(true);
-  const handleLocationSelect = (coords) => setFormData({ ...formData, latitude: coords.lat, longitude: coords.lng });
+  const openMapSelector = () => setShowMapSelector(true);
+  const handleLocationSelect = (coords) => setFormData(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
+  const handleAddressSelect = (address) => setFormData(prev => ({ ...prev, location: address }));
+
+  const handleApplyLiveLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          handleLocationSelect({ lat: latitude, lng: longitude });
+          // Open map to show where they are and fetch address
+          openMapSelector();
+        },
+        (error) => alert("Could not access location: " + error.message),
+        { enableHighAccuracy: true }
+      );
+    } else {
+      alert("Geolocation not supported");
+    }
+  };
 
   const handleSubmit = async () => {
     if (!user?.is_identity_verified && user?.role !== 'Admin') {
@@ -346,6 +367,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
               <button onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 rounded-full transition">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
+              {/* Verification Modal Info/Status */}
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Upload className="w-8 h-8 text-blue-600" />
@@ -355,42 +377,71 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                   To ensure safety and trust on StaySpot, all owners must verify their identity before listing rooms.
                 </p>
               </div>
+
+              {/* Success/Error Banners */}
+              {statusModal && (
+                <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${
+                  statusModal.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
+                }`}>
+                  {statusModal.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                  <span className="text-sm font-bold">{statusModal.message}</span>
+                </div>
+              )}
+
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 const file = e.target.identity_document.files[0];
-                if (!file) return alert('Please select a file');
+                if (!file) return setStatusModal({ type: 'error', message: 'Please select a file' });
+                
                 const fd = new FormData();
                 fd.append('identity_document', file);
+                setLoadingModal(true);
+                setStatusModal(null);
+
                 try {
                   const { apiRequest } = await import('../utils/api');
                   const { API_ENDPOINTS } = await import('../constants/api');
                   const response = await apiRequest(API_ENDPOINTS.UPDATE_PROFILE, { method: 'POST', body: fd });
+                  
                   if (response.ok) {
-                    alert('Identity document uploaded successfully! Admin verification is pending.');
+                    setStatusModal({ type: 'success', message: 'Identity document uploaded! Admin review pending.' });
                     if (refreshUser) await refreshUser();
-                    setShowModal(null);
+                    setTimeout(() => setShowModal(null), 2500);
                   } else {
                     const data = await response.json();
-                    alert(data.error || 'Upload failed');
+                    setStatusModal({ type: 'error', message: data.error || data.detail || `Upload failed with status ${response.status}` });
                   }
-                } catch (err) { alert('Upload failed: ' + err.message); }
+                } catch (err) { 
+                  setStatusModal({ type: 'error', message: 'Upload failed: ' + err.message }); 
+                } finally {
+                  setLoadingModal(false);
+                }
               }}>
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Citizenship or Valid ID Photo</label>
-                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:bg-gray-50 transition text-center">
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:bg-gray-50 transition text-center relative">
                     <input type="file" name="identity_document" accept="image/*" required
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                    <p className="text-xs text-gray-400 mt-2">Supported: JPG, PNG</p>
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <div className="flex flex-col items-center">
+                       <Upload className="w-6 h-6 text-gray-300 mb-2" />
+                       <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Tap to browse files</p>
+                       <p className="text-[10px] text-gray-300 mt-1">PNG, JPG up to 5MB</p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setShowModal(null)}
-                    className="flex-1 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition text-sm">
+                    className="flex-1 py-3 bg-gray-50 text-gray-400 font-bold rounded-xl hover:bg-gray-100 transition text-xs uppercase tracking-wider">
                     Cancel
                   </button>
-                  <button type="submit"
-                    className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm shadow-blue-200 text-sm">
-                    Upload & Verify
+                  <button type="submit" disabled={loadingModal}
+                    className="flex-[2] py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm shadow-blue-100 text-xs uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2">
+                    {loadingModal ? (
+                      <>
+                        <Clock className="w-4 h-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : 'Upload & Verify'}
                   </button>
                 </div>
               </form>
@@ -425,11 +476,29 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                           placeholder="e.g. Spacious 2 BHK Apartment" required />
                       </FieldGroup>
                       <FieldGroup label="Exact Location *">
-                        <div className="relative">
-                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
+                        <div className="relative group">
+                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
                           <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                            className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition"
+                            className="w-full border border-gray-200 rounded-xl pl-10 pr-32 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition"
                             placeholder="Street, City, Area" required />
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                            <button 
+                              type="button"
+                              onClick={handleApplyLiveLocation}
+                              className="px-2 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 hover:bg-blue-700 transition shadow-sm"
+                              title="Set current location"
+                            >
+                              <Navigation className="w-3 h-3" />
+                              Live
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={openMapSelector}
+                              className="px-2 py-1 bg-gray-50 text-gray-600 border border-gray-100 rounded-lg text-[10px] font-bold flex items-center gap-1 hover:bg-gray-100 transition shadow-sm"
+                            >
+                              Map
+                            </button>
+                          </div>
                         </div>
                       </FieldGroup>
                       <FieldGroup label="Monthly Rent (NPR) *">
@@ -537,15 +606,26 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Map Placement</p>
-                      <button type="button" onClick={handleMapClick}
-                        className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/30 transition group">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Map Placement</p>
+                        <button 
+                          type="button"
+                          onClick={handleApplyLiveLocation}
+                          className="flex items-center gap-1.5 text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg hover:bg-blue-100 transition uppercase"
+                        >
+                          <Navigation className="w-3 h-3" /> Use Current Location
+                        </button>
+                      </div>
+                      <button type="button" onClick={openMapSelector}
+                        className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-white transition group bg-gray-50/10">
                         <div className="flex items-center gap-3">
-                          <MapPin className="text-blue-500" size={18} />
+                          <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-50 flex items-center justify-center group-hover:border-blue-100">
+                             <MapPin className="text-blue-500" size={18} />
+                          </div>
                           <div className="text-left">
                             <p className="text-sm font-bold text-gray-700">Set Map Location</p>
                             <p className="text-[10px] text-gray-400">
-                              {formData.latitude ? `${parseFloat(formData.latitude).toFixed(4)}, ${parseFloat(formData.longitude).toFixed(4)}` : 'Not set yet'}
+                              {formData.latitude ? `${parseFloat(formData.latitude).toFixed(4)}, ${parseFloat(formData.longitude).toFixed(4)}` : 'Click to pin on map'}
                             </p>
                           </div>
                         </div>
@@ -582,8 +662,11 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
                 </button>
               </div>
               <div className="p-6">
-                <MapPicker onLocationSelect={handleLocationSelect}
-                  initialLocation={formData.latitude ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } : null} />
+                <MapPicker 
+                  onLocationSelect={handleLocationSelect}
+                  onAddressSelect={handleAddressSelect}
+                  initialLocation={formData.latitude ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } : null} 
+                />
                 <div className="mt-5 flex justify-end">
                   <button onClick={() => setShowMapSelector(false)}
                     className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition text-sm">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { MapProvider } from './context/MapContext';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
@@ -35,7 +35,6 @@ import OwnerMaintenance from './pages/OwnerMaintenance';
 import { ROUTES, API_ENDPOINTS } from './constants/api';
 import { apiRequest } from './utils/api';
 
-import { useLocation } from 'react-router-dom';
 
 function App() {
   const [user, setUser] = React.useState(null);
@@ -123,6 +122,9 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
         <Navigation user={user} onLogout={handleLogout} showLanding={showLanding} />
       )}
 
+      {/* Global Payment Callback Redirect */}
+      <PaymentCallbackHandler />
+
       <main className="flex-grow">
         <Routes>
           {/* Landing page */}
@@ -140,7 +142,8 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
                   to={`${
                     user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                       user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                        ROUTES.TENANT_DASHBOARD
+                        (location.search.includes('pidx=') || location.search.includes('data=') || location.search.includes('oid=')) 
+                         ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
                   }${location.search}`}
                 />
               ) : (
@@ -157,7 +160,10 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
                 <Navigate to={`${
                   user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                     user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                      ROUTES.TENANT_DASHBOARD
+                      (new URLSearchParams(location.search).get('pidx') || 
+                       new URLSearchParams(location.search).get('data') ||
+                       new URLSearchParams(location.search).get('oid')) 
+                       ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
                 }${location.search}`} />
               ) : (
                 <Login onLogin={handleLogin} />
@@ -172,7 +178,10 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
                 <Navigate to={`${
                   user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                     user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                      ROUTES.TENANT_DASHBOARD
+                      (new URLSearchParams(location.search).get('pidx') || 
+                       new URLSearchParams(location.search).get('data') ||
+                       new URLSearchParams(location.search).get('oid')) 
+                       ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
                 }${location.search}`} />
               ) : (
                 <Register onLogin={handleLogin} />
@@ -293,6 +302,26 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
       {!showLanding && !isAdminPath && <Footer />}
     </div>
   );
+}
+
+/**
+ * Handles automatic redirection to the payments page when payment gateway 
+ * callback parameters are detected in the URL, regardless of which page the 
+ * user lands on first.
+ */
+function PaymentCallbackHandler() {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+    // Nucleaer Failsafe: If we land on dashboard (even for a second) with tokens, instantly move away
+    const search = window.location.search;
+    if (search.includes('pidx=') || search.includes('data=') || search.includes('oid=')) {
+      navigate(`${ROUTES.TENANT_PAYMENTS}${search}`, { replace: true });
+      return;
+    }
+  }, [navigate]);
+
+    return null;
 }
 
 export default App;

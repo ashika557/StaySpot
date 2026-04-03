@@ -8,7 +8,7 @@ function Register({ onLogin }) {
 
   // form inputs
   const [formData, setFormData] = useState({
-    full_name: '', email: '', phone: '', password: '', confirm_password: '', role: 'Tenant'
+    full_name: '', email: '', password: '', confirm_password: '', role: 'Tenant'
   });
 
   const [errors, setErrors] = useState({});        // field-level errors
@@ -36,19 +36,30 @@ function Register({ onLogin }) {
     return () => clearInterval(interval); // cleanup to avoid memory leak
   }, [resendTimer]);
 
+  // Password rules
+  const passwordRules = [
+    { label: 'At least 8 characters',       test: (p) => p.length >= 8 },
+    { label: 'One uppercase letter (A–Z)',   test: (p) => /[A-Z]/.test(p) },
+    { label: 'One lowercase letter (a–z)',   test: (p) => /[a-z]/.test(p) },
+    { label: 'One number (0–9)',             test: (p) => /[0-9]/.test(p) },
+  ];
+
+  const [passwordTouched, setPasswordTouched] = useState(false);
+
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.full_name.trim()) newErrors.full_name = 'Full Name is required';
 
     if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format';
+    else if (!/^[^\s@]+@gmail\.com$/.test(formData.email.trim().toLowerCase())) newErrors.email = 'Must be a valid @gmail.com address';
 
-    if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
-    else if (!/^\+?[\d\s-]{10,15}$/.test(formData.phone)) newErrors.phone = 'Invalid phone number';
-
-    if (!formData.password) newErrors.password = 'Password is required';
-    else if (formData.password.length < 8) newErrors.password = 'Min. 8 characters';
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else {
+      const failedRules = passwordRules.filter(r => !r.test(formData.password));
+      if (failedRules.length > 0) newErrors.password = 'Password does not meet all requirements.';
+    }
 
     if (!formData.confirm_password) newErrors.confirm_password = 'Please confirm your password';
     else if (formData.password !== formData.confirm_password) newErrors.confirm_password = 'Passwords do not match';
@@ -84,7 +95,6 @@ function Register({ onLogin }) {
         setSuccessMessage('Verification code sent to your email!');
         setStep('email_otp');
         setResendTimer(60);
-        if (result.otp_dev) console.log("DEV OTP:", result.otp_dev); // remove in production
       } else {
         setErrorMessage(result.error || 'Failed to send code.');
       }
@@ -135,7 +145,6 @@ function Register({ onLogin }) {
       const data = new FormData();
       data.append('full_name', formData.full_name);
       data.append('email', formData.email);
-      data.append('phone', formData.phone);
       data.append('password', formData.password);
       data.append('role', formData.role);
 
@@ -160,30 +169,35 @@ function Register({ onLogin }) {
       <div className="flex w-full max-w-[940px] rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.12)] min-h-[580px] bg-white">
 
         {/* LEFT PANEL */}
-        <div className="hidden md:flex w-[42%] flex-col justify-between bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500 p-12 relative overflow-hidden">
-          {/* decorative background circles */}
-          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5" />
-
-          <div className="z-10">
-            <div className="flex items-center gap-3 mb-12">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" fill="#3b5bdb" />
-                  <rect x="9" y="13" width="6" height="8" rx="1" fill="white" />
-                </svg>
-              </div>
-              <span className="text-white font-extrabold text-xl tracking-tight">Stay Spot</span>
+        <div className="w-[42%] hidden md:flex flex-col justify-between p-12 relative overflow-hidden bg-indigo-600">
+          
+          {/* Logo Top Left */}
+          <div className="flex items-center gap-3 z-10">
+            <div className="w-10 h-10 bg-white rounded-[14px] flex items-center justify-center shrink-0 shadow-sm">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="#4f46e5" strokeWidth="2" strokeLinejoin="round" />
+                <path d="M9 21V12h6v9" stroke="#4f46e5" strokeWidth="2" strokeLinejoin="round" />
+              </svg>
             </div>
+            <span className="text-white font-black text-2xl tracking-tighter">StaySpot</span>
+          </div>
 
-            <h1 className="text-white text-3xl font-extrabold leading-[1.2] mb-4 tracking-tight">
-              Join Smart Room<br />Renting Community
+          {/* Bottom Advertising Text */}
+          <div className="z-10 mt-auto">
+            <div className="flex items-center gap-2 mb-4 opacity-80">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="white" strokeWidth="2" />
+                <path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="text-white text-xs font-bold tracking-[0.15em] uppercase">Secure & Verified</span>
+            </div>
+            <h1 className="text-white text-5xl font-extrabold leading-[1.1] mb-5 tracking-tight font-sans">
+              Welcome to<br/>StaySpot
             </h1>
-            <p className="text-white/80 text-sm leading-relaxed mb-8">
-              Connect with verified owners and tenants. Find your perfect space or list your property with ease.
+            <p className="text-white/80 text-base leading-relaxed max-w-sm font-medium">
+              Find your perfect room in minutes and manage your rental portfolio with ease.
             </p>
           </div>
-          <div className="text-white/60 text-xs z-10 font-medium tracking-wide">🏠 Join 50,000+ users already on RoomRent</div>
         </div>
 
         {/* RIGHT PANEL */}
@@ -208,79 +222,105 @@ function Register({ onLogin }) {
 
               <form onSubmit={handleRequestOtp} className="flex flex-col gap-4">
                 {/* full name */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                <div className="mb-2">
+                  <label className="block text-xs font-extrabold text-[#8792a6] mb-2 uppercase tracking-wider">Full Name</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">👤</span>
-                    <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="John Doe" 
-                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.full_name ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">👤</span>
+                    <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="John Doe"
+                      className={`w-full py-3.5 pl-11 pr-4 text-sm rounded-xl outline-none transition-colors border-2 ${errors.full_name ? 'bg-red-50 border-red-200 focus:border-red-400' : 'bg-[#f4f6fc] border-transparent focus:bg-white focus:border-indigo-600 text-gray-800 font-bold placeholder:text-gray-400 placeholder:font-medium'}`} />
                   </div>
-                  {errors.full_name && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.full_name}</p>}
+                  {errors.full_name && <p className="text-red-500 text-xs mt-1.5 font-bold">{errors.full_name}</p>}
                 </div>
 
                 {/* email */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+                <div className="mb-2">
+                  <label className="block text-xs font-extrabold text-[#8792a6] mb-2 uppercase tracking-wider">Email Address</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">✉️</span>
-                    <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" 
-                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">✉️</span>
+                    <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@gmail.com"
+                      className={`w-full py-3.5 pl-11 pr-4 text-sm rounded-xl outline-none transition-colors border-2 ${errors.email ? 'bg-red-50 border-red-200 focus:border-red-400' : 'bg-[#f4f6fc] border-transparent focus:bg-white focus:border-indigo-600 text-gray-800 font-bold placeholder:text-gray-400 placeholder:font-medium'}`} />
                   </div>
-                  {errors.email && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.email}</p>}
-                </div>
-
-                {/* phone */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone Number</label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">📞</span>
-                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+977-9800000000" 
-                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
-                  </div>
-                  {errors.phone && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.phone}</p>}
+                  {errors.email && <p className="text-red-500 text-xs mt-1.5 font-bold">{errors.email}</p>}
                 </div>
 
                 {/* password */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                <div className="mb-2">
+                  <label className="block text-xs font-extrabold text-[#8792a6] mb-2 uppercase tracking-wider">Password</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">🔒</span>
-                    <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Min. 8 characters" 
-                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔒</span>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      onFocus={() => setPasswordTouched(true)}
+                      placeholder="••••••••"
+                      className={`w-full py-3.5 pl-11 pr-4 text-sm rounded-xl outline-none transition-colors border-2 ${errors.password ? 'bg-red-50 border-red-200 focus:border-red-400' : 'bg-[#f4f6fc] border-transparent focus:bg-white focus:border-indigo-600 text-gray-800 font-bold placeholder:text-gray-400 placeholder:font-medium'}`}
+                    />
                   </div>
-                  {errors.password && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.password}</p>}
+
+                  {/* Live password requirements */}
+                  {passwordTouched && (
+                    <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Password must have:</p>
+                      <ul className="space-y-1">
+                        {passwordRules.map((rule) => {
+                          const passed = rule.test(formData.password);
+                          return (
+                            <li key={rule.label} className={`flex items-center gap-2 text-xs font-semibold transition-colors ${passed ? 'text-green-600' : 'text-gray-400'}`}>
+                              <span className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] font-black ${
+                                passed ? 'bg-green-500' : 'bg-gray-300'
+                              }`}>
+                                {passed ? '✓' : '×'}
+                              </span>
+                              {rule.label}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+
+                  {errors.password && <p className="text-red-500 text-xs mt-1.5 font-bold">{errors.password}</p>}
                 </div>
 
                 {/* confirm password */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">🔒</span>
-                    <input type="password" name="confirm_password" value={formData.confirm_password} onChange={handleChange} placeholder="Repeat your password" 
-                           className={`w-full py-2.5 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white placeholder:text-gray-400 ${errors.confirm_password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-blue-600'}`} />
-                  </div>
-                  {errors.confirm_password && <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.confirm_password}</p>}
-                </div>
-
-                {/* role dropdown */}
                 <div className="mb-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">I am a...</label>
+                  <label className="block text-xs font-extrabold text-[#8792a6] mb-2 uppercase tracking-wider">Confirm Password</label>
                   <div className="relative">
-                    <select name="role" value={formData.role} onChange={handleChange} 
-                            className="w-full py-2.5 px-4 text-sm rounded-lg outline-none transition-colors border-2 bg-gray-50 focus:bg-white border-gray-200 focus:border-blue-600 appearance-none">
-                      <option value="Tenant">Tenant (looking for a room)</option>
-                      <option value="Owner">Owner (listing a room)</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                    </div>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔒</span>
+                    <input type="password" name="confirm_password" value={formData.confirm_password} onChange={handleChange} placeholder="••••••••"
+                      className={`w-full py-3.5 pl-11 pr-4 text-sm rounded-xl outline-none transition-colors border-2 ${errors.confirm_password ? 'bg-red-50 border-red-200 focus:border-red-400' : 'bg-[#f4f6fc] border-transparent focus:bg-white focus:border-indigo-600 text-gray-800 font-bold placeholder:text-gray-400 placeholder:font-medium'}`} />
+                  </div>
+                  {errors.confirm_password && <p className="text-red-500 text-xs mt-1.5 font-bold">{errors.confirm_password}</p>}
+                </div>
+
+                {/* role selector button toggle */}
+                <div className="mb-2">
+                  <div className="flex bg-[#f4f6fc] p-1.5 rounded-[14px]">
+                    {['Tenant', 'Owner'].map(r => (
+                      <button
+                        key={r}
+                        type="button"
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all duration-200 tracking-wider uppercase ${
+                          formData.role === r 
+                            ? 'bg-white text-indigo-700 shadow-sm' 
+                            : 'text-[#8792a6] hover:text-indigo-500'
+                        }`}
+                        onClick={() => setFormData(p => ({ ...p, role: r }))}
+                      >
+                        <span className="text-sm">{r === 'Tenant' ? '👤' : '🏢'}</span> {r} Account
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <button type="submit" disabled={loading} 
-                        className={`w-full py-3 mt-2 text-sm font-bold text-white rounded-lg transition-all shadow-[0_4px_14px_rgba(37,99,235,0.35)] ${loading ? 'bg-indigo-300 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-blue-500 hover:-translate-y-0.5 hover:shadow-lg'}`}>
-                  {loading ? 'Sending OTP...' : 'Continue →'}
-                </button>
+                <div className="mt-4">
+                  <button type="submit" disabled={loading}
+                    className={`w-full py-3.5 text-[13px] font-black tracking-[0.15em] text-white rounded-xl transition-all shadow-[0_4px_14px_rgba(79,70,229,0.35)] uppercase ${loading ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5'}`}>
+                    {loading ? 'Sending OTP...' : 'REGISTER →'}
+                  </button>
+                </div>
               </form>
 
               <div className="text-center mt-6 text-sm text-gray-500">
@@ -322,8 +362,8 @@ function Register({ onLogin }) {
                   />
                 </div>
 
-                <button type="submit" disabled={loading} 
-                        className={`w-full py-3 text-sm font-bold text-white rounded-lg transition-all shadow-[0_4px_14px_rgba(37,99,235,0.35)] mb-4 ${loading ? 'bg-indigo-300 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-blue-500 hover:-translate-y-0.5 hover:shadow-lg'}`}>
+                <button type="submit" disabled={loading}
+                  className={`w-full py-3 text-sm font-bold text-white rounded-lg transition-all shadow-[0_4px_14px_rgba(37,99,235,0.35)] mb-4 ${loading ? 'bg-indigo-300 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-blue-500 hover:-translate-y-0.5 hover:shadow-lg'}`}>
                   {loading ? 'Verifying...' : 'Verify Email'}
                 </button>
 

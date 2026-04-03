@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleMap, Marker, InfoWindow, StandaloneSearchBox } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, StandaloneSearchBox, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { useNavigate } from 'react-router-dom';
 import { useMapContext } from '../context/MapContext';
 import { CONFIG } from '../constants/config';
-import { School, MapPin, Coffee, ShoppingCart, Hospital, Building, Landmark, Navigation2, Info, Search } from 'lucide-react';
+import { School, MapPin, Coffee, ShoppingCart, Hospital, Building, Landmark, Navigation2, Info, Search, Timer, Route } from 'lucide-react';
 
 const mapContainerStyle = {
     width: '100%',
@@ -25,27 +26,77 @@ const categories = [
 
 const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searchCoords = null }) => {
     const { isLoaded } = useMapContext();
+    const navigate = useNavigate();
     const [internalSelectedRoom, setInternalSelectedRoom] = useState(null);
     const [workplace, setWorkplace] = useState(null);
     const [nearbyPlaces, setNearbyPlaces] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
     const [map, setMap] = useState(null);
+    const [directionsResponse, setDirectionsResponse] = useState(null);
+    const [routeInfo, setRouteInfo] = useState({ distance: '', duration: '' });
     const searchBoxRef = useRef(null);
 
     // Sync selected room from props
     const selectedRoom = externalSelectedRoom || internalSelectedRoom;
 
-    // Reset nearby places when selected room changes
+    // Reset nearby places and directions when selected room changes
     useEffect(() => {
         if (selectedRoom) {
             setNearbyPlaces([]);
             setActiveCategory(null);
+            setDirectionsResponse(null);
+            setRouteInfo({ distance: '', duration: '' });
+
             if (map && selectedRoom.latitude) {
                 map.panTo({ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) });
                 map.setZoom(17);
             }
         }
     }, [selectedRoom, map]);
+
+    // Handle Directions
+    useEffect(() => {
+        if (selectedRoom && workplace && window.google) {
+            const directionsService = new window.google.maps.DirectionsService();
+            directionsService.route(
+                {
+                    origin: { lat: workplace.lat, lng: workplace.lng },
+                    destination: { lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) },
+                    travelMode: window.google.maps.TravelMode.DRIVING
+                },
+                (result, status) => {
+                    if (status === window.google.maps.DirectionsStatus.OK) {
+                        setDirectionsResponse(result);
+                        setRouteInfo({
+                            distance: result.routes[0].legs[0].distance.text,
+                            duration: result.routes[0].legs[0].duration.text
+                        });
+                    } else {
+                        console.error(`error fetching directions ${result}`);
+                    }
+                }
+            );
+        } else {
+            setDirectionsResponse(null);
+            setRouteInfo({ distance: '', duration: '' });
+        }
+    }, [selectedRoom, workplace]);
+
+    // Get current location on mount if possible
+    useEffect(() => {
+        if (navigator.geolocation && !workplace) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setWorkplace({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        name: 'Your Current Location'
+                    });
+                },
+                (err) => console.log('Geolocation skipped:', err.message)
+            );
+        }
+    }, []);
 
     const onMapLoad = (mapInstance) => setMap(mapInstance);
     const onSearchLoad = (ref) => searchBoxRef.current = ref;
@@ -72,11 +123,9 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
             });
 
             if (validRooms.length === 1) {
-                // If only 1 room is found, pan directly and set a comfortable zoom
                 map.panTo({ lat: parseFloat(validRooms[0].latitude), lng: parseFloat(validRooms[0].longitude) });
                 map.setZoom(16);
             } else if (validRooms.length > 1) {
-                // If multiple rooms, fit all of them on screen
                 map.fitBounds(bounds);
             }
         }
@@ -89,7 +138,7 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
             const location = {
                 lat: place.geometry.location.lat(),
                 lng: place.geometry.location.lng(),
-                name: place.name
+                name: place.formatted_address || place.name
             };
             setWorkplace(location);
             if (map) {
@@ -152,15 +201,6 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
         }
     };
 
-    // Calculate distance from workplace to selected room
-    const getWorkplaceDistance = (room) => {
-        if (!workplace || !room || !window.google) return null;
-        const roomLoc = new window.google.maps.LatLng(parseFloat(room.latitude), parseFloat(room.longitude));
-        const workLoc = new window.google.maps.LatLng(workplace.lat, workplace.lng);
-        const distance = window.google.maps.geometry.spherical.computeDistanceBetween(roomLoc, workLoc);
-        return (distance / 1000).toFixed(2);
-    };
-
     if (!isLoaded) return (
         <div className="h-[600px] flex flex-col items-center justify-center bg-gray-50 rounded-2xl gap-4">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -173,8 +213,8 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
             {/* Search Header */}
             <div className="bg-white p-5 rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
                 <div className="flex items-center gap-3 text-blue-600 font-extrabold whitespace-nowrap bg-blue-50 px-5 py-3 rounded-2xl">
-                    <Navigation2 className="w-5 h-5" />
-                    <span className="text-sm">Distance Finder</span>
+                    <Navigation2 className="w-5 h-5 text-blue-600 animate-pulse" />
+                    <span className="text-sm">Route Analyzer</span>
                 </div>
                 <div className="relative flex-1 w-full">
                     <StandaloneSearchBox onLoad={onSearchLoad} onPlacesChanged={onPlacesChanged}>
@@ -188,8 +228,8 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                 </div>
                 {workplace && (
                     <button
-                        onClick={() => { setWorkplace(null); setNearbyPlaces([]); }}
-                        className="text-red-500 font-bold text-xs bg-red-50 px-4 py-3 rounded-2xl hover:bg-red-100 transition"
+                        onClick={() => { setWorkplace(null); setNearbyPlaces([]); setDirectionsResponse(null); }}
+                        className="text-red-500 font-bold text-xs bg-red-50 px-4 py-3 rounded-2xl hover:bg-red-100 transition whitespace-nowrap"
                     >
                         Clear Location
                     </button>
@@ -259,6 +299,20 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                             />
                         )}
 
+                        {directionsResponse && (
+                            <DirectionsRenderer
+                                directions={directionsResponse}
+                                options={{
+                                    polylineOptions: {
+                                        strokeColor: '#2563eb',
+                                        strokeOpacity: 0.8,
+                                        strokeWeight: 6,
+                                    },
+                                    markerOptions: { visible: false } // We use our own markers
+                                }}
+                            />
+                        )}
+
                         {selectedRoom && (
                             <InfoWindow
                                 position={{ lat: parseFloat(selectedRoom.latitude), lng: parseFloat(selectedRoom.longitude) }}
@@ -276,19 +330,32 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                                         />
                                     )}
                                     <h4 className="font-extrabold text-gray-900 text-sm leading-tight">{selectedRoom.title}</h4>
-                                    <p className="text-blue-600 font-extrabold text-sm mt-1">NPR {selectedRoom.price}</p>
+                                    <div className="flex items-center justify-between mt-1">
+                                        <p className="text-blue-600 font-extrabold text-sm">NPR {selectedRoom.price}</p>
+                                        <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                                            <MapPin size={10} /> {selectedRoom.location?.split(',')[0]}
+                                        </span>
+                                    </div>
 
-                                    {workplace && (
-                                        <div className="mt-3 flex items-center gap-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
-                                            <Navigation2 className="w-3 h-3 text-blue-600" />
-                                            <span className="text-[10px] font-bold text-blue-800">
-                                                {getWorkplaceDistance(selectedRoom)} km to {workplace.name.split(',')[0]}
-                                            </span>
+                                    {routeInfo.distance && (
+                                        <div className="mt-3 space-y-2">
+                                            <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
+                                                <Navigation2 className="w-3 h-3 text-blue-600" />
+                                                <span className="text-[10px] font-bold text-blue-800">
+                                                    {routeInfo.distance} via Road
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                                                <Timer className="w-3 h-3 text-emerald-600" />
+                                                <span className="text-[10px] font-bold text-emerald-800">
+                                                    approx. {routeInfo.duration} travel
+                                                </span>
+                                            </div>
                                         </div>
                                     )}
 
                                     <button
-                                        onClick={() => (window.location.href = `/room/${selectedRoom.id}`)}
+                                        onClick={() => navigate(`/room/${selectedRoom.id}`)}
                                         className="w-full mt-3 py-2.5 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-black transition-all shadow-lg shadow-gray-200"
                                     >
                                         Detailed View
@@ -298,29 +365,53 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                         )}
                     </GoogleMap>
 
+                    {/* Route Summary Overlay */}
+                    {routeInfo.distance && selectedRoom && (
+                        <div className="absolute bottom-28 left-6 right-6 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-white/50 flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-bottom duration-500 z-[1000]">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                                    <Route className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Road Connection</p>
+                                    <h4 className="font-extrabold text-gray-900 text-sm">From {workplace.name?.split(',')[0]} to Room</h4>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-6 pr-4">
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase">Distance</p>
+                                    <p className="text-lg font-black text-blue-600 leading-none">{routeInfo.distance}</p>
+                                </div>
+                                <div className="w-px h-8 bg-gray-100" />
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase">Est. Time</p>
+                                    <p className="text-lg font-black text-emerald-600 leading-none">{routeInfo.duration}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Nearby Category Picker Overlay */}
                     {selectedRoom && (
-                        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-white/50 gap-2 z-[1000] animate-in slide-in-from-top duration-500">
+                        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-white/50 gap-2 z-[1000] animate-in slide-in-from-top duration-500 max-w-[90%] overflow-x-auto no-scrollbar">
                             {categories.map((cat) => (
                                 <button
                                     key={cat.id}
                                     onClick={() => searchNearby(selectedRoom, cat.id, false)}
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 ${activeCategory === cat.id
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 whitespace-nowrap ${activeCategory === cat.id
                                         ? `${cat.color} text-white shadow-lg`
-                                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                                        : 'bg-white text-gray-600 hover:bg-gray-100 font-extrabold'
                                         }`}
                                 >
                                     {cat.icon}
-                                    <span className="text-xs font-extrabold">{cat.label}</span>
+                                    <span className="text-xs">{cat.label}</span>
                                 </button>
                             ))}
-                            
-                            {/* Custom Search Input */}
-                            <div className="flex items-center bg-white/80 rounded-xl border border-gray-200 overflow-hidden ml-2 h-10">
+                            <div className="flex items-center bg-white/80 rounded-xl border border-gray-200 overflow-hidden ml-2 h-10 min-w-40">
                                 <input 
                                     type="text"
-                                    placeholder="Type anything (e.g. Gym)"
-                                    className="w-36 px-3 py-2 text-xs font-bold text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
+                                    placeholder="Type (e.g. Gym)"
+                                    className="w-full px-3 py-2 text-xs font-bold text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && e.target.value.trim()) {
                                             searchNearby(selectedRoom, e.target.value.trim(), true);
@@ -344,13 +435,13 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                         {workplace && (
                             <div className="flex items-center gap-3">
                                 <div className="w-3 h-3 bg-blue-500 rounded-full ring-4 ring-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-                                <span className="text-[10px] font-extrabold text-white tracking-widest uppercase">Your Target</span>
+                                <span className="text-[10px] font-extrabold text-white tracking-widest uppercase">Target Location</span>
                             </div>
                         )}
-                        {nearbyPlaces.length > 0 && (
+                        {routeInfo.distance && (
                             <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 bg-emerald-500 rounded-full ring-4 ring-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                                <span className="text-[10px] font-extrabold text-white tracking-widest uppercase">Nearby {activeCategory}s</span>
+                                <div className="w-8 h-1 bg-blue-600 rounded-full shadow-[0_0_5px_rgba(37,99,235,0.8)]"></div>
+                                <span className="text-[10px] font-extrabold text-white tracking-widest uppercase">Road Route</span>
                             </div>
                         )}
                     </div>
@@ -360,14 +451,14 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                 <div className="bg-gray-50 rounded-[32px] p-6 border border-gray-100 overflow-y-auto max-h-[650px] space-y-4">
                     <h3 className="font-extrabold text-gray-900 flex items-center gap-2 mb-2">
                         <Building className="w-5 h-5 text-blue-600" />
-                        Explore Nearby
+                        Surrounding Hubs
                     </h3>
 
                     {!selectedRoom ? (
-                        <div className="bg-white/50 border-2 border-dashed border-gray-200 rounded-3xl p-8 text-center">
+                        <div className="bg-white/50 border-2 border-dashed border-gray-200 rounded-3xl p-8 text-center mt-4">
                             <Info className="w-8 h-8 text-gray-300 mx-auto mb-3" />
                             <p className="text-sm font-bold text-gray-400 leading-relaxed italic">
-                                Select a room to explore distances to schools, ATMs, and more.
+                                Select a room to view road distance and available routes.
                             </p>
                         </div>
                     ) : nearbyPlaces.length > 0 ? (
@@ -399,10 +490,10 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                             <p className="text-sm font-bold text-gray-400">No {activeCategory}s found nearby.</p>
                         </div>
                     ) : (
-                        <div className="bg-blue-50 border-2 border-dashed border-blue-100 rounded-3xl p-8 text-center">
+                        <div className="bg-blue-50/50 border-2 border-dashed border-blue-100 rounded-3xl p-8 text-center">
                             <Landmark className="w-8 h-8 text-blue-300 mx-auto mb-3" />
-                            <p className="text-sm font-bold text-blue-500 leading-relaxed">
-                                Pick a category above the map to see how far they are!
+                            <p className="text-sm font-bold text-blue-600 leading-relaxed">
+                                Pick a category above the map to scan the local area!
                             </p>
                         </div>
                     )}
