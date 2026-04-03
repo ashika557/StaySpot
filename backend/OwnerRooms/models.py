@@ -201,21 +201,6 @@ class Visit(models.Model):
 # Payment model moved to payments app
 
 
-class Chat(models.Model):
-    """Represents chat messages between tenants and owners."""
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
-    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name='chats')
-    message = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=False)
-    
-    class Meta:
-        ordering = ['-timestamp']
-    
-    def __str__(self):
-        return f"{self.sender.full_name} to {self.receiver.full_name} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
-
 
 class RoomReview(models.Model):
     """Stores tenant reviews and ratings for rooms."""

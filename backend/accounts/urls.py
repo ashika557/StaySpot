@@ -20,4 +20,5 @@ urlpatterns = [
     path('admin/users/<int:user_id>/update/', views.admin_update_user, name='admin_update_user'),
     path('admin/users/<int:user_id>/verify-kyc/', views.admin_verify_kyc, name='admin_verify_kyc'),
     path('admin/users/<int:user_id>/delete/', views.admin_delete_user, name='admin_delete_user'),
+    path('delete-account/', views.delete_account, name='delete_account'),
 ]

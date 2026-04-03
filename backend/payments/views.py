@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -41,7 +41,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         amount_str = str(int(payment.amount)) if payment.amount == int(payment.amount) else str(payment.amount)
         data_to_sign = f"total_amount={amount_str},transaction_uuid={transaction_uuid},product_code={settings.ESEWA_PRODUCT_CODE}"
         
-        print(f"DEBUG: Initiating eSewa with UUID: {transaction_uuid}, amount: {amount_str}")
+
         
         secret_key = settings.ESEWA_SECRET_KEY
         signature = hmac.new(
@@ -102,27 +102,23 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 message_parts.append(f"{field}={response_data.get(field)}")
             message_str = ",".join(message_parts)
             
-            print(f"DEBUG: Verifying message: {message_str}")
+
             
             secret_key = settings.ESEWA_SECRET_KEY
-            if not secret_key:
-                print("WARNING: ESEWA_SECRET_KEY is not set. Verification will likely fail.")
+
 
             # HMAC requires the key and message as bytes, then we base64 encode the digest
             hmac_obj = hmac.new(secret_key.encode(), message_str.encode(), hashlib.sha256)
             expected_sig = base64.b64encode(hmac_obj.digest()).decode()
             
-            print(f"DEBUG: Expected signature: {expected_sig}")
-            print(f"DEBUG: Received signature: {resp_sig}")
+
             
             if resp_sig != expected_sig:
-                 # PROD: return Response({'error': 'Invalid signature verification failed'}, status=status.HTTP_400_BAD_REQUEST)
-                 # DEV/STUDENT PROJECT: Allow if status is COMPLETE despite signature mismatch
-                 print(f"WARNING: Signature mismatch for payment {payment.id}. Expected {expected_sig}, got {resp_sig}. Proceeding because this is a student project.")
+                 return Response({'error': 'Invalid signature verification failed'}, status=status.HTTP_400_BAD_REQUEST)
 
             esewa_status = response_data.get('status', '').upper()
             if esewa_status not in ['COMPLETE', 'SUCCESS']:
-                 print(f"DEBUG: Status is {esewa_status}, not COMPLETE or SUCCESS")
+
                  return Response({'error': f'Payment status is {esewa_status}'}, status=status.HTTP_400_BAD_REQUEST)
 
             esewa_transaction_code = response_data.get('transaction_code')
@@ -140,13 +136,13 @@ class PaymentViewSet(viewsets.ModelViewSet):
             if booking.status == 'Pending':
                 booking.status = 'Confirmed'
                 booking.save()
-                print(f"DEBUG: Booking {booking.id} confirmed.")
+
             
             room = booking.room
             if room.status == 'Available':
                 room.status = 'Rented'
                 room.save()
-                print(f"DEBUG: Room {room.id} marked as Rented.")
+
     
             # Notify Owner
             send_notification(
@@ -187,12 +183,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
         url = f"{lookup_url}?product_code={product_code}&total_amount={amount_str}&transaction_uuid={transaction_uuid}"
 
         try:
-            print(f"DEBUG: eSewa Status Query URL: {url}")
+
             response = requests.get(url, timeout=10)
-            print(f"DEBUG: eSewa Status Response Code: {response.status_code}")
+
             if response.status_code == 200:
                 data = response.json()
-                print(f"DEBUG: eSewa Status Response Data: {data}")
+
                 esewa_status = data.get('status', '').upper()
                 
                 if esewa_status in ['COMPLETE', 'SUCCESS']:
@@ -298,7 +294,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             response = requests.post(url, headers=headers, data=payload)
             if response.status_code == 200:
                 data = response.json()
-                print(f"DEBUG: Khalti Lookup Data: {data}")
+
                 # Use case-insensitive check and include 'success' as a fallback
                 khalti_state = data.get('status', '').lower()
                 if khalti_state in ['completed', 'success']:
@@ -313,13 +309,13 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     if booking.status == 'Pending':
                         booking.status = 'Confirmed'
                         booking.save()
-                        print(f"DEBUG: Booking {booking.id} confirmed via Khalti.")
+
                     
                     room = booking.room
                     if room.status == 'Available':
                         room.status = 'Rented'
                         room.save()
-                        print(f"DEBUG: Room {room.id} marked as Rented via Khalti.")
+
 
                     try:
                         # Notify Owner
@@ -331,12 +327,13 @@ class PaymentViewSet(viewsets.ModelViewSet):
                             related_id=payment.id
                         )
                     except Exception as ne:
-                        print(f"DEBUG: Owner notification failed but payment was saved: {ne}")
+                        pass
+
 
                     return Response({'status': 'Payment verified successfully'})
                 return Response({'status': data.get('status'), 'message': 'Payment state is not Completed'})
             else:
-                print(f"DEBUG: Khalti Lookup Failed! Status: {response.status_code}, Content: {response.text}")
+
                 return Response(response.json(), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

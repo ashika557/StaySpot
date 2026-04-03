@@ -1,11 +1,11 @@
 
 from django.db.models import Q
 from django.utils import timezone
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, RoomReview, Complaint, Chat
+from .models import Room, RoomImage, UserSearchPreference, Booking, Visit, RoomReview, Complaint
 from accounts.models import User
 from payments.models import Payment
 from .serializers import (
@@ -41,6 +41,11 @@ class RoomViewSet(viewsets.ModelViewSet):
         location = self.request.query_params.get('location')
         gender = self.request.query_params.get('gender_preference')
         room_type = self.request.query_params.get('room_type')
+
+        if gender and gender != 'Any':
+            queryset = queryset.filter(Q(gender_preference=gender) | Q(gender_preference='Any'))
+        if room_type:
+            queryset = queryset.filter(room_type=room_type)
         
         # Amenities
         wifi = self.request.query_params.get('wifi')
@@ -62,13 +67,6 @@ class RoomViewSet(viewsets.ModelViewSet):
         lng = self.request.query_params.get('lng')
         radius = self.request.query_params.get('radius') # in km
         
-        if location:
-            queryset = queryset.filter(location__icontains=location)
-        if gender and gender != 'Any':
-            queryset = queryset.filter(Q(gender_preference=gender) | Q(gender_preference='Any'))
-        if room_type:
-            queryset = queryset.filter(room_type=room_type)
-        
         # Boolean Filters
         if wifi == 'true': queryset = queryset.filter(wifi=True)
         if ac == 'true': queryset = queryset.filter(ac=True)
@@ -85,26 +83,51 @@ class RoomViewSet(viewsets.ModelViewSet):
         if max_price:
             queryset = queryset.filter(price__lte=max_price)
 
-        # Basic distance filtering if lat/lng/radius provided
+        # Distance Search
+        lat = self.request.query_params.get('lat')
+        lng = self.request.query_params.get('lng')
+        radius = self.request.query_params.get('radius') # in km
+
+        # Logic for location and distance
+        # If both location text and coordinates are provided, we should find items that match either:
+        # 1. The location name matches (text search)
+        # 2. Or the item is within the distance range (spatial search)
+        
+        q_location = Q()
+        if location:
+            q_location = Q(location__icontains=location)
+            # If no coordinates, just filter by location directly
+            if not (lat and lng and radius):
+                queryset = queryset.filter(q_location)
+
         if lat and lng and radius:
             try:
-                lat = float(lat)
-                lng = float(lng)
-                radius = float(radius)
-                # Simple bounding box for rough distance filtering
-                # 1 degree of latitude is approx 111km
-                lat_deg = radius / 111.0
-                # 1 degree of longitude depends on latitude
-                import math
-                lng_deg = radius / (111.0 * math.cos(math.radians(lat)))
+                lat_val = float(lat)
+                lng_val = float(lng)
+                radius_val = float(radius)
                 
-                queryset = queryset.filter(
-                    latitude__gte=lat - lat_deg,
-                    latitude__lte=lat + lat_deg,
-                    longitude__gte=lng - lng_deg,
-                    longitude__lte=lng + lng_deg
+                # 1 degree of latitude is approx 111km
+                lat_deg = radius_val / 111.0
+                import math
+                lng_deg = radius_val / (111.0 * math.cos(math.radians(lat_val)))
+                
+                q_distance = Q(
+                    latitude__gte=lat_val - lat_deg,
+                    latitude__lte=lat_val + lat_deg,
+                    longitude__gte=lng_val - lng_deg,
+                    longitude__lte=lng_val + lng_deg
                 )
+                
+                if location:
+                    # Combined search: match by name OR match by distance
+                    queryset = queryset.filter(q_location | q_distance)
+                else:
+                    # Just distance search
+                    queryset = queryset.filter(q_distance)
             except (ValueError, TypeError):
+                # Fallback to location search if distance parsing fails but location exists
+                if location:
+                    queryset = queryset.filter(q_location)
                 pass
             
         # Update user preferences if filtering (only for Tenants)
@@ -186,7 +209,6 @@ class RoomViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if not user.is_identity_verified and user.role != 'Admin':
-            from rest_framework import serializers
             raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before adding a room."})
         serializer.save(owner=user)
     
@@ -313,7 +335,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                 if user.role == 'Admin':
                     # Superadmin has full control
                     pass
-                elif booking.room.owner != user:
+                elif booking.room.owner_id != user.id:
                     raise serializers.ValidationError("You do not own this room.")
                     
         serializer.save()
@@ -343,7 +365,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                     status='Pending',
                     payment_type='Rent'
                 )
-                print(f"DEBUG: Auto-created first Rent payment (due {first_due_date}) for booking {booking.id}")
+
 
         elif new_status in ['Cancelled', 'Rejected', 'Completed']:
             # If a booking is cancelled/rejected/completed, room becomes available again
@@ -383,7 +405,6 @@ class BookingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if not user.is_identity_verified and user.role != 'Admin':
-            from rest_framework import serializers
             raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
         
         # Check if room is already occupied
@@ -441,7 +462,6 @@ class VisitViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if not user.is_identity_verified and user.role != 'Admin':
-            from rest_framework import serializers
             raise serializers.ValidationError({"error": "Your identity document is pending verification by an administrator." if user.identity_document else "You must provide an identity document before this action."})
         visit = serializer.save(tenant=user)
         
@@ -477,22 +497,7 @@ class VisitViewSet(viewsets.ModelViewSet):
 # PaymentViewSet moved to payments app
 
 
-# Debug endpoint to check user info
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def debug_user_info(request):
-    """Debug endpoint to check current user's authentication and role."""
-    user = request.user
-    return Response({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'full_name': user.full_name,
-        'phone': user.phone,
-        'role': user.role,
-        'is_authenticated': request.user.is_authenticated,
-        'auth_header_present': 'Authorization' in request.headers,
-    })
+
 
 
 # Tenant Dashboard API endpoint
@@ -504,22 +509,19 @@ def tenant_dashboard(request):
     Returns: upcoming visit, current booking, payment reminders, recent chats, suggested rooms
     """
     user = request.user
-    print(f"DEBUG: Tenant Dashboard - User: {user}, Auth: {user.is_authenticated}")
-    print(f"DEBUG: Cookies: {request.COOKIES}")
+
     
     if not user.is_authenticated:
         return Response(
-            {'error': 'Authentication required', 'debug_cookies': str(request.COOKIES)}, 
+            {'error': 'Authentication required'}, 
             status=status.HTTP_401_UNAUTHORIZED
         )
 
-    # Temporarily disabled role check for debugging
-    # TODO: Re-enable this once authentication is properly set up
-    # if user.role != 'Tenant':
-    #     return Response(
-    #         {'error': 'This endpoint is only for tenants'}, 
-    #         status=status.HTTP_403_FORBIDDEN
-    #     )
+    if user.role != 'Tenant':
+        return Response(
+            {'error': 'This endpoint is only for tenants'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
     
     # Get upcoming visit (next scheduled visit)
     upcoming_visit = Visit.objects.filter(
@@ -553,11 +555,11 @@ def tenant_dashboard(request):
     
     # Get suggested rooms (fallback to any available if no preferences)
     suggested_rooms = Room.objects.filter(status='Available')
-    print(f"DEBUG: All available rooms count: {suggested_rooms.count()}")
+
     
     try:
         pref = user.search_preference
-        print(f"DEBUG: User preferences: loc={pref.location}, gender={pref.gender_preference}, type={pref.room_type}")
+
         q_objects = Q()
         if pref.location:
             q_objects |= Q(location__icontains=pref.location)
@@ -574,14 +576,14 @@ def tenant_dashboard(request):
         
         if q_objects:
             suggested_rooms = suggested_rooms.filter(q_objects).distinct()
-            print(f"DEBUG: Filtered suggested rooms count: {suggested_rooms.count()}")
+
         
         suggested_rooms = suggested_rooms.order_by('-created_at')[:3]
     except Exception as e:
-        print(f"DEBUG: Preference processing error: {e}")
+
         suggested_rooms = suggested_rooms.order_by('-created_at')[:3]
     
-    print(f"DEBUG: Final suggested rooms count: {len(suggested_rooms)}")
+
     
     # Serialize data and return
     from payments.serializers import PaymentSerializer
@@ -689,22 +691,22 @@ class RoomReviewViewSet(viewsets.ModelViewSet):
             
         # Assign the current tenant to the review
         try:
-            serializer.save(tenant=user)
+            serializer.save(tenant=user, room_id=room_id)
         except Exception as e:
             from django.db import IntegrityError
             if isinstance(e, IntegrityError):
                 from rest_framework import serializers
-                raise serializers.ValidationError("You have already reviewed this room.")
+                raise serializers.ValidationError({"error": "You have already reviewed this room."})
             raise e
 
     def perform_update(self, serializer):
-        if serializer.instance.tenant != self.request.user:
+        if serializer.instance.tenant_id != self.request.user.id:
             from rest_framework import serializers
             raise serializers.ValidationError("You can only edit your own reviews.")
         serializer.save()
 
     def perform_destroy(self, instance):
-        if instance.tenant != self.request.user:
+        if instance.tenant_id != self.request.user.id:
             from rest_framework import serializers
             raise serializers.ValidationError("You can only delete your own reviews.")
         instance.delete()
@@ -742,10 +744,20 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             related_id=complaint.id
         )
 
+
+    def update(self, request, *args, **kwargs):
+        # Compatibility hack: some frontend versions might send 'Checking'
+        if 'status' in request.data and request.data['status'] == 'Checking':
+            request.data['status'] = 'Investigating'
+        return super().update(request, *args, **kwargs)
+
     def perform_update(self, serializer):
         user = self.request.user
         complaint = self.get_object()
         new_status = serializer.validated_data.get('status')
+        if new_status == 'Checking':
+            new_status = 'Investigating'
+            serializer.validated_data['status'] = 'Investigating'
         
         if new_status and new_status != complaint.status:
             if user.role == 'Tenant':
@@ -753,7 +765,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
                 raise serializers.ValidationError({"error": "Tenants cannot change the status of a complaint."})
             
             # Only owner of the room/complaint or admin can change status
-            if user.role == 'Owner' and complaint.owner != user:
+            if user.role == 'Owner' and complaint.owner_id != user.id:
                 from rest_framework import serializers
                 raise serializers.ValidationError({"error": "You do not have permission to update this complaint."})
 
@@ -769,6 +781,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             )
         else:
             serializer.save()
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

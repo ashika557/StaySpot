@@ -11,6 +11,8 @@ class Notification(models.Model):
         ('visit_request', 'New Visit Request'),
         ('visit_status', 'Visit Status Update'),
         ('rent_reminder', 'Rent Due Reminder'),
+        ('complaint_filed', 'New Complaint Filed'),
+        ('complaint_status_change', 'Complaint Status Update'),
     )
 
     recipient = models.ForeignKey(
@@ -24,7 +26,7 @@ class Notification(models.Model):
         related_name='notifications_triggered',
         null=True, blank=True
     )
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    notification_type = models.CharField(max_length=40, choices=NOTIFICATION_TYPES)
     text = models.TextField()
     related_id = models.IntegerField(null=True, blank=True)  # ID of booking/conversation
     is_read = models.BooleanField(default=False)

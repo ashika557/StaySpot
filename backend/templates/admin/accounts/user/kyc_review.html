@@ -1,0 +1,160 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .kyc-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid #F1F5F9;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 100px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        border: 1px solid;
+    }
+    .badge-pending  { background:#FFFBEB; color:#D97706; border-color:#FDE68A; }
+    .badge-verified { background:#ECFDF5; color:#059669; border-color:#A7F3D0; }
+    .badge-rejected { background:#FEF2F2; color:#DC2626; border-color:#FECACA; }
+    .btn-back {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700;
+        text-decoration: none !important; background: #F1F5F9; color: #475569 !important;
+        font-family: 'Inter', sans-serif;
+    }
+    .btn-back:hover { background: #E2E8F0; }
+    .kyc-btn {
+        flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 14px; border-radius: 14px; font-size: 14px; font-weight: 800;
+        border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+        transition: transform 0.15s, opacity 0.2s;
+    }
+    .kyc-btn:hover { transform: scale(0.98); opacity: 0.9; }
+    .kyc-btn:active { transform: scale(0.96); }
+    .btn-approve { background: #059669; color: white; box-shadow: 0 8px 24px rgba(5,150,105,0.2); }
+    .btn-reject  { background: #DC2626; color: white; box-shadow: 0 8px 24px rgba(220,38,38,0.2); }
+</style>
+
+<div style="max-width: 580px; animation: fadeIn 0.3s ease;">
+
+    <!-- Back -->
+    <div style="margin-bottom:24px;">
+        <a href="/admin/accounts/user/{{ user_obj.id }}/detail/" class="btn-back">
+            ← Back to Profile
+        </a>
+    </div>
+
+    <!-- Main KYC Card -->
+    <div class="kyc-card">
+
+        <!-- Header -->
+        <div style="padding:18px 24px; background:linear-gradient(135deg,#FFFBEB,#FEF3C7); border-bottom:1px solid #FDE68A; display:flex; align-items:center; gap:14px;">
+            <div style="width:40px;height:40px;background:#F59E0B;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+                🛡
+            </div>
+            <div>
+                <div style="font-weight:900;font-size:16px;color:#0F172A;line-height:1.2;">KYC Review</div>
+                <div style="font-size:11px;color:#92400E;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Identity Verification</div>
+            </div>
+        </div>
+
+        <!-- User summary -->
+        <div style="padding:14px 20px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#BFDBFE,#C7D2FE);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#1E40AF;flex-shrink:0;">
+                {{ user_obj.full_name|slice:":1"|upper|default:"U" }}
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:800;font-size:14px;color:#0F172A;margin-bottom:2px;">{{ user_obj.full_name|default:user_obj.username }}</div>
+                <div style="font-size:12px;color:#64748B;">{{ user_obj.email }}</div>
+            </div>
+            <div style="flex-shrink:0;">
+                {% if user_obj.is_identity_verified %}
+                    <span class="badge badge-verified">✓ Verified</span>
+                {% elif user_obj.verification_status == 'Rejected' %}
+                    <span class="badge badge-rejected">✗ Rejected</span>
+                {% else %}
+                    <span class="badge badge-pending">⏳ Pending</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Document -->
+        <div style="padding:20px;">
+            <div style="font-size:10px;font-weight:900;color:#94A3B8;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+                <span>📄 Submitted Document</span>
+                {% if user_obj.identity_document %}
+                <a href="{{ user_obj.identity_document.url }}" target="_blank" style="font-size:11px;font-weight:700;color:#2563EB;text-decoration:none;">Open full size ↗</a>
+                {% endif %}
+            </div>
+
+            {% if user_obj.identity_document %}
+            <div style="border-radius:14px;overflow:hidden;border:2px dashed #BFDBFE;background:#F8FAFC;">
+                <img src="{{ user_obj.identity_document.url }}"
+                     alt="Identity Document"
+                     style="width:100%;max-height:300px;object-fit:contain;display:block;background:white;">
+            </div>
+            {% else %}
+            <div style="padding:40px;text-align:center;background:#F8FAFC;border-radius:14px;border:2px dashed #E2E8F0;color:#CBD5E1;">
+                <div style="font-size:40px;margin-bottom:10px;">📄</div>
+                <div style="font-weight:700;font-size:13px;color:#94A3B8;">No document uploaded</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Action area -->
+        <div style="padding:0 20px 20px;">
+            {% if user_obj.verification_status == 'Pending' and user_obj.identity_document %}
+            <p style="text-align:center;font-size:12px;color:#94A3B8;font-weight:600;margin:0 0 14px;">
+                Review the document above, then approve or reject
+            </p>
+            <form method="post" style="display:flex;gap:12px;">
+                {% csrf_token %}
+                <button type="submit" name="action" value="approve" class="kyc-btn btn-approve">
+                    ✓ &nbsp; Approve Identity
+                </button>
+                <button type="submit" name="action" value="reject" class="kyc-btn btn-reject">
+                    ✗ &nbsp; Reject Identity
+                </button>
+            </form>
+
+            {% elif user_obj.is_identity_verified %}
+            <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:14px;">
+                <span style="font-size:20px;">✅</span>
+                <div>
+                    <div style="font-weight:800;font-size:13px;color:#065F46;">Identity Approved</div>
+                    <div style="font-size:11px;color:#059669;">This user's document has been verified.</div>
+                </div>
+            </div>
+
+            {% elif user_obj.verification_status == 'Rejected' %}
+            <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:14px;">
+                <span style="font-size:20px;">❌</span>
+                <div>
+                    <div style="font-weight:800;font-size:13px;color:#991B1B;">Identity Rejected</div>
+                    <div style="font-size:11px;color:#DC2626;">This document was rejected. User may re-submit.</div>
+                </div>
+            </div>
+
+            {% else %}
+            <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:14px;">
+                <span style="font-size:20px;">📄</span>
+                <div style="font-weight:700;font-size:13px;color:#94A3B8;">No document submitted yet</div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

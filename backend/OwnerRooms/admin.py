@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Room, RoomImage, Booking, Visit, Chat, Complaint
-
+from .models import Room, RoomImage, Booking, Visit, Complaint
 class RoomImageInline(admin.TabularInline):
     model = RoomImage
     extra = 1
@@ -140,6 +139,8 @@ class RoomAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context)
 
     list_display = ['room_info', 'owner_info', 'status_badge', 'created_at', 'flag_count_display', 'property_actions']
+    list_display_links = None
+    actions = None
     list_filter = ['status', 'room_type', 'gender_preference']
     search_fields = ['title', 'location']
     inlines = [RoomImageInline]
@@ -159,6 +160,8 @@ class RoomImageAdmin(admin.ModelAdmin):
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
     list_display = ['tenant', 'room', 'start_date', 'end_date', 'monthly_rent', 'status', 'created_at']
+    list_display_links = None
+    actions = None
     list_filter = ['status', 'start_date']
     search_fields = ['tenant__full_name', 'room__title']
     date_hierarchy = 'start_date'
@@ -172,6 +175,8 @@ class BookingAdmin(admin.ModelAdmin):
 @admin.register(Visit)
 class VisitAdmin(admin.ModelAdmin):
     list_display = ['tenant', 'room', 'owner', 'visit_date', 'visit_time', 'status']
+    list_display_links = None
+    actions = None
     list_filter = ['status', 'visit_date']
     search_fields = ['tenant__full_name', 'room__title', 'owner__full_name']
     date_hierarchy = 'visit_date'
@@ -185,6 +190,8 @@ class VisitAdmin(admin.ModelAdmin):
 @admin.register(Complaint)
 class ComplaintAdmin(admin.ModelAdmin):
     list_display = ['tenant', 'room', 'owner', 'complaint_type', 'status', 'created_at']
+    list_display_links = None
+    actions = None
     list_filter = ['status', 'complaint_type', 'created_at']
     search_fields = ['tenant__full_name', 'owner__full_name', 'description']
     date_hierarchy = 'created_at'
@@ -205,13 +212,3 @@ class ComplaintAdmin(admin.ModelAdmin):
         extra_context['high_complaint_owners'] = high_complaint_owners
         return super().changelist_view(request, extra_context=extra_context)
 
-@admin.register(Chat)
-class ChatAdmin(admin.ModelAdmin):
-    list_display = ['sender', 'receiver', 'room', 'message_preview', 'timestamp', 'is_read']
-    list_filter = ['is_read', 'timestamp']
-    search_fields = ['sender__full_name', 'receiver__full_name', 'message']
-    date_hierarchy = 'timestamp'
-    
-    def message_preview(self, obj):
-        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
-    message_preview.short_description = 'Message'

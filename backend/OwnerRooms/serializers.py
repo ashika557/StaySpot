@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Room, RoomImage, Booking, Visit, Chat, RoomReview, Complaint
+from .models import Room, RoomImage, Booking, Visit, RoomReview, Complaint
 from accounts.models import User
 from chat.serializers import MessageSerializer
 from payments.models import Payment
@@ -16,16 +16,8 @@ class RoomImageSerializer(serializers.ModelSerializer):
 class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'phone', 'role', 'identity_document', 'is_identity_verified']
+        fields = ['id', 'full_name', 'email', 'phone', 'role', 'profile_photo', 'identity_document', 'is_identity_verified']
 
-
-class RoomReviewSerializer(serializers.ModelSerializer):
-    tenant = UserBasicSerializer(read_only=True)
-    
-    class Meta:
-        model = RoomReview
-        fields = ['id', 'tenant', 'room', 'rating', 'comment', 'created_at']
-        read_only_fields = ['id', 'tenant', 'created_at']
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -84,6 +76,16 @@ class RoomSerializer(serializers.ModelSerializer):
             RoomImage.objects.create(room=instance, image=image)
         
         return instance
+
+
+class RoomReviewSerializer(serializers.ModelSerializer):
+    tenant = UserBasicSerializer(read_only=True)
+    room = RoomSerializer(read_only=True)
+    
+    class Meta:
+        model = RoomReview
+        fields = ['id', 'tenant', 'room', 'rating', 'comment', 'created_at']
+        read_only_fields = ['id', 'tenant', 'created_at']
 
 
 # User serializer for nested data

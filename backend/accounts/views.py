@@ -24,6 +24,9 @@ def request_registration_otp(request):
     if not email:
         return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
         
+    if not email.lower().endswith('@gmail.com'):
+        return Response({'error': 'Must be a valid @gmail.com address.'}, status=status.HTTP_400_BAD_REQUEST)
+        
     # Check if email is already registered
     if User.objects.filter(email=email).exists():
         return Response({'error': 'An account with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -44,15 +47,13 @@ def request_registration_otp(request):
     
     try:
         send_mail(subject, message, from_email, [email])
-        print(f"DEBUG: Registration OTP for {email} is {otp_code}")
     except Exception as e:
         print(f"Failed to send email: {e}")
         return Response({'error': 'Failed to send verification email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-    return Response({
-        'message': 'Verification code sent to your email.',
-        'otp_dev': otp_code # Remove in production
-    }, status=status.HTTP_200_OK)
+    response_data = {'message': 'Verification code sent to your email.'}
+        
+    return Response(response_data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -92,7 +93,7 @@ def register(request):
         return Response({'error': 'Email not verified. Please verify your email first.'}, status=status.HTTP_400_BAD_REQUEST)
 
     # Validate required fields
-    required_fields = ['full_name', 'email', 'phone', 'password', 'role']
+    required_fields = ['full_name', 'email', 'password', 'role']
     for field in required_fields:
         if not data.get(field):
             return Response(
@@ -107,7 +108,6 @@ def register(request):
             email=email,
             password=data['password'],
             full_name=data['full_name'],
-            phone=data['phone'],
             role=data['role'],
             is_active=True # Already verified via email OTP
         )
@@ -135,7 +135,7 @@ def login_view(request):
     data = request.data
     email = data.get('email', '').strip()
     
-    print(f"DEBUG: Login attempt - Email: '{email}', Role: '{data.get('role')}'")
+
 
     # Validate required fields
     if not email:
@@ -166,9 +166,7 @@ def login_view(request):
     # Authenticate user
     try:
         user = User.objects.get(email=email)
-        print(f"DEBUG: Found user by email: {user.username}")
     except User.DoesNotExist:
-        print(f"DEBUG: User not found for email: '{email}'")
         return Response(
             {'error': 'Invalid credentials.'},
             status=status.HTTP_401_UNAUTHORIZED
@@ -193,7 +191,7 @@ def login_view(request):
     
     # Login user
     login(request, user)
-    print(f"DEBUG: User {user.email} logged in. Session key: {request.session.session_key}")
+
     
     return Response({
         'message': 'Login successful.',
@@ -277,7 +275,7 @@ def update_profile(request):
         user.postal_code = postal_code
     if identity_document:
         user.identity_document = identity_document
-        if user.verification_status == 'Not Submitted' or user.verification_status == 'Rejected':
+        if user.verification_status != 'Approved':
             user.verification_status = 'Pending'
             user.is_identity_verified = False
     if profile_photo:
@@ -317,66 +315,74 @@ def get_csrf_token(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
-    """Modified to send OTP to phone instead of email link."""
+    """Send a 6-digit OTP to the user's registered Gmail address for password reset."""
     data = request.data
-    phone = data.get('phone', '').strip()
-    
-    if not phone:
-        return Response({'error': 'Phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+    email = data.get('email', '').strip()
+
+    if not email:
+        return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        user = User.objects.get(phone=phone)
-        
-        # Create Phone OTP for Password Reset
+        user = User.objects.get(email=email)
+
+        # Generate OTP and store it (reuse PhoneOTP model with email stored in phone field)
         otp_code = PhoneOTP.generate_otp()
         PhoneOTP.objects.filter(user=user, purpose='PasswordReset', is_verified=False).delete()
-        PhoneOTP.objects.create(user=user, phone=phone, otp_code=otp_code, purpose='PasswordReset')
-        
-        # Log for dev
-        print(f"DEBUG: Password Reset OTP for {phone} is {otp_code}")
-        
-        return Response({
-            'message': 'A reset code has been sent to your phone.',
-            'otp_dev': otp_code # Dev only
-        }, status=status.HTTP_200_OK)
-        
+        PhoneOTP.objects.create(user=user, phone=email, otp_code=otp_code, purpose='PasswordReset')
+
+        # Send OTP via Gmail SMTP
+        subject = 'StaySpot – Password Reset Code'
+        message = (
+            f'Hi {user.full_name},\n\n'
+            f'Your password reset code is: {otp_code}\n\n'
+            f'This code is valid for 10 minutes. If you did not request this, please ignore this email.\n\n'
+            f'– The StaySpot Team'
+        )
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+        except Exception as e:
+            print(f"Failed to send password reset email: {e}")
+            return Response({'error': 'Failed to send reset email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'message': 'A reset code has been sent to your email.'}, status=status.HTTP_200_OK)
+
     except User.DoesNotExist:
-        # Avoid user enumeration
-        return Response({'message': 'If an account exists with this phone number, a code has been sent.'}, status=status.HTTP_200_OK)
+        # Avoid user enumeration – return same message regardless
+        return Response({'message': 'If an account exists with this email, a code has been sent.'}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_forgot_password_otp(request):
-    """Verify phone OTP and return a reset token."""
-    phone = request.data.get('phone', '').strip()
+    """Verify email OTP for password reset and return a reset token."""
+    email = request.data.get('email', '').strip()
     otp_code = request.data.get('otp_code', '').strip()
-    
-    if not phone or not otp_code:
-        return Response({'error': 'Phone and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+    if not email or not otp_code:
+        return Response({'error': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        user = User.objects.get(phone=phone)
+        user = User.objects.get(email=email)
         otp = PhoneOTP.objects.get(user=user, otp_code=otp_code, purpose='PasswordReset', is_verified=False)
-        
+
         if not otp.is_valid():
-            return Response({'error': 'OTP expired.'}, status=status.HTTP_400_BAD_REQUEST)
-            
+            return Response({'error': 'OTP expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+
         otp.is_verified = True
         otp.save()
-        
-        # Create a Password Reset Token that will be consumed in the final step
+
+        # Create a short-lived Password Reset Token
         reset_token = PasswordResetToken.objects.create(
             user=user,
             expires_at=timezone.now() + timedelta(minutes=15)
         )
-        
+
         return Response({
             'token': reset_token.token,
             'message': 'OTP verified. You can now reset your password.'
         }, status=status.HTTP_200_OK)
-        
+
     except (User.DoesNotExist, PhoneOTP.DoesNotExist):
-        return Response({'error': 'Invalid phone or code.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Invalid email or code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -518,10 +524,11 @@ def resend_otp(request):
         # Log for development
         print(f"NEW PHONE OTP for {user.phone}: {otp_code}")
         
-        return Response({
-            'message': 'A new OTP has been sent to your phone.',
-            'otp_dev': otp_code # For development
-        }, status=status.HTTP_200_OK)
+        response_data = {'message': 'A new OTP has been sent to your phone.'}
+        if settings.DEBUG:
+            response_data['otp_dev'] = otp_code
+            
+        return Response(response_data, status=status.HTTP_200_OK)
         
     except User.DoesNotExist:
         return Response(
@@ -647,3 +654,20 @@ def admin_delete_user(request, user_id):
     user.delete()
     
     return Response({'message': f'User {user_name} has been permanently deleted.'}, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_account(request):
+    """Permanently delete the logged-in user's account."""
+    user = request.user
+    user_name = user.full_name
+    
+    # Optional: Log the deletion context for debugging or auditing
+    print(f"DEBUG: Deleting account for {user.email} (ID: {user.id})")
+    
+    try:
+        user.delete()
+        return Response({'message': f'Your account ({user_name}) has been permanently deleted.'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f"ERROR: Failed to delete account: {e}")
+        return Response({'error': 'Failed to delete your account. Please contact support.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

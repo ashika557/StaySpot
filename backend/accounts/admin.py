@@ -10,9 +10,11 @@ from .models import User, PasswordResetToken, PendingVerification
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = ('user_info', 'user_role', 'user_status', 'date_joined', 'verification_actions')
+    list_display_links = None
     list_filter = ('role', 'is_active', 'is_identity_verified', 'verification_status', 'is_staff')
     search_fields = ('username', 'full_name', 'email', 'phone')
     ordering = ('-date_joined',)
+    actions = None
     
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Additional Info', {'fields': ('full_name', 'phone', 'role', 'address', 'profile_photo')}),
@@ -64,26 +66,21 @@ class UserAdmin(BaseUserAdmin):
 
     def verification_actions(self, obj):
         from django.urls import reverse
-        
-        change_url = reverse('admin:accounts_user_change', args=[obj.pk])
-        
-        buttons = [
-            f'<a href="{change_url}" style="background: #2563EB; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration: none; margin-right: 4px;">View</a>'
-        ]
-        
-        if obj.identity_document and not obj.is_identity_verified:
-            approve_url = f"{reverse('admin:accounts_user_changelist')}?action=approve_id&ids={obj.pk}"
-            reject_url = f"{reverse('admin:accounts_user_changelist')}?action=reject_id&ids={obj.pk}"
-            buttons.append(f'<a href="{approve_url}" style="background: #10B981; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration: none; margin-right: 4px;">Approve</a>')
-            buttons.append(f'<a href="{reject_url}" style="background: #F59E0B; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration: none;">Reject</a>')
-
-        return format_html(''.join(buttons))
+        detail_url = reverse('admin:user_detail', args=[obj.pk])
+        html = f'<a href="{detail_url}" style="background:#2563EB;color:white;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;margin-right:4px;">View</a>'
+        if obj.identity_document and obj.verification_status == 'Pending':
+            kyc_url = reverse('admin:user_kyc_review', args=[obj.pk])
+            html += f'<a href="{kyc_url}" style="background:#F59E0B;color:white;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Review KYC</a>'
+        return format_html(html)
     verification_actions.short_description = 'Actions'
     
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path('profile/', self.admin_site.admin_view(self.profile_view), name='user_profile'),
+            path('<int:user_id>/detail/', self.admin_site.admin_view(self.user_detail_view), name='user_detail'),
+            path('<int:user_id>/kyc/', self.admin_site.admin_view(self.kyc_review_view), name='user_kyc_review'),
+            path('<int:user_id>/toggle-active/', self.admin_site.admin_view(self.toggle_active_view), name='user_toggle_active'),
         ]
         return custom_urls + urls
 
@@ -108,6 +105,55 @@ class UserAdmin(BaseUserAdmin):
             'user_obj': request.user,
         }
         return render(request, 'admin/accounts/profile.html', context)
+
+    def user_detail_view(self, request, user_id):
+        from django.shortcuts import get_object_or_404
+        u = get_object_or_404(User, pk=user_id)
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'{u.full_name or u.email} — User Profile',
+            'user_obj': u,
+            'opts': self.model._meta,
+        }
+        return render(request, 'admin/accounts/user/user_detail.html', context)
+
+    def kyc_review_view(self, request, user_id):
+        from django.shortcuts import get_object_or_404
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        u = get_object_or_404(User, pk=user_id)
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            if action == 'approve':
+                u.is_identity_verified = True
+                u.verification_status = 'Verified'
+                u.save()
+                messages.success(request, f"{u.full_name or u.email}'s identity has been approved.")
+            elif action == 'reject':
+                u.is_identity_verified = False
+                u.verification_status = 'Rejected'
+                u.save()
+                messages.warning(request, f"{u.full_name or u.email}'s identity has been rejected.")
+            return HttpResponseRedirect(reverse('admin:accounts_user_changelist'))
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'KYC Review — {u.full_name or u.email}',
+            'user_obj': u,
+            'opts': self.model._meta,
+        }
+        return render(request, 'admin/accounts/user/kyc_review.html', context)
+
+    def toggle_active_view(self, request, user_id):
+        from django.shortcuts import get_object_or_404
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        u = get_object_or_404(User, pk=user_id)
+        if u.pk != request.user.pk:
+            u.is_active = not u.is_active
+            u.save()
+            status = 'activated' if u.is_active else 'deactivated'
+            messages.success(request, f"{u.full_name or u.email}'s account has been {status}.")
+        return HttpResponseRedirect(reverse('admin:user_detail', args=[user_id]))
 
     def identity_preview(self, obj):
         if obj.identity_document:
