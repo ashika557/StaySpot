@@ -15,10 +15,6 @@ export default function AdminComplaintRegistry({ user }) {
     const [priorityFilter, setPriorityFilter] = useState('All');
     // const [actionLoading, setActionLoading] = useState(null);
 
-    useEffect(() => {
-        fetchComplaints();
-    }, [fetchComplaints]);
-
     const fetchComplaints = React.useCallback(async () => {
         try {
             setLoading(true);
@@ -42,6 +38,10 @@ export default function AdminComplaintRegistry({ user }) {
             // setActionLoading(null);
         }
     };
+
+    useEffect(() => {
+        fetchComplaints();
+    }, [fetchComplaints]);
 
     const filteredComplaints = useMemo(() => {
         return complaints.filter(c => {

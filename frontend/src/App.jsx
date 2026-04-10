@@ -56,7 +56,7 @@ function App() {
     }
   }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = React.useCallback(async () => {
     try {
       // Add timestamp to prevent caching
       const response = await apiRequest(`${API_ENDPOINTS.GET_USER}?t=${new Date().getTime()}`);
@@ -70,7 +70,7 @@ function App() {
     } catch (error) {
       console.error("Failed to refresh user profile", error);
     }
-  };
+  }, []);
 
   const triggerRentReminders = async () => {
     try {

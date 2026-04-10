@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, Star, CheckCircle, Clock, Upload, Send, MessageSquare, ChevronRight, MapPin, Edit2, Trash2, X, Loader } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Star, Send, Edit2, Trash2, X, Loader, AlertTriangle, CheckCircle, Upload } from 'lucide-react';
 import { apiRequest } from '../utils/api';
-import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 import complaintService from '../services/complaintService';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
@@ -39,7 +39,7 @@ export default function ComplaintsReviews({ user }) {
     const queryParams = new URLSearchParams(location.search);
     const preSelectedRoomId = queryParams.get('roomId');
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const [complaintsData, bookingsData] = await Promise.all([
@@ -60,11 +60,11 @@ export default function ComplaintsReviews({ user }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user.id]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     useEffect(() => {
         if (preSelectedRoomId && bookings.length > 0) {

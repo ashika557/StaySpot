@@ -19,16 +19,16 @@ const TenantBookings = ({ user }) => {
 
     const navigate = useNavigate();
 
-    useEffect(() => { fetchBookings(); }, []);
-
-    const fetchBookings = async () => {
+    const fetchBookings = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await bookingService.getAllBookings();
             setBookings(data);
         } catch (err) { console.error('Failed to grab bookings', err); }
         finally { setLoading(false); }
-    };
+    }, []);
+
+    useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
     const handleCancelBooking = async (id) => {
         if (!window.confirm("Are you sure you want to cancel this booking?")) return;

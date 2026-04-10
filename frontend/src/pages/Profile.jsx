@@ -24,7 +24,7 @@ function Profile({ user, onUpdateUser, refreshUser }) {
     useEffect(() => {
         getCsrfToken().then(setCsrfToken);
         if (refreshUser) refreshUser();
-    }, []);
+    }, [refreshUser]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;

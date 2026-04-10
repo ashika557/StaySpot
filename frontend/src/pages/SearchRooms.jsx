@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Search, MapPin, Star, ChevronDown, RotateCcw,
-    ChevronRight, MessageCircle, SlidersHorizontal,
+    ChevronRight, SlidersHorizontal,
     Map as MapIcon, Wifi, Car, Droplets, UtensilsCrossed, Sofa, PawPrint, Home
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';

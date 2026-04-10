@@ -13,10 +13,6 @@ export default function TenantVisits({ user }) {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('All');
 
-    useEffect(() => {
-        fetchVisits();
-    }, [fetchVisits]);
-
     const fetchVisits = React.useCallback(async () => {
         try {
             const data = await visitService.getAllVisits();
@@ -28,6 +24,10 @@ export default function TenantVisits({ user }) {
             setLoading(false);
         }
     }, []);
+
+    useEffect(() => {
+        fetchVisits();
+    }, [fetchVisits]);
 
     const handleCancel = async (visitId) => {
         if (!window.confirm("Are you sure you want to cancel this visit request?")) return;
@@ -93,7 +93,6 @@ export default function TenantVisits({ user }) {
     const pendingCount = visits.filter(v => v.status === 'Pending').length;
     const scheduledCount = visits.filter(v => v.status === 'Scheduled' || v.status === 'Approved').length;
     const completedCount = visits.filter(v => v.status === 'Completed').length;
-    const cancelledCount = visits.filter(v => v.status === 'Cancelled' || v.status === 'Rejected').length;
 
     const statCards = [
         { label: 'TOTAL VISITS', value: visits.length, icon: <CalendarDays className="w-5 h-5 text-blue-500" />, iconBg: 'bg-blue-50', border: 'border-t-blue-500', color: 'text-gray-900' },

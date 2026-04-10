@@ -26,11 +26,46 @@ export default function OwnerDashboard({ user, onLogout }) {
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchMainData();
+  const getFinancialData = React.useCallback(async () => {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.OWNER_FINANCIALS);
+      if (response.ok) {
+        const data = await response.json();
+        setTotalIncome(data.stats.all_time.earnings);
+        const pending = data.logs.filter(log => log.status === 'Pending' || log.status === 'Overdue');
+        setPendingPayments(pending.slice(0, 5));
+      }
+    } catch (error) { console.error(error); }
   }, []);
 
-  const fetchMainData = async () => {
+  const getRecentChats = React.useCallback(async () => {
+    try {
+      const chats = await chatService.getConversations();
+      setRecentChats(chats.slice(0, 3));
+    } catch (error) { console.error(error); }
+  }, []);
+
+  const getVisitRequests = React.useCallback(async () => {
+    try {
+      const visits = await visitService.getAllVisits();
+      const pending = visits.filter(v => v.status === 'Pending').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setVisitRequests(pending);
+    } catch (error) { console.error(error); }
+  }, []);
+
+  const getRoomData = React.useCallback(async () => {
+    try {
+      const response = await apiRequest('/rooms/');
+      if (response.ok) {
+        const rooms = await response.json();
+        setTotalRooms(rooms.length);
+        setAvailableRooms(rooms.filter(r => r.status === 'Available').length);
+        setOccupiedRooms(rooms.filter(r => r.status === 'Occupied' || r.status === 'Rented').length);
+      }
+    } catch (error) { console.error(error); }
+  }, []);
+
+  const fetchMainData = React.useCallback(async () => {
     try {
       setLoading(true);
       await Promise.all([
@@ -44,46 +79,11 @@ export default function OwnerDashboard({ user, onLogout }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getRoomData, getRecentChats, getVisitRequests, getFinancialData]);
 
-  async function getFinancialData() {
-    try {
-      const response = await apiRequest(API_ENDPOINTS.OWNER_FINANCIALS);
-      if (response.ok) {
-        const data = await response.json();
-        setTotalIncome(data.stats.all_time.earnings);
-        const pending = data.logs.filter(log => log.status === 'Pending' || log.status === 'Overdue');
-        setPendingPayments(pending.slice(0, 5));
-      }
-    } catch (error) { console.error(error); }
-  }
-
-  async function getRecentChats() {
-    try {
-      const chats = await chatService.getConversations();
-      setRecentChats(chats.slice(0, 3));
-    } catch (error) { console.error(error); }
-  }
-
-  async function getVisitRequests() {
-    try {
-      const visits = await visitService.getAllVisits();
-      const pending = visits.filter(v => v.status === 'Pending').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      setVisitRequests(pending);
-    } catch (error) { console.error(error); }
-  }
-
-  async function getRoomData() {
-    try {
-      const response = await apiRequest('/rooms/');
-      if (response.ok) {
-        const rooms = await response.json();
-        setTotalRooms(rooms.length);
-        setAvailableRooms(rooms.filter(r => r.status === 'Available').length);
-        setOccupiedRooms(rooms.filter(r => r.status === 'Occupied' || r.status === 'Rented').length);
-      }
-    } catch (error) { console.error(error); }
-  }
+  useEffect(() => {
+    fetchMainData();
+  }, [fetchMainData]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();

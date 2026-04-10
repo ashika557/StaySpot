@@ -22,20 +22,29 @@ const Chat = ({ user }) => {
 
     const fileInputRef = useRef(null);    // to click the hidden file input programmatically
 
-    useEffect(() => {
-        if (!user) return;
-        fetchConversations();
-
-        // if navigated from "Message Owner" button, ?userId= will be in the URL
-        const params = new URLSearchParams(location.search);
-        const autoUserId = params.get('userId');
-        if (autoUserId) handleAutoStartChat(autoUserId);
-
-        // disconnect WebSocket when leaving the page
-        return () => { chatService.disconnect(); };
-    }, [user, location.search, handleAutoStartChat]);
-
     const lastAutoStart = useRef(null);
+    const scrollContainerRef = useRef(null);
+    const isFirstLoad = useRef(true);
+
+    const fetchConversations = React.useCallback(async () => {
+        try {
+            const data = await chatService.getConversations();
+            setConversations(data);
+            setLoading(false);
+        } catch (error) {
+            console.error('Failed to load conversations', error);
+            setLoading(false);
+        }
+    }, []);
+
+    const fetchMessages = React.useCallback(async (conversationId) => {
+        try {
+            const data = await chatService.getMessages(conversationId);
+            setMessages(data);
+        } catch (error) {
+            console.error('Failed to load messages', error);
+        }
+    }, []);
 
     // creates a conversation if one doesn't exist, then opens it
     const handleAutoStartChat = React.useCallback(async (userId) => {
@@ -54,7 +63,20 @@ const Chat = ({ user }) => {
         } catch (error) {
             console.error('Failed to auto-start chat:', error);
         }
-    }, []);
+    }, [fetchConversations]);
+
+    useEffect(() => {
+        if (!user) return;
+        fetchConversations();
+
+        // if navigated from "Message Owner" button, ?userId= will be in the URL
+        const params = new URLSearchParams(location.search);
+        const autoUserId = params.get('userId');
+        if (autoUserId) handleAutoStartChat(autoUserId);
+
+        // disconnect WebSocket when leaving the page
+        return () => { chatService.disconnect(); };
+    }, [user, location.search, handleAutoStartChat, fetchConversations]);
 
     // runs whenever the user switches to a different conversation
     useEffect(() => {
@@ -79,9 +101,6 @@ const Chat = ({ user }) => {
         }
     }, [activeChat, user.id, fetchMessages]);
 
-    const scrollContainerRef = useRef(null);
-    const isFirstLoad = useRef(true);
-
     // scroll to bottom whenever messages change
     useEffect(() => {
         if (messages.length > 0 && scrollContainerRef.current) {
@@ -102,26 +121,6 @@ const Chat = ({ user }) => {
     useEffect(() => {
         isFirstLoad.current = true;
     }, [activeChat]);
-
-    const fetchConversations = React.useCallback(async () => {
-        try {
-            const data = await chatService.getConversations();
-            setConversations(data);
-            setLoading(false);
-        } catch (error) {
-            console.error('Failed to load conversations', error);
-            setLoading(false);
-        }
-    }, []);
-
-    const fetchMessages = React.useCallback(async (conversationId) => {
-        try {
-            const data = await chatService.getMessages(conversationId);
-            setMessages(data);
-        } catch (error) {
-            console.error('Failed to load messages', error);
-        }
-    }, []);
 
     const handleSendMessage = (e) => {
         e.preventDefault();

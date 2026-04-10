@@ -17,10 +17,6 @@ export default function AdminKycReview({ user: loggedInUser }) {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        fetchUser();
-    }, [fetchUser]);
-
     const fetchUser = React.useCallback(async () => {
         try {
             setLoading(true);
@@ -44,6 +40,10 @@ export default function AdminKycReview({ user: loggedInUser }) {
             setActionLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser]);
 
     if (loading) {
         return (

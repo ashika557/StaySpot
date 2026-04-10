@@ -18,10 +18,6 @@ export default function AdminUserDetail({ user: loggedInUser }) {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        fetchUser();
-    }, [fetchUser]);
-
     const fetchUser = React.useCallback(async () => {
         try {
             setLoading(true);
@@ -45,6 +41,10 @@ export default function AdminUserDetail({ user: loggedInUser }) {
             setActionLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser]);
 
     const handleDelete = async () => {
         if (!window.confirm('Delete this account permanently? This cannot be undone.')) return;

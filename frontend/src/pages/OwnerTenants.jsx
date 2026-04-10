@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Search, Users, FileText, AlertTriangle, Wrench, MapPin,
     Eye, Edit, MessageSquare, ChevronLeft, ChevronRight,
-    User, ChevronDown, Filter, BadgeCheck, ShieldCheck,
-    MoreHorizontal, ArrowRight, UserPlus, Mail, Phone, ExternalLink, Loader, Bell
+    ChevronDown, BadgeCheck, UserPlus, ExternalLink, Loader, Bell
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import OwnerSidebar from '../components/OwnerSidebar';
@@ -20,9 +19,7 @@ const OwnerTenants = ({ user, onLogout }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const tenantsPerPage = 6;
 
-    useEffect(() => { fetchTenantData(); }, []);
-
-    const fetchTenantData = async () => {
+    const fetchTenantData = React.useCallback(async () => {
         try {
             setLoading(true);
             const response = await apiRequest(API_ENDPOINTS.OWNER_TENANTS);
@@ -33,7 +30,9 @@ const OwnerTenants = ({ user, onLogout }) => {
             }
         } catch (error) { console.error(error); }
         finally { setLoading(false); }
-    };
+    }, []);
+
+    useEffect(() => { fetchTenantData(); }, [fetchTenantData]);
 
     const filteredTenants = tenants.filter(t => {
         const matchesSearch = t.tenant.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||

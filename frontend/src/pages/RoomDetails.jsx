@@ -10,7 +10,6 @@ import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
 import { visitService } from '../services/tenantService';
 import { getMediaUrl, ROUTES } from '../constants/api';
-import { CONFIG } from '../constants/config';
 
 const ICON_BASE_URL = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/';
 

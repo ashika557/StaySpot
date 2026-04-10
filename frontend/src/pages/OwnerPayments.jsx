@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, TrendingUp, DollarSign, ChevronLeft, 
-  ChevronRight, Wallet, ArrowUpRight, ArrowDownRight, 
-  Filter, CreditCard, Search, MoreHorizontal, 
-  ArrowRight, ShieldCheck, BadgeCheck, 
-  Home, User, ExternalLink, Loader
+  Calendar, TrendingUp, ChevronLeft, 
+  ChevronRight, Wallet, Filter, CreditCard, Search, 
+  Home, Loader
 } from 'lucide-react';
 import OwnerSidebar from '../components/OwnerSidebar';
 import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
 import { apiRequest } from '../utils/api';
+
+const monthsList = [
+    'All Months', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const currentYearVal = new Date().getFullYear();
+const yearsList = [currentYearVal.toString(), (currentYearVal - 1).toString()];
 
 const OwnerPayments = ({ user, onLogout }) => {
     const [loading, setLoading] = useState(true);
@@ -27,27 +33,16 @@ const OwnerPayments = ({ user, onLogout }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const logsPerPage = 8;
 
-    const months = [
-        'All Months', 'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
 
-    const currentYear = new Date().getFullYear();
-    const years = [currentYear.toString(), (currentYear - 1).toString()];
-
-    useEffect(() => {
-        fetchFinancialData();
-    }, [filters.month, filters.year, filters.room_id]);
-
-    const fetchFinancialData = async () => {
+    const fetchFinancialData = React.useCallback(async () => {
         try {
             setLoading(true);
-            const monthIdx = months.indexOf(filters.month);
-            const queryParams = new URLSearchParams({
-                month: monthIdx > 0 ? monthIdx.toString() : 'All Months',
-                year: filters.year,
-                room_id: filters.room_id
-            });
+        const monthIdx = monthsList.indexOf(filters.month);
+        const queryParams = new URLSearchParams({
+            month: monthIdx > 0 ? monthIdx.toString() : 'All Months',
+            year: filters.year,
+            room_id: filters.room_id
+        });
 
             const response = await apiRequest(`${API_ENDPOINTS.OWNER_FINANCIALS}?${queryParams.toString()}`);
             if (response.ok) {
@@ -60,7 +55,11 @@ const OwnerPayments = ({ user, onLogout }) => {
             }
         } catch (error) { console.error("Failed to fetch financial data", error); }
         finally { setLoading(false); }
-    };
+    }, [filters.month, filters.year, filters.room_id]);
+
+    useEffect(() => {
+        fetchFinancialData();
+    }, [fetchFinancialData]);
 
     const totalLogs = logs.length;
     const indexOfLastLog = currentPage * logsPerPage;
@@ -154,14 +153,14 @@ const OwnerPayments = ({ user, onLogout }) => {
                                     value={filters.month}
                                     onChange={(e) => setFilters({ ...filters, month: e.target.value })}
                                 >
-                                    {months.map(m => <option key={m} value={m}>{m}</option>)}
+                                    {monthsList.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                                 <select
                                     className="appearance-none px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all cursor-pointer"
                                     value={filters.year}
                                     onChange={(e) => setFilters({ ...filters, year: e.target.value })}
                                 >
-                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
+                                    {yearsList.map(y => <option key={y} value={y}>{y}</option>)}
                                 </select>
                                 <select
                                     className="appearance-none px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all cursor-pointer"

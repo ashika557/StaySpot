@@ -22,11 +22,7 @@ export default function AdminRoomRegistry({ user }) {
     // Action State
     const [actionLoading, setActionLoading] = useState(null);
 
-    useEffect(() => {
-        fetchRooms();
-    }, []);
-
-    const fetchRooms = async () => {
+    const fetchRooms = React.useCallback(async () => {
         try {
             setLoading(true);
             const response = await apiRequest(API_ENDPOINTS.ROOMS);
@@ -39,7 +35,11 @@ export default function AdminRoomRegistry({ user }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchRooms();
+    }, [fetchRooms]);
 
     const handleModerateRoom = async (roomId, action) => {
         try {

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Wrench, CheckCircle, Clock, AlertTriangle, Search, Filter, MessageSquare, User, Home, ChevronRight, X, UserCheck, Info } from 'lucide-react';
+import { Wrench, CheckCircle, Clock, Search, MessageSquare, Home, UserCheck, Info } from 'lucide-react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { apiRequest } from '../utils/api';
-import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
+import { getMediaUrl } from '../constants/api';
 import complaintService from '../services/complaintService';
 
 export default function OwnerMaintenance({ user, onLogout }) {
@@ -12,11 +11,7 @@ export default function OwnerMaintenance({ user, onLogout }) {
     const [statusFilter, setStatusFilter] = useState('All');
     const [updatingId, setUpdatingId] = useState(null);
 
-    useEffect(() => {
-        fetchRequests();
-    }, []);
-
-    const fetchRequests = async () => {
+    const fetchRequests = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await complaintService.getComplaints();
@@ -27,7 +22,11 @@ export default function OwnerMaintenance({ user, onLogout }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchRequests();
+    }, [fetchRequests]);
 
     const handleStatusUpdate = async (id, newStatus) => {
         try {

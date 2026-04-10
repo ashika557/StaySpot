@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
 import {
-  Calendar, MapPin, DollarSign, MessageCircle, Star,
+  Calendar, MapPin, DollarSign, Star,
   ChevronRight, MessageSquare, Home,
-  CheckCircle, Bell, ArrowRight
+  CheckCircle, Bell, ArrowRight, MessageCircle
 } from 'lucide-react';
 import { dashboardService, paymentService } from '../services/tenantService';
 import { chatService } from '../services/chatService';
@@ -20,19 +20,7 @@ export default function TenantDashboard({ user }) {
   const isVerifyingRef = useRef(false);
   const hasProcessedCallbackRef = useRef(false);
 
-  useEffect(() => {
-    // Nuclear Failsafe: If we land on dashboard (even for a second) with tokens, instantly move away
-    const search = window.location.search;
-    if (search.includes('pidx=') || search.includes('data=') || search.includes('oid=')) {
-      navigate(`${ROUTES.TENANT_PAYMENTS}${search}`, { replace: true });
-      return;
-    }
-    fetchDashboardData();
-  }, [navigate]);
-
-  // Removed redundant autoVerify logic - handled in TenantPayments.jsx
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = React.useCallback(async () => {
     try {
       setLoading(true);
       const data = await dashboardService.getDashboardData();
@@ -43,7 +31,17 @@ export default function TenantDashboard({ user }) {
       } catch (e) { console.error("Failed to load chats", e); }
     } catch (error) { console.error('Error fetching dashboard data:', error); }
     finally { setLoading(false); }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Nuclear Failsafe: If we land on dashboard (even for a second) with tokens, instantly move away
+    const search = window.location.search;
+    if (search.includes('pidx=') || search.includes('data=') || search.includes('oid=')) {
+      navigate(`${ROUTES.TENANT_PAYMENTS}${search}`, { replace: true });
+      return;
+    }
+    fetchDashboardData();
+  }, [navigate, fetchDashboardData]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();

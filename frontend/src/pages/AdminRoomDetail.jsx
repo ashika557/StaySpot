@@ -19,10 +19,6 @@ export default function AdminRoomDetail({ user }) {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        fetchRoom();
-    }, [fetchRoom]);
-
     const fetchRoom = React.useCallback(async () => {
         try {
             setLoading(true);
@@ -51,6 +47,10 @@ export default function AdminRoomDetail({ user }) {
             setActionLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchRoom();
+    }, [fetchRoom]);
 
     const handleDelete = async () => {
         if (!window.confirm('Are you sure you want to delete this property permanently?')) return;

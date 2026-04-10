@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { Home, Users, TrendingUp, Eye, Search, Grid, List, Edit, Trash2, X, Upload, Plus, Bell, MapPin, Star, Calendar, DollarSign, LayoutGrid, ArrowRight, Navigation, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Home, Users, TrendingUp, Eye, Search, Grid, List, Edit, Trash2, X, Upload, Plus, MapPin, Star, Calendar, ArrowRight, Navigation, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
-import { ROUTES, getMediaUrl } from '../constants/api';
+import { getMediaUrl } from '../constants/api';
 
 export default function OwnerRooms({ user, refreshUser, onLogout }) {
-  const navigate = useNavigate();
   const [rooms, setRooms] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showModal, setShowModal] = React.useState(null);
@@ -34,12 +32,7 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
   const [statusModal, setStatusModal] = React.useState(null);
   const [loadingModal, setLoadingModal] = React.useState(false);
 
-  React.useEffect(() => {
-    fetchRooms();
-    if (refreshUser) refreshUser();
-  }, []);
-
-  const fetchRooms = async () => {
+  const fetchRooms = React.useCallback(async () => {
     try {
       setLoading(true);
       const data = await roomService.getAllRooms();
@@ -50,7 +43,12 @@ export default function OwnerRooms({ user, refreshUser, onLogout }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  React.useEffect(() => {
+    fetchRooms();
+    if (refreshUser) refreshUser();
+  }, [fetchRooms, refreshUser]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Delete this room?')) {

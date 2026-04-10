@@ -5,7 +5,6 @@ import { API_ENDPOINTS, ROUTES } from '../constants/api';
 
 function VerifyEmail() {
     const { token } = useParams();
-    const navigate = useNavigate();
     const [status, setStatus] = useState('verifying'); // verifying, success, error
     const [message, setMessage] = useState('');
 

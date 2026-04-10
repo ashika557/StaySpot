@@ -19,9 +19,7 @@ export default function AdminUserRegistry({ user: loggedInUser }) {
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 10;
 
-    useEffect(() => { fetchUsers(); }, []);
-
-    const fetchUsers = async () => {
+    const fetchUsers = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await adminService.getUsers();
@@ -31,7 +29,9 @@ export default function AdminUserRegistry({ user: loggedInUser }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
     const handleUpdateStatus = async (userId, isActive) => {
         try {

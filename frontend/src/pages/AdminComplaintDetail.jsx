@@ -20,10 +20,6 @@ export default function AdminComplaintDetail({ user: loggedInUser }) {
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        fetchComplaint();
-    }, [id, fetchComplaint]);
-
     const fetchComplaint = React.useCallback(async () => {
         try {
             setLoading(true);
@@ -59,6 +55,10 @@ export default function AdminComplaintDetail({ user: loggedInUser }) {
             setActionLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchComplaint();
+    }, [id, fetchComplaint]);
 
     if (loading) {
         return (

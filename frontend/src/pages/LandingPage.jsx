@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Map as MapIcon, Calendar, MessageSquare, Star, CreditCard, MapPin, Shield, Zap, Twitter, Facebook, Linkedin } from 'lucide-react';
+import { Home, Map as MapIcon, Calendar, MessageSquare, Star, CreditCard, MapPin, Shield, Zap } from 'lucide-react';
 import Footer from '../components/Footer';
 
 // This is the main landing page for StaySpot. 

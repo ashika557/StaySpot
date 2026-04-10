@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import OwnerSidebar from '../components/OwnerSidebar';
 import {
-    Calendar, MapPin, CheckCircle, XCircle, Search,
+    Calendar, MapPin, CheckCircle, Search,
     CalendarDays, AlertCircle, Eye, Filter,
     BadgeCheck, FileText, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -20,9 +20,7 @@ export default function OwnerVisitRequests({ user, onLogout }) {
     const [selectedTenant, setSelectedTenant] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => { fetchVisits(); }, []);
-
-    const fetchVisits = async () => {
+    const fetchVisits = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await visitService.getAllVisits();
@@ -30,7 +28,9 @@ export default function OwnerVisitRequests({ user, onLogout }) {
             setVisits(sorted);
         } catch (error) { console.error(error); }
         finally { setLoading(false); }
-    };
+    }, []);
+
+    useEffect(() => { fetchVisits(); }, [fetchVisits]);
 
     const handleStatusUpdate = async (visitId, newStatus) => {
         try {

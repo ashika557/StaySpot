@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Check, X, Calendar, Clock, ChevronDown, 
-  BookOpen, AlertCircle, CheckCircle, XCircle, 
-  User, ShieldCheck, Mail, Phone, BadgeCheck, 
-  Eye, ArrowRight, TrendingUp, Filter, Loader, Search, ExternalLink
+  Calendar, Clock, BookOpen, CheckCircle, XCircle, 
+  ShieldCheck, TrendingUp, Filter, Search, ArrowRight
 } from 'lucide-react';
 import OwnerSidebar from '../components/OwnerSidebar';
 import { bookingService } from '../services/bookingService';
@@ -15,16 +13,16 @@ const OwnerBookings = ({ user, onLogout }) => {
     const [filterRoom, setFilterRoom] = useState('All');
     const [filterStatus, setFilterStatus] = useState('All');
 
-    useEffect(() => { fetchBookings(); }, []);
-
-    const fetchBookings = async () => {
+    const fetchBookings = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await bookingService.getAllBookings();
             setBookings(data);
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
-    };
+    }, []);
+
+    useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
     const handleUpdateStatus = async (id, status) => {
         try {

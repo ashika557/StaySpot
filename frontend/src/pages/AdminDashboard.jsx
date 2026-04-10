@@ -15,11 +15,7 @@ export default function AdminDashboard({ user }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        fetchStats();
-    }, []);
-
-    const fetchStats = async () => {
+    const fetchStats = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await adminService.getDashboardStats();
@@ -30,7 +26,11 @@ export default function AdminDashboard({ user }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
 
     if (loading) {
         return (
