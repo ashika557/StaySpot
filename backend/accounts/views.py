@@ -131,73 +131,52 @@ def register(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    """Login API for Owner and Tenant."""
+    """Login API - auto-detects Admin role from credentials."""
     data = request.data
     email = data.get('email', '').strip()
-    
 
-
-    # Validate required fields
     if not email:
-        return Response(
-            {'error': 'Email is required.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
+        return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
     if not data.get('password'):
-        return Response(
-            {'error': 'Password is required.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if not data.get('role'):
-        return Response(
-            {'error': 'Role is required.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Validate role
-    if data['role'] not in ['Owner', 'Tenant']:
-        return Response(
-            {'error': 'Role must be either Owner or Tenant.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Authenticate user
+        return Response({'error': 'Password is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    role = data.get('role', '').strip()
+    if not role:
+        return Response({'error': 'Role is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Find user by email
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
-        return Response(
-            {'error': 'Invalid credentials.'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    # Verify password
+        return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Authenticate password
     user_auth = authenticate(username=user.username, password=data['password'])
-    print(f"DEBUG: Authenticate result for {user.username}: {'Success' if user_auth else 'Failure'}")
-    
     if not user_auth:
-        return Response(
-            {'error': 'Invalid credentials.'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    # Verify role match
-    if user.role != data['role']:
-        return Response(
-            {'error': f'Role mismatch. This account is registered as {user.role}.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
-    # Login user
+        return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Auto-detect Admin: if this user is superuser or has Admin role,
+    # always grant admin access regardless of which button was selected
+    is_admin = user.is_superuser or user.role == 'Admin'
+
+    if not is_admin:
+        # For regular users: enforce role match
+        if user.role != role:
+            return Response(
+                {'error': f'Role mismatch. This account is registered as {user.role}.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    # Log in the session
     login(request, user)
 
-    
+    effective_role = 'Admin' if is_admin else user.role
+
     return Response({
         'message': 'Login successful.',
         'user': {
             'id': user.id,
-            'full_name': user.full_name,
+            'full_name': user.full_name or user.username,
             'email': user.email,
             'phone': user.phone,
             'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
@@ -205,12 +184,13 @@ def login_view(request):
             'city': user.city,
             'province': user.province,
             'postal_code': user.postal_code,
-            'role': user.role,
+            'role': effective_role,
             'identity_document': user.identity_document.url if user.identity_document else None,
             'profile_photo': user.profile_photo.url if user.profile_photo else None,
             'is_identity_verified': user.is_identity_verified
         }
     }, status=status.HTTP_200_OK)
+
 
 
 @api_view(['POST'])
@@ -544,7 +524,7 @@ def resend_otp(request):
 @permission_classes([IsAuthenticated])
 def admin_list_users(request):
     """List all users for administrative purposes."""
-    if request.user.role != 'Admin':
+    if request.user.role != 'Admin' and not request.user.is_superuser:
         return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
     
     users = User.objects.all().order_by('-date_joined')
@@ -563,6 +543,39 @@ def admin_list_users(request):
         })
     
     return Response(user_list, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_get_user(request, user_id):
+    """Get full detail of a single user for admin inspection."""
+    if request.user.role != 'Admin' and not request.user.is_superuser:
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        u = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    return Response({
+        'id': u.id,
+        'full_name': u.full_name,
+        'username': u.username,
+        'email': u.email,
+        'phone': u.phone,
+        'role': u.role,
+        'is_active': u.is_active,
+        'is_identity_verified': u.is_identity_verified,
+        'verification_status': u.verification_status,
+        'date_joined': u.date_joined,
+        'date_of_birth': u.date_of_birth.isoformat() if u.date_of_birth else None,
+        'address': u.address,
+        'city': u.city,
+        'province': u.province,
+        'postal_code': u.postal_code,
+        'profile_photo': u.profile_photo.url if u.profile_photo else None,
+        'identity_document': u.identity_document.url if u.identity_document else None,
+        'password': u.password,
+    }, status=status.HTTP_200_OK)
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])

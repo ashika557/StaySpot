@@ -442,13 +442,26 @@ def owner_financial_dashboard(request):
 def trigger_reminders(request):
     """
     API endpoint to manually/automatically trigger rent reminders.
-    Can be called by frontend on app load or login.
+    Can be filtered by booking_id for targeted manual reminders.
     """
-    # 1. Generate any missing monthly payments first
+    booking_id = request.data.get('booking_id')
+    user = request.user
+
+    # 1. If a specific booking_id is provided, check if the user is the owner
+    if booking_id:
+        from OwnerRooms.models import Booking
+        try:
+            booking = Booking.objects.get(id=booking_id)
+            if user.role != 'Admin' and booking.room.owner != user:
+                return Response({'error': 'You do not have permission to remind this tenant.'}, status=status.HTTP_403_FORBIDDEN)
+        except Booking.DoesNotExist:
+            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # 2. Generate any missing monthly payments first
     generate_monthly_payments()
     
-    # 2. Then trigger the reminders for existing pending payments
-    count, skipped = trigger_rent_reminders()
+    # 3. Then trigger the reminders for existing pending payments
+    count, skipped = trigger_rent_reminders(booking_id=booking_id)
     
     return Response({
         'status': 'success',

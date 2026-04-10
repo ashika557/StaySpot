@@ -73,31 +73,8 @@ class RoomAdmin(admin.ModelAdmin):
 
     def property_actions(self, obj):
         from django.urls import reverse
-        change_url = reverse('admin:OwnerRooms_room_change', args=[obj.pk])
-        base_url = reverse('admin:OwnerRooms_room_changelist')
-        
-        # Base actions
-        actions = []
-        
-        # View (always)
-        actions.append(f'<a href="{change_url}" title="View Details" style="text-decoration: none; margin-right: 12px; font-size: 16px;">👁️</a>')
-        
-        # Approve/Verify (if pending or flagged)
-        flag_count = obj.complaints.filter(status__in=['Pending', 'Investigating']).count()
-        if obj.status == 'Pending Verification' or flag_count > 0:
-            actions.append(f'<a href="{base_url}?action=approve_room&ids={obj.pk}" title="Approve" style="text-decoration: none; margin-right: 12px; font-size: 16px;">✅</a>')
-        
-        # Reject/Flag (if not flagged)
-        if flag_count == 0:
-             actions.append(f'<a href="{base_url}?action=reject_room&ids={obj.pk}" title="Flag/Reject" style="text-decoration: none; margin-right: 12px; font-size: 16px;">❌</a>')
-             
-        # Edit
-        actions.append(f'<a href="{change_url}" title="Edit" style="text-decoration: none; margin-right: 12px; font-size: 16px;">✏️</a>')
-        
-        # Delete
-        actions.append(f'<a href="#" title="Delete" style="text-decoration: none; font-size: 16px;">🗑️</a>')
-        
-        return format_html('<div style="display: flex; align-items: center;">{}</div>', format_html(''.join(actions)))
+        detail_url = reverse('admin:room_detail', args=[obj.pk])
+        return format_html(f'<a href="{detail_url}" style="background:#2563EB;color:white;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> View Detail</a>')
     property_actions.short_description = 'Actions'
 
     def changelist_view(self, request, extra_context=None):
@@ -139,12 +116,40 @@ class RoomAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context)
 
     list_display = ['room_info', 'owner_info', 'status_badge', 'created_at', 'flag_count_display', 'property_actions']
-    list_display_links = None
+    list_display_links = ['room_info']
     actions = None
     list_filter = ['status', 'room_type', 'gender_preference']
     search_fields = ['title', 'location']
     inlines = [RoomImageInline]
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:room_id>/detail/', self.admin_site.admin_view(self.room_detail_view), name='room_detail'),
+        ]
+        return custom_urls + urls
+
+    def room_detail_view(self, request, room_id):
+        from django.shortcuts import get_object_or_404, render
+        room = get_object_or_404(Room, pk=room_id)
+        # Get all related images
+        images = room.images.all()
+        
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'{room.title} — Room Details',
+            'room': room,
+            'images': images,
+            'opts': self.model._meta,
+        }
+        return render(request, 'admin/OwnerRooms/room/room_detail.html', context)
     
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        from django.shortcuts import redirect
+        from django.urls import reverse
+        return redirect(reverse('admin:room_detail', args=[object_id]))
+
     fieldsets = (
         ('Basic Information', {'fields': ('owner', 'title', 'location', 'room_type')}),
         ('Details', {'fields': ('price', 'floor', 'size', 'status', 'gender_preference')}),
@@ -189,9 +194,21 @@ class VisitAdmin(admin.ModelAdmin):
 
 @admin.register(Complaint)
 class ComplaintAdmin(admin.ModelAdmin):
-    list_display = ['tenant', 'room', 'owner', 'complaint_type', 'status', 'created_at']
-    list_display_links = None
+    def complaint_actions(self, obj):
+        from django.urls import reverse
+        detail_url = reverse('admin:complaint_detail', args=[obj.pk])
+        return format_html(f'<a href="{detail_url}" style="background:#2563EB;color:white;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> View Detail</a>')
+    complaint_actions.short_description = 'Actions'
+
+    list_display = ['tenant', 'room', 'complaint_type', 'status', 'created_at', 'complaint_actions']
+    list_display_links = ['tenant', 'room']
     actions = None
+    
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        from django.shortcuts import redirect
+        from django.urls import reverse
+        return redirect(reverse('admin:complaint_detail', args=[object_id]))
+    
     list_filter = ['status', 'complaint_type', 'created_at']
     search_fields = ['tenant__full_name', 'owner__full_name', 'description']
     date_hierarchy = 'created_at'
@@ -211,4 +228,33 @@ class ComplaintAdmin(admin.ModelAdmin):
         extra_context['top_issues'] = top_issues
         extra_context['high_complaint_owners'] = high_complaint_owners
         return super().changelist_view(request, extra_context=extra_context)
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:complaint_id>/detail/', self.admin_site.admin_view(self.complaint_detail_view), name='complaint_detail'),
+        ]
+        return custom_urls + urls
+
+    def complaint_detail_view(self, request, complaint_id):
+        from django.shortcuts import get_object_or_404, render, redirect
+        from django.contrib import messages
+        complaint = get_object_or_404(Complaint, pk=complaint_id)
+        
+        if request.method == 'POST':
+            new_status = request.POST.get('status')
+            if new_status:
+                complaint.status = new_status
+                complaint.save()
+                messages.success(request, f"Complaint status updated to {new_status}")
+                return redirect('admin:complaint_detail', complaint_id=complaint_id)
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Complaint Review — {complaint.complaint_type}',
+            'complaint': complaint,
+            'opts': self.model._meta,
+        }
+        return render(request, 'admin/OwnerRooms/complaint/complaint_detail.html', context)
 

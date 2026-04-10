@@ -34,6 +34,10 @@ class UserModelTests(TestCase):
         """Newly created users should be active."""
         self.assertTrue(self.user.is_active)
 
+    def test_user_unverified_by_default(self):
+        """Newly created users should NOT be identity verified by default."""
+        self.assertFalse(self.user.is_identity_verified)
+
 
 class PhoneOTPModelTests(TestCase):
     """

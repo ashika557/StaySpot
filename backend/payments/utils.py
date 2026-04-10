@@ -1,13 +1,17 @@
 from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from .models import Payment
+from notifications.utils import send_notification
 from notifications.models import Notification
 
 
-def trigger_rent_reminders():
+def trigger_rent_reminders(booking_id=None):
     """
     Scans for pending rent payments due within the next 7 days and sends notifications.
+    Can be filtered by booking_id for manual triggers.
     Returns the count of reminders sent and skipped.
     """
     today = timezone.now().date()
@@ -16,11 +20,15 @@ def trigger_rent_reminders():
     reminder_window = today + timedelta(days=7)
 
     # Find all pending or overdue rent payments due within the next 7 days
-    pending_payments = Payment.objects.filter(
-        status__in=['Pending', 'Overdue'],
-        payment_type='Rent',
-        due_date__lte=reminder_window,
-    )
+    filters = {
+        'status__in': ['Pending', 'Overdue'],
+        'payment_type': 'Rent',
+        'due_date__lte': reminder_window,
+    }
+    if booking_id:
+        filters['booking_id'] = booking_id
+
+    pending_payments = Payment.objects.filter(**filters)
 
     count = 0
     skipped = 0
@@ -46,12 +54,32 @@ def trigger_rent_reminders():
             else:
                 due_text = f"in {days_left} days (on {payment.due_date})"
 
-            Notification.objects.create(
+            notification_text = f"Rent Reminder: Your rent of NPR {payment.amount} for {payment.booking.room.title} is due {due_text}. Please clear it soon."
+            
+            # 1. Send in-app notification (WebSocket + DB)
+            send_notification(
                 recipient=tenant,
+                actor=payment.booking.room.owner, # Owner is the actor
                 notification_type='rent_reminder',
-                text=f"Rent Reminder: Your rent of NPR {payment.amount} for {payment.booking.room.title} is due {due_text}. Please clear it soon.",
+                text=notification_text,
                 related_id=payment.id
             )
+
+            # 2. Send Email Reminder
+            if tenant.email:
+                try:
+                    subject = f"Rent Reminder: {payment.booking.room.title}"
+                    email_body = f"Hello {tenant.full_name},\n\nThis is a friendly reminder that your rent for {payment.booking.room.title} is {due_text}.\n\nAmount: NPR {payment.amount}\nDue Date: {payment.due_date}\n\nPlease login to StaySpot to complete your payment.\n\nThank you,\nStaySpot Team"
+                    send_mail(
+                        subject,
+                        email_body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [tenant.email],
+                        fail_silently=True
+                    )
+                except Exception as e:
+                    print(f"Failed to send email to {tenant.email}: {str(e)}")
+
             count += 1
         else:
             skipped += 1

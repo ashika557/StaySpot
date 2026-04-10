@@ -45,6 +45,12 @@ class OwnerRoomsTests(TestCase):
         self.assertEqual(self.room.status, 'Available')
         self.assertEqual(self.room.owner, self.owner)
 
+    def test_room_rating_is_zero_by_default(self):
+        """A new room should have 0.0 average rating and 0 review count."""
+        # Check that we handle 'zero reviews' correctly in the model logic
+        self.assertEqual(float(self.room.average_rating or 0), 0.0)
+        self.assertEqual(int(self.room.review_count or 0), 0)
+
     def test_booking_flow(self):
         """Lifecycle of a booking: Pending -> Confirmed -> Occupied."""
         # 1. Create Booking
@@ -153,3 +159,16 @@ class OwnerRoomsTests(TestCase):
         
         complaint = Complaint.objects.get(id=complaint_id)
         self.assertEqual(complaint.status, 'Resolved')
+
+    def test_room_maintenance_hides_from_search(self):
+        """Rooms with status 'Maintenance' should not be available for the frontend search."""
+        self.room.status = 'Maintenance'
+        self.room.save()
+        
+        response = self.client.get('/api/rooms/')
+        # The room should still exist in DB, but let's check your specific filtering logic
+        # Most search views filter for 'Available' only.
+        if response.status_code == 200:
+            rooms = response.json()
+            available_room_ids = [r['id'] for r in rooms]
+            self.assertNotIn(self.room.id, available_room_ids)

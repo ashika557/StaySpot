@@ -32,18 +32,18 @@ class UserAdmin(BaseUserAdmin):
             avatar = f'<div style="width: 40px; height: 40px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #64748B;">{initial}</div>'
             
         return format_html(
-            '<div style="display: flex; align-items: center; gap: 12px;">'
+            '<div style="display: flex; align-items: center; gap: 16px; min-width: 250px;">'
             '    {}'
-            '    <div style="display: flex; flex-direction: column;">'
-            '        <div style="font-weight: 700; color: #0F172A; font-size: 14px;">{}</div>'
-            '        <div style="color: #64748B; font-size: 12px;">{}</div>'
+            '    <div style="display: flex; flex-direction: column; flex: 1;">'
+            '        <div style="font-weight: 800; color: #0F172A; font-size: 14.5px; letter-spacing: -0.01em;">{}</div>'
+            '        <div style="color: #64748B; font-size: 12.5px; font-weight: 500;">{}</div>'
             '    </div>'
             '</div>',
             format_html(avatar),
             obj.full_name or obj.username,
             obj.email
         )
-    user_info.short_description = 'User'
+    user_info.short_description = 'User Identification'
 
     def user_role(self, obj):
         role_colors = {

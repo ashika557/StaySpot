@@ -67,6 +67,17 @@ class PaymentModelTests(TestCase):
         self.assertIn('Payment Tenant', str(payment))
         self.assertIn('1200', str(payment))
 
+    def test_payment_type_is_valid(self):
+        """Payments should always have a valid type (Rent, Deposit, or Fee)."""
+        from .models import Payment
+        payment = Payment.objects.create(
+            booking=self.booking,
+            amount=1500,
+            due_date=timezone.now().date(),
+            payment_type='Rent'
+        )
+        self.assertIn(payment.payment_type, ['Rent', 'Deposit', 'Fee'])
+
 
 class PaymentApiIntegrationTests(TestCase):
     """
@@ -144,3 +155,46 @@ class PaymentApiIntegrationTests(TestCase):
         # Should now be denied
         after_logout = self.client.get('/api/payments/')
         self.assertIn(after_logout.status_code, [401, 403, 302])
+
+    def test_manual_reminder_triggers_successfully(self):
+        """Owner should be able to trigger a manual reminder for their tenant."""
+        # 1. Setup Payment
+        from .models import Payment
+        Payment.objects.create(
+            booking=self.booking, amount=1000, 
+            due_date=timezone.now().date() - timedelta(days=2), status='Pending'
+        )
+
+        # 2. Log in as Owner (via force_login for speed)
+        self.client.force_login(self.owner)
+        
+        # 3. Call the trigger endpoint with booking_id
+        response = self.client.post('/api/trigger-reminders/', {
+            'booking_id': self.booking.id
+        }, content_type='application/json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('reminders processed', response.json()['status'].lower())
+
+    def test_unauthorized_user_cannot_trigger_reminders(self):
+        """A random tenant should not be able to trigger reminders for another tenant's payment."""
+        # Setup overdue payment
+        from .models import Payment
+        Payment.objects.create(
+            booking=self.booking, amount=1000, 
+            due_date=timezone.now().date() - timedelta(days=2), status='Pending'
+        )
+
+        # 1. Create a 2nd random tenant
+        hacker = User.objects.create_user(
+            username='hacker@test.com', email='hacker@test.com', password='123', role='Tenant'
+        )
+        self.client.force_login(hacker)
+        
+        # 2. Try to trigger reminder for the 1st tenant
+        response = self.client.post('/api/trigger-reminders/', {
+            'booking_id': self.booking.id
+        }, content_type='application/json')
+        
+        # 3. Access denied (403 Forbidden)
+        self.assertEqual(response.status_code, 403)

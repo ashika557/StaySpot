@@ -179,3 +179,23 @@ class ChatApiIntegrationTests(TestCase):
         data = response.json()
         self.assertIsInstance(data, list)
         self.assertGreaterEqual(len(data), 1)
+
+    def test_conversation_privacy_isolation(self):
+        """A tenant should NOT see conversations between an owner and a different tenant."""
+        # Setup: Conv between OWNER & TENANT-1
+        Conversation.objects.create(owner=self.owner, tenant=self.tenant)
+
+        # 1. Create TENANT-2 (Hacker)
+        hacker = User.objects.create_user(
+            username='stranger@chat.com', email='stranger@chat.com', 
+            password='Pass@123', role='Tenant'
+        )
+        self.client.force_login(hacker)
+        
+        # 2. Try to view conversation list
+        response = self.client.get('/api/chat/')
+        
+        # 3. List should be EMPTY for the hacker
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 0)
