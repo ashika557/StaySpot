@@ -30,10 +30,12 @@ export const API_ENDPOINTS = {
   ADMIN_DASHBOARD: '/admin/dashboard/',
   // Admin User Management
   ADMIN_USERS: `/admin/users/`,
+  ADMIN_GET_USER: (userId) => `/admin/users/${userId}/`,
   ADMIN_UPDATE_USER: (userId) => `/admin/users/${userId}/update/`,
   ADMIN_DELETE_USER: (userId) => `/admin/users/${userId}/delete/`,
   ADMIN_VERIFY_KYC: (userId) => `/admin/users/${userId}/verify-kyc/`,
   ADMIN_COMPLAINTS: '/complaints/',
+  ADMIN_ROOM_ACTION: (roomId) => `/rooms/${roomId}/moderate/`,
 };
 
 export const ROUTES = {

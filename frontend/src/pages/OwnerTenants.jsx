@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, Users, FileText, AlertTriangle, Wrench, MapPin, 
-  Eye, Edit, MessageSquare, ChevronLeft, ChevronRight, 
-  User, ChevronDown, Filter, BadgeCheck, ShieldCheck, 
-  MoreHorizontal, ArrowRight, UserPlus, Mail, Phone, ExternalLink, Loader
+import {
+    Search, Users, FileText, AlertTriangle, Wrench, MapPin,
+    Eye, Edit, MessageSquare, ChevronLeft, ChevronRight,
+    User, ChevronDown, Filter, BadgeCheck, ShieldCheck,
+    MoreHorizontal, ArrowRight, UserPlus, Mail, Phone, ExternalLink, Loader, Bell
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import OwnerSidebar from '../components/OwnerSidebar';
@@ -233,6 +233,24 @@ const OwnerTenants = ({ user, onLogout }) => {
                                                         >
                                                             <Edit className="w-3.5 h-3.5" />
                                                         </button>
+                                                        {(item.rent_status === 'Pending' || item.rent_status === 'Overdue') && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        const response = await apiRequest(API_ENDPOINTS.TRIGGER_REMINDERS, {
+                                                                            method: 'POST',
+                                                                            body: JSON.stringify({ booking_id: item.id })
+                                                                        });
+                                                                        if (response.ok) alert("Reminder sent!");
+                                                                        else alert("Failed to send reminder");
+                                                                    } catch (e) { alert("Error sending reminder"); }
+                                                                }}
+                                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-orange-50 border border-orange-100 text-orange-500 hover:bg-orange-100 transition-all shadow-sm"
+                                                                title="Remind"
+                                                            >
+                                                                <Bell className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -260,11 +278,10 @@ const OwnerTenants = ({ user, onLogout }) => {
                                     <button
                                         key={i}
                                         onClick={() => setCurrentPage(i + 1)}
-                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-sm ${
-                                            currentPage === i + 1
+                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-sm ${currentPage === i + 1
                                                 ? 'bg-gray-900 text-white'
                                                 : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-700'
-                                        }`}
+                                            }`}
                                     >
                                         {i + 1}
                                     </button>

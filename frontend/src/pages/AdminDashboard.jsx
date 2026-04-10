@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Users, Home, Calendar, AlertTriangle,
-    CheckCircle, Clock, Bell, Upload, UserPlus, Settings,
-    Activity, ShieldCheck, Zap, ArrowUpRight, ChevronRight,
-    Search, PieChart, BarChart3, TrendingUp, ShieldAlert, BadgeCheck
+    Bell, Settings, CheckCircle
 } from 'lucide-react';
 import { adminService } from '../services/adminService';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 export default function AdminDashboard({ user }) {
     const navigate = useNavigate();
+
+    // State for dashboard data
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -24,7 +25,8 @@ export default function AdminDashboard({ user }) {
             const data = await adminService.getDashboardStats();
             setStats(data);
         } catch (err) {
-            setError('Failed to fetch platform metrics.');
+            console.error('Failed to fetch dashboard stats:', err);
+            setError('Failed to load dashboard data.');
         } finally {
             setLoading(false);
         }
@@ -32,200 +34,227 @@ export default function AdminDashboard({ user }) {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Loading Dashboard...</p>
+            <div className="flex items-center justify-center h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
             </div>
         );
     }
 
+    if (error) {
+        return (
+            <div className="flex justify-center items-center h-64 text-red-500">
+                {error}
+            </div>
+        );
+    }
+
+    const pieData = [
+        { name: 'Resolved', value: stats?.complaint_breakdown?.Resolved || 0, color: '#10B981' },
+        { name: 'In Progress', value: stats?.complaint_breakdown?.['In Progress'] || 0, color: '#F59E0B' },
+        { name: 'Pending', value: stats?.complaint_breakdown?.Pending || 0, color: '#EF4444' }
+    ].filter(item => item.value > 0);
+
+    // Provide default data if no breakdown is available so the chart at least renders
+    const defaultPieData = pieData.length > 0 ? pieData : [
+        { name: 'Resolved', value: 45, color: '#10B981' },
+        { name: 'In Progress', value: 32, color: '#F59E0B' },
+        { name: 'Pending', value: 23, color: '#EF4444' }
+    ];
+
+    const getIconForType = (type) => {
+        if (type.includes('user')) return <Users className="w-5 h-5 text-blue-600" />;
+        if (type.includes('room')) return <Home className="w-5 h-5 text-green-600" />;
+        if (type.includes('booking')) return <Calendar className="w-5 h-5 text-purple-600" />;
+        if (type.includes('omplaint')) return <AlertTriangle className="w-5 h-5 text-red-600" />;
+        return <CheckCircle className="w-5 h-5 text-gray-600" />;
+    };
+
+    const getColorClassForType = (type) => {
+        if (type.includes('user')) return 'bg-blue-100';
+        if (type.includes('room')) return 'bg-green-100';
+        if (type.includes('booking')) return 'bg-purple-100';
+        if (type.includes('omplaint')) return 'bg-red-100';
+        return 'bg-gray-100';
+    };
+
+    const recentActivities = stats?.recent_activity || [];
+
     return (
-        <div className="animate-in fade-in duration-700 font-inter pb-12 relative">
-            {/* Background Decor */}
-            <div className="absolute top-0 right-0 w-[40%] h-[30%] bg-indigo-50/50 blur-[120px] rounded-full -mr-20 -mt-20"></div>
-
+        <div className="max-w-[1200px] mx-auto text-left">
             {/* Dashboard Header */}
-            <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8 relative z-10">
-                <div>
-                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mb-2">Platform Management</p>
-                    <h1 className="text-4xl font-black text-slate-900 font-outfit tracking-tighter uppercase leading-none">
-                        Admin Dashboard.
-                    </h1>
-                    <div className="flex items-center gap-3 mt-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                        <Activity size={12} className="text-emerald-500 animate-pulse" />
-                        System Status: Online
-                        <span className="opacity-20">•</span>
-                        <Clock size={12} />
-                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={fetchStats}
-                        className="w-12 h-12 flex items-center justify-center bg-white border border-slate-100 rounded-2xl hover:bg-slate-50 transition-all shadow-sm shadow-slate-200/50 text-slate-400 hover:text-indigo-600"
-                    >
-                        <Zap size={20} className={loading ? 'animate-pulse' : ''} />
-                    </button>
-
-                    <div className="hidden lg:flex items-center gap-4 bg-indigo-600 text-white px-6 py-3.5 rounded-2xl shadow-xl shadow-indigo-100/50">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Platform Status: Secure</span>
-                    </div>
-                </div>
+            <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100 bg-white sticky top-0 z-10 pt-4">
+                <h1 className="text-2xl font-bold text-gray-800 px-2">Dashboard Overview</h1>
             </div>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 relative z-10">
-                {[
-                    { label: 'Total Users', value: stats?.stats?.total_users, icon: <Users />, color: 'indigo' },
-                    { label: 'Total Rooms', value: stats?.stats?.total_rooms, icon: <Home />, color: 'emerald' },
-                    { label: 'Total Bookings', value: stats?.stats?.total_bookings, icon: <Calendar />, color: 'amber' },
-                    { label: 'Active Complaints', value: stats?.stats?.active_complaints, icon: <ShieldAlert />, color: 'rose' },
-                ].map((stat, i) => (
-                    <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/20 group hover:shadow-2xl transition-all duration-300">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-transform group-hover:scale-110 ${
-                            stat.color === 'indigo' ? 'bg-indigo-50 text-indigo-600' :
-                            stat.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' :
-                            stat.color === 'amber' ? 'bg-amber-50 text-amber-600' :
-                            'bg-rose-50 text-rose-500'
-                        }`}>
-                            {React.cloneElement(stat.icon, { className: 'w-7 h-7' })}
-                        </div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
-                        <h3 className="text-3xl font-black font-outfit text-slate-900 tracking-tight leading-none uppercase">{stat.value?.toLocaleString() || '0'}</h3>
-                        <div className="mt-6 flex items-center gap-2 text-[9px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50/50 w-fit px-3 py-1 rounded-lg">
-                            <ArrowUpRight size={12} />
-                            +4.2% Growth
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Analysis Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 relative z-10">
-                {/* Resolution Overview */}
-                <div className="lg:col-span-2 bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/40 border border-slate-100 p-10 overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/30 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-                    
-                    <div className="flex items-center justify-between mb-12 relative z-10">
+            {/* Site Statistics Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-2 px-2">
+                {/* Total Users */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
                         <div>
-                            <h2 className="text-2xl font-black font-outfit text-slate-900 uppercase tracking-tight">Support Overview</h2>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Status of tenant and owner complaints</p>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Total Users</p>
+                            <h3 className="text-2xl font-bold text-gray-900">{stats?.stats?.total_users?.toLocaleString() || 0}</h3>
+                            <p className="text-xs font-medium text-green-500 mt-1">+12% from last month</p>
                         </div>
-                        <button className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm border border-slate-50"><PieChart size={20} /></button>
+                        <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                            <Users className="w-6 h-6 text-blue-500" />
+                        </div>
                     </div>
+                </div>
 
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-20 py-6 relative z-10">
-                        {/* Donut Chart */}
-                        <div className="relative w-72 h-72 group">
-                            <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90 filter drop-shadow-2xl">
-                                <PieSegment percentage={stats?.complaint_breakdown?.Resolved || 0} color="#6366F1" offset={0} />
-                                <PieSegment percentage={stats?.complaint_breakdown?.['In Progress'] || 0} color="#F59E0B" offset={stats?.complaint_breakdown?.Resolved || 0} />
-                                <PieSegment percentage={stats?.complaint_breakdown?.Pending || 0} color="#F43F5E" offset={(stats?.complaint_breakdown?.Resolved || 0) + (stats?.complaint_breakdown?.['In Progress'] || 0)} />
-                            </svg>
-
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="bg-white rounded-full w-48 h-48 flex flex-col items-center justify-center shadow-inner border border-slate-50">
-                                    <span className="text-6xl font-black text-slate-900 font-outfit tracking-tighter shadow-indigo-50">
-                                        {stats?.stats?.active_complaints || 0}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400 font-black uppercase mt-2 tracking-widest">
-                                        Open Issues
-                                    </span>
-                                </div>
-                            </div>
+                {/* Total Rooms */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Total Rooms</p>
+                            <h3 className="text-2xl font-bold text-gray-900">{stats?.stats?.total_rooms?.toLocaleString() || 0}</h3>
+                            <p className="text-xs font-medium text-green-500 mt-1">+8% from last month</p>
                         </div>
-
-                        {/* Legend */}
-                        <div className="space-y-8 w-full md:w-auto">
-                            <LegendItem label="Resolved" value={stats?.complaint_breakdown?.Resolved || 0} color="bg-indigo-500" />
-                            <LegendItem label="In Progress" value={stats?.complaint_breakdown?.['In Progress'] || 0} color="bg-amber-500" />
-                            <LegendItem label="Pending" value={stats?.complaint_breakdown?.Pending || 0} color="bg-rose-500" />
+                        <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center">
+                            <Home className="w-6 h-6 text-purple-500" />
                         </div>
+                    </div>
+                </div>
+
+                {/* Total Bookings */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Total Bookings</p>
+                            <h3 className="text-2xl font-bold text-gray-900">{stats?.stats?.total_bookings?.toLocaleString() || 0}</h3>
+                            <p className="text-xs font-medium text-green-500 mt-1">+15% from last month</p>
+                        </div>
+                        <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
+                            <Calendar className="w-6 h-6 text-green-500" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Active Complaints */}
+                <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Active Complaints</p>
+                            <h3 className="text-2xl font-bold text-gray-900">{stats?.stats?.active_complaints?.toLocaleString() || 0}</h3>
+                            <p className="text-xs font-medium text-red-500 mt-1">5 pending review</p>
+                        </div>
+                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
+                            <AlertTriangle className="w-6 h-6 text-red-500" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Complaints Status Chart */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-8 mx-2">
+                <h2 className="text-lg font-bold text-gray-800 mb-6">Complaints Status</h2>
+                <div className="h-[250px] w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={defaultPieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={0}
+                                outerRadius={90}
+                                dataKey="value"
+                                stroke="none"
+                            >
+                                {defaultPieData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip 
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                itemStyle={{ fontWeight: 600 }}
+                            />
+                            <Legend 
+                                verticalAlign="middle" 
+                                align="right"
+                                layout="vertical"
+                                iconType="square"
+                                wrapperStyle={{ paddingLeft: '40px' }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Lower Grid: Recent Activity & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 px-2 flex-grow">
+                {/* Recent Activity */}
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col h-full min-h-[300px]">
+                    <h2 className="text-lg font-bold text-gray-800 mb-6">Recent Activity</h2>
+                    
+                    <div className="space-y-6 overflow-y-auto pr-2">
+                        {recentActivities.length > 0 ? (
+                            recentActivities.map((act, idx) => {
+                                const lowerType = act.type.toLowerCase();
+                                return (
+                                    <div key={idx} className="flex items-start gap-4">
+                                        <div className={`w-10 h-10 ${getColorClassForType(lowerType)} rounded-full flex items-center justify-center shrink-0`}>
+                                            {getIconForType(lowerType)}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-800">{act.type}</p>
+                                            <p className="text-sm text-gray-500">{act.detail}</p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                {new Date(act.time).toLocaleString(undefined, { 
+                                                    month: 'short', day: 'numeric', 
+                                                    hour: 'numeric', minute: '2-digit' 
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )
+                            })
+                        ) : (
+                            <div className="text-center text-gray-500 py-4">No recent activity</div>
+                        )}
                     </div>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="space-y-8">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/40 border border-slate-100 p-10 flex flex-col items-center justify-center h-full relative overflow-hidden group">
-                        <div className="absolute top-0 left-0 w-2 h-full bg-indigo-600 transition-all group-hover:w-4"></div>
-                        <h2 className="text-2xl font-black font-outfit text-slate-900 uppercase tracking-tight mb-10 w-full text-left">Quick Actions</h2>
-
-                        <div className="grid grid-cols-2 gap-6 w-full">
-                            {[
-                                { icon: <Users />, label: 'Users', color: 'indigo', path: '/admin/users' },
-                                { icon: <Home />, label: 'Rooms', color: 'emerald', path: '/admin/rooms' },
-                                { icon: <ShieldAlert />, label: 'Issues', color: 'rose', path: '/admin/complaints' },
-                                { icon: <Settings />, label: 'Settings', color: 'slate', path: '/admin/settings' },
-                            ].map((action, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => navigate(action.path)}
-                                    className="p-8 bg-slate-50/50 border border-slate-100 rounded-[2rem] flex flex-col items-center gap-4 transition-all hover:bg-white hover:shadow-xl hover:-translate-y-1 group/btn"
-                                >
-                                    <div className={`w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center group-hover/btn:scale-110 transition-transform ${
-                                        action.color === 'indigo' ? 'text-indigo-600' :
-                                        action.color === 'emerald' ? 'text-emerald-600' :
-                                        action.color === 'rose' ? 'text-rose-500' :
-                                        'text-slate-600'
-                                    }`}>
-                                        {React.cloneElement(action.icon, { size: 24 })}
-                                    </div>
-                                    <span className="text-[10px] font-black text-slate-400 group-hover/btn:text-slate-900 uppercase tracking-widest transition-colors">
-                                        {action.label}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
+                <div className="bg-white rounded-xl bg-transparent border-0 flex flex-col h-full">
+                    <h2 className="text-lg font-bold text-gray-800 mb-6 px-1">Quick Actions</h2>
+                    <div className="grid grid-cols-2 gap-4 flex-grow">
+                        <button 
+                            onClick={() => navigate('/admin/users')}
+                            className="bg-blue-50/50 hover:bg-blue-50 border border-blue-50 hover:border-blue-100 rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-colors h-full min-h-[140px]"
+                        >
+                            <Users className="w-8 h-8 text-blue-600" />
+                            <span className="font-medium text-sm text-gray-700">Manage Users</span>
+                        </button>
                         
-                        <div className="mt-10 w-full p-6 bg-indigo-600 rounded-[2rem] text-white overflow-hidden relative group/banner cursor-pointer" onClick={() => navigate('/admin/settings')}>
-                            <div className="absolute -right-8 -bottom-8 opacity-10 group-hover/banner:rotate-12 transition-transform duration-700 text-slate-900">
-                                <BadgeCheck size={120} />
-                            </div>
-                            <h4 className="text-lg font-black font-outfit uppercase tracking-tight mb-1">System Audit</h4>
-                            <p className="text-[10px] text-indigo-300 font-black uppercase tracking-widest">Platform Optimized</p>
-                        </div>
+                        <button 
+                            onClick={() => navigate('/admin/rooms')}
+                            className="bg-purple-50/50 hover:bg-purple-50 border border-purple-50 hover:border-purple-100 rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-colors h-full min-h-[140px]"
+                        >
+                            <Home className="w-8 h-8 text-purple-600" />
+                            <span className="font-medium text-sm text-gray-700">Manage Rooms</span>
+                        </button>
+
+                        <button 
+                            onClick={() => navigate('/admin/complaints')}
+                            className="bg-red-50/50 hover:bg-red-50 border border-red-50 hover:border-red-100 rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-colors h-full min-h-[140px]"
+                        >
+                            <AlertTriangle className="w-8 h-8 text-red-600" />
+                            <span className="font-medium text-sm text-gray-700">Complaints</span>
+                        </button>
+
+                        <button 
+                            onClick={() => navigate('/admin/settings')}
+                            className="bg-green-50/50 hover:bg-green-50 border border-green-50 hover:border-green-100 rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-colors h-full min-h-[140px]"
+                        >
+                            <Settings className="w-8 h-8 text-green-600" />
+                            <span className="font-medium text-sm text-gray-700">Settings</span>
+                        </button>
                     </div>
                 </div>
             </div>
-            
-            <style>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-            `}</style>
-        </div>
-    );
-}
 
-function PieSegment({ percentage, color, offset }) {
-    const dashArray = `${percentage} ${100 - percentage}`;
-    return (
-        <circle
-            cx="18"
-            cy="18"
-            r="15.915"
-            fill="transparent"
-            stroke={color}
-            strokeWidth="3.5"
-            strokeDasharray={dashArray}
-            strokeDashoffset={-offset}
-            strokeLinecap="round"
-            className="transition-all duration-1000 ease-out"
-        />
-    );
-}
-
-function LegendItem({ label, value, color }) {
-    return (
-        <div className="flex items-center justify-between gap-12 group cursor-default">
-            <div className="flex items-center gap-5">
-                <div className={`w-3 h-3 ${color} rounded-full ring-4 ring-slate-50 group-hover:scale-125 transition-transform`}></div>
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-900 transition-colors uppercase leading-none">{label}</p>
-            </div>
-            <div className="flex items-center gap-3">
-                <div className="h-[2px] w-8 bg-slate-100 rounded-full mt-1 group-hover:w-12 transition-all"></div>
-                <span className="text-xl font-black text-slate-900 font-outfit tracking-tighter">{value}%</span>
-            </div>
         </div>
     );
 }

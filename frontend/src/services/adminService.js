@@ -39,6 +39,22 @@ export const adminService = {
     },
 
     /**
+     * Get a specific user's detail for administration
+     */
+    getUserDetail: async (userId) => {
+        try {
+            const response = await apiRequest(API_ENDPOINTS.ADMIN_GET_USER(userId));
+            if (!response.ok) {
+                throw new Error('Failed to fetch user detail');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching user detail:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Update user role or status
      */
     updateUser: async (userId, data) => {
@@ -73,6 +89,22 @@ export const adminService = {
             return await response.json();
         } catch (error) {
             console.error('Error fetching complaints:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get a specific complaint detail
+     */
+    getComplaintDetail: async (complaintId) => {
+        try {
+            const response = await apiRequest(`${API_ENDPOINTS.ADMIN_COMPLAINTS}${complaintId}/`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch complaint detail');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching complaint detail:', error);
             throw error;
         }
     },

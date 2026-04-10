@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { 
-  Home, Calendar, DollarSign, MessageSquare, Wrench, 
+import {
+  Home, Calendar, DollarSign, MessageSquare, Wrench,
   Users, ArrowRight, Activity, Plus,
-  Zap, ShieldCheck, ArrowUpRight, ChevronRight, MapPin
+  Zap, ShieldCheck, ArrowUpRight, ChevronRight, MapPin, Bell
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';
@@ -20,6 +20,7 @@ export default function OwnerDashboard({ user, onLogout }) {
   const [totalIncome, setTotalIncome] = useState(0);
   const [recentChats, setRecentChats] = useState([]);
   const [visitRequests, setVisitRequests] = useState([]);
+  const [pendingPayments, setPendingPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedTenant, setSelectedTenant] = useState(null);
@@ -51,6 +52,8 @@ export default function OwnerDashboard({ user, onLogout }) {
       if (response.ok) {
         const data = await response.json();
         setTotalIncome(data.stats.all_time.earnings);
+        const pending = data.logs.filter(log => log.status === 'Pending' || log.status === 'Overdue');
+        setPendingPayments(pending.slice(0, 5));
       }
     } catch (error) { console.error(error); }
   }
@@ -87,6 +90,24 @@ export default function OwnerDashboard({ user, onLogout }) {
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
+  };
+
+  const handleSendReminder = async (bookingId) => {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.TRIGGER_REMINDERS, {
+        method: 'POST',
+        body: JSON.stringify({ booking_id: bookingId })
+      });
+      if (response.ok) {
+        alert("Reminder sent successfully!");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to send reminder");
+      }
+    } catch (err) {
+      console.error("Reminder failed", err);
+      alert("Failed to send reminder");
+    }
   };
 
   if (loading) {
@@ -218,22 +239,69 @@ export default function OwnerDashboard({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* Performance Banner */}
-              <div className="bg-indigo-600 rounded-xl p-6 text-white flex items-center justify-between overflow-hidden relative shadow-sm">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full -mr-32 -mt-32 blur-3xl pointer-events-none"></div>
-                <div className="relative z-10">
-                  <h4 className="text-base font-bold mb-1">Property Performance</h4>
-                  <p className="text-indigo-200 text-xs mb-4 max-w-xs">Your rooms are performing well with high occupancy across StaySpot.</p>
-                  <div className="flex gap-3 flex-wrap">
-                    <div className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/10 text-[10px] font-semibold flex items-center gap-1.5">
-                      <Zap size={10} className="text-amber-400" /> 94% Capacity
+
+              {/* Rent Reminders Section */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                      <Bell className="w-4 h-4 text-orange-500" />
                     </div>
-                    <div className="px-3 py-1.5 bg-emerald-500/20 text-emerald-100 rounded-lg border border-emerald-500/10 text-[10px] font-semibold flex items-center gap-1.5">
-                      <ShieldCheck size={10} /> Verified Owner
+                    <div>
+                      <h2 className="text-base font-bold text-gray-900">Rent Reminders</h2>
+                      <p className="text-[10px] text-gray-400">Outstanding payments</p>
                     </div>
                   </div>
+                  <button onClick={() => navigate(ROUTES.OWNER_PAYMENTS)} className="text-xs text-indigo-600 font-bold hover:underline">
+                    View All
+                  </button>
                 </div>
-                <Activity className="w-24 h-24 text-white/10 absolute right-8 bottom-0 rotate-12 pointer-events-none" />
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50/50">
+                      <tr>
+                        <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tenant</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {pendingPayments.length > 0 ? (
+                        pendingPayments.map((p) => (
+                          <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={p.tenant.profile_photo || `https://ui-avatars.com/api/?name=${p.tenant.full_name}&background=eff6ff&color=2563eb&bold=true`}
+                                  className="w-8 h-8 rounded-full"
+                                  alt=""
+                                />
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-800">{p.tenant.full_name}</p>
+                                  <p className="text-[10px] text-gray-400">Rs {p.amount.toLocaleString()} • {p.status}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button
+                                onClick={() => handleSendReminder(p.booking_id || p.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                              >
+                                <Bell className="w-3 h-3" /> Remind
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="2" className="px-6 py-8 text-center text-[10px] text-gray-400 italic">
+                            No pending rent payments.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
             </div>

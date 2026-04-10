@@ -29,8 +29,15 @@ import AdminLayout from './components/AdminLayout';
 import AdminSettings from './pages/AdminSettings';
 import AdminDashboard from './pages/AdminDashboard';
 import ManageUsers from './pages/ManageUsers';
+import AdminUserRegistry from './pages/AdminUserRegistry';
+import AdminUserDetail from './pages/AdminUserDetail';
+import AdminKycReview from './pages/AdminKycReview';
 import ManageRooms from './pages/ManageRooms';
+import AdminRoomRegistry from './pages/AdminRoomRegistry';
 import ManageComplaints from './pages/ManageComplaints';
+import AdminComplaintRegistry from './pages/AdminComplaintRegistry';
+import AdminComplaintDetail from './pages/AdminComplaintDetail';
+import AdminRoomDetail from './pages/AdminRoomDetail';
 import OwnerMaintenance from './pages/OwnerMaintenance';
 import { ROUTES, API_ENDPOINTS } from './constants/api';
 import { apiRequest } from './utils/api';
@@ -139,12 +146,11 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
                 />
               ) : user ? (
                 <Navigate
-                  to={`${
-                    user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                  to={`${user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                       user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                        (location.search.includes('pidx=') || location.search.includes('data=') || location.search.includes('oid=')) 
-                         ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
-                  }${location.search}`}
+                        (location.search.includes('pidx=') || location.search.includes('data=') || location.search.includes('oid='))
+                          ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
+                    }${location.search}`}
                 />
               ) : (
                 <Navigate to={`${ROUTES.LOGIN}${location.search}`} />
@@ -157,14 +163,13 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
             path={ROUTES.LOGIN}
             element={
               user ? (
-                <Navigate to={`${
-                  user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                <Navigate to={`${user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                     user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                      (new URLSearchParams(location.search).get('pidx') || 
-                       new URLSearchParams(location.search).get('data') ||
-                       new URLSearchParams(location.search).get('oid')) 
-                       ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
-                }${location.search}`} />
+                      (new URLSearchParams(location.search).get('pidx') ||
+                        new URLSearchParams(location.search).get('data') ||
+                        new URLSearchParams(location.search).get('oid'))
+                        ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
+                  }${location.search}`} />
               ) : (
                 <Login onLogin={handleLogin} />
               )
@@ -175,14 +180,13 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
             path={ROUTES.REGISTER}
             element={
               user ? (
-                <Navigate to={`${
-                  user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
+                <Navigate to={`${user.role === 'Admin' ? ROUTES.ADMIN_DASHBOARD :
                     user.role === 'Owner' ? ROUTES.OWNER_DASHBOARD :
-                      (new URLSearchParams(location.search).get('pidx') || 
-                       new URLSearchParams(location.search).get('data') ||
-                       new URLSearchParams(location.search).get('oid')) 
-                       ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
-                }${location.search}`} />
+                      (new URLSearchParams(location.search).get('pidx') ||
+                        new URLSearchParams(location.search).get('data') ||
+                        new URLSearchParams(location.search).get('oid'))
+                        ? ROUTES.TENANT_PAYMENTS : ROUTES.TENANT_DASHBOARD
+                  }${location.search}`} />
               ) : (
                 <Register onLogin={handleLogin} />
               )
@@ -263,8 +267,12 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
           <Route
             path={ROUTES.PROFILE}
             element={user ? <Profile user={user} refreshUser={refreshUser} onUpdateUser={(updatedUser) => {
-              setUser(updatedUser);
-              localStorage.setItem('user', JSON.stringify(updatedUser));
+              if (updatedUser === null) {
+                handleLogout(); // Use handleLogout to clean up everything
+              } else {
+                setUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              }
             }} /> : <Navigate to={`${ROUTES.LOGIN}${location.search}`} />}
           />
 
@@ -281,9 +289,13 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
                 <AdminLayout user={user}>
                   <Routes>
                     <Route path="dashboard" element={<AdminDashboard user={user} />} />
-                    <Route path="users" element={<ManageUsers user={user} />} />
-                    <Route path="rooms" element={<ManageRooms user={user} />} />
-                    <Route path="complaints" element={<ManageComplaints user={user} />} />
+                    <Route path="users" element={<AdminUserRegistry user={user} />} />
+                    <Route path="users/:id" element={<AdminUserDetail user={user} />} />
+                    <Route path="users/:id/kyc" element={<AdminKycReview user={user} />} />
+                    <Route path="rooms" element={<AdminRoomRegistry user={user} />} />
+                    <Route path="rooms/:id" element={<AdminRoomDetail user={user} />} />
+                    <Route path="complaints" element={<AdminComplaintRegistry user={user} />} />
+                    <Route path="complaints/:id" element={<AdminComplaintDetail user={user} />} />
                     <Route path="settings" element={<AdminSettings user={user} />} />
                     <Route path="*" element={<Navigate to="/admin/dashboard" />} />
                   </Routes>
@@ -310,9 +322,9 @@ function AppContent({ user, setUser, showLanding, setShowLanding, handleLogin, h
  * user lands on first.
  */
 function PaymentCallbackHandler() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    useEffect(() => {
+  useEffect(() => {
     // Nucleaer Failsafe: If we land on dashboard (even for a second) with tokens, instantly move away
     const search = window.location.search;
     if (search.includes('pidx=') || search.includes('data=') || search.includes('oid=')) {
@@ -321,7 +333,7 @@ function PaymentCallbackHandler() {
     }
   }, [navigate]);
 
-    return null;
+  return null;
 }
 
 export default App;
