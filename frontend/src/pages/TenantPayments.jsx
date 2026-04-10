@@ -46,7 +46,7 @@ export default function TenantPayments({ user }) {
         // skip if already done
         if (hasProcessedCallbackRef.current) return;
 
-        const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(location.search);
         const pidx = urlParams.get('pidx');                   // Khalti param
         const purchaseOrderId = urlParams.get('purchase_order_id'); // Khalti param
         const encodedData = urlParams.get('data');            // eSewa param (base64)

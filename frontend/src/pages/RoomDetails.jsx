@@ -11,8 +11,6 @@ import { bookingService } from '../services/bookingService';
 import { visitService } from '../services/tenantService';
 import { getMediaUrl, ROUTES } from '../constants/api';
 
-const ICON_BASE_URL = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/';
-
 const RoomDetails = ({ user }) => {
     const { id } = useParams();   // room ID from URL e.g. /rooms/42
     const navigate = useNavigate();
