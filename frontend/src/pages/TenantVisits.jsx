@@ -13,9 +13,11 @@ export default function TenantVisits({ user }) {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('All');
 
-    useEffect(() => { fetchVisits(); }, []);
+    useEffect(() => {
+        fetchVisits();
+    }, [fetchVisits]);
 
-    const fetchVisits = async () => {
+    const fetchVisits = React.useCallback(async () => {
         try {
             const data = await visitService.getAllVisits();
             const sorted = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -25,7 +27,7 @@ export default function TenantVisits({ user }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     const handleCancel = async (visitId) => {
         if (!window.confirm("Are you sure you want to cancel this visit request?")) return;

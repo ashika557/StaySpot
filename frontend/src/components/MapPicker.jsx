@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import { CONFIG } from '../constants/config';
-import { Navigation, Search, MapPin, Info } from 'lucide-react';
+import { Navigation, Search, Info } from 'lucide-react';
 
 const MapPicker = ({ onLocationSelect, initialLocation, readOnly = false }) => {
     const { isLoaded } = useMapContext();

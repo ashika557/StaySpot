@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { 
-    User, Mail, Edit, 
-    Save, Lock, Trash2, Camera, Shield,
-    Bell, CheckCircle, XCircle
+    Mail, Edit, 
+    Save, Lock, Trash2, Camera
 } from 'lucide-react';
 import { getMediaUrl } from '../constants/api';
 

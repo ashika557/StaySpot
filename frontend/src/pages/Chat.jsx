@@ -33,12 +33,12 @@ const Chat = ({ user }) => {
 
         // disconnect WebSocket when leaving the page
         return () => { chatService.disconnect(); };
-    }, [user, location.search]);
+    }, [user, location.search, handleAutoStartChat]);
 
     const lastAutoStart = useRef(null);
 
     // creates a conversation if one doesn't exist, then opens it
-    const handleAutoStartChat = async (userId) => {
+    const handleAutoStartChat = React.useCallback(async (userId) => {
         // Prevent double runs for the same userId
         if (lastAutoStart.current === userId) return;
         lastAutoStart.current = userId;
@@ -54,7 +54,7 @@ const Chat = ({ user }) => {
         } catch (error) {
             console.error('Failed to auto-start chat:', error);
         }
-    };
+    }, []);
 
     // runs whenever the user switches to a different conversation
     useEffect(() => {
@@ -77,7 +77,7 @@ const Chat = ({ user }) => {
             chatService.markAsRead(activeChat.id);
             chatService.sendSeenEvent(user.id, activeChat.id);
         }
-    }, [activeChat, user.id]);
+    }, [activeChat, user.id, fetchMessages]);
 
     const scrollContainerRef = useRef(null);
     const isFirstLoad = useRef(true);
@@ -103,7 +103,7 @@ const Chat = ({ user }) => {
         isFirstLoad.current = true;
     }, [activeChat]);
 
-    const fetchConversations = async () => {
+    const fetchConversations = React.useCallback(async () => {
         try {
             const data = await chatService.getConversations();
             setConversations(data);
@@ -112,16 +112,16 @@ const Chat = ({ user }) => {
             console.error('Failed to load conversations', error);
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchMessages = async (conversationId) => {
+    const fetchMessages = React.useCallback(async (conversationId) => {
         try {
             const data = await chatService.getMessages(conversationId);
             setMessages(data);
         } catch (error) {
             console.error('Failed to load messages', error);
         }
-    };
+    }, []);
 
     const handleSendMessage = (e) => {
         e.preventDefault();

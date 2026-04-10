@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    ArrowLeft, MessageSquare, AlertCircle, Clock, 
-    CheckCircle, Search, Home as HomeIcon, User, 
-    Trash2, Camera, UserPlus, BarChart3, Shield,
-    Info, ExternalLink, Loader2, AlertTriangle,
-    Building, MoreHorizontal, ArrowRight
+    ArrowLeft, CheckCircle, Home as HomeIcon,  
+    Trash2, Camera, UserPlus, Shield,
+    Info, Loader2, AlertTriangle,
+    Building, MoreHorizontal
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
@@ -23,9 +22,9 @@ export default function AdminComplaintDetail({ user: loggedInUser }) {
 
     useEffect(() => {
         fetchComplaint();
-    }, [id]);
+    }, [id, fetchComplaint]);
 
-    const fetchComplaint = async () => {
+    const fetchComplaint = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await adminService.getComplaintDetail(id);
@@ -35,7 +34,7 @@ export default function AdminComplaintDetail({ user: loggedInUser }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     const handleUpdateStatus = async (status) => {
         try {

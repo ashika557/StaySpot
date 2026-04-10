@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, Home, MapPin, BadgeCheck, Shield, 
-    Trash2, Edit, Wifi, Wind, Tv, Navigation,
-    User, Mail, Phone, Calendar, Loader2, AlertTriangle,
+    Trash2, Wifi, Wind, Tv, Navigation,
+    User, Calendar, Loader2, AlertTriangle,
     Settings
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
@@ -21,9 +21,9 @@ export default function AdminRoomDetail({ user }) {
 
     useEffect(() => {
         fetchRoom();
-    }, [id]);
+    }, [fetchRoom]);
 
-    const fetchRoom = async () => {
+    const fetchRoom = React.useCallback(async () => {
         try {
             setLoading(true);
             const response = await apiRequest(`${API_ENDPOINTS.ROOMS}${id}/`);
@@ -38,7 +38,7 @@ export default function AdminRoomDetail({ user }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     const handleModerate = async (action) => {
         try {

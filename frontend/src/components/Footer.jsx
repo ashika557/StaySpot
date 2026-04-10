@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Home, Twitter, Facebook, Linkedin } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { ROUTES } from '../constants/api';
 
 const Footer = () => {

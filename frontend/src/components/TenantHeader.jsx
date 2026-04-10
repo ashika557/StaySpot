@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Bell } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { ROUTES, getMediaUrl } from '../constants/api';
 import NotificationBell from './NotificationBell';
 

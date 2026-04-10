@@ -3,7 +3,7 @@ import OwnerSidebar from '../components/OwnerSidebar';
 import {
   Home, Calendar, DollarSign, MessageSquare, Wrench,
   Users, ArrowRight, Activity, Plus,
-  Zap, ShieldCheck, ArrowUpRight, ChevronRight, MapPin, Bell
+  ArrowUpRight, ChevronRight, MapPin, Bell
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { chatService } from '../services/chatService';

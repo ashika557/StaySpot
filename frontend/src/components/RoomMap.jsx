@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleMap, Marker, InfoWindow, StandaloneSearchBox, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, StandaloneSearchBox, DirectionsRenderer } from '@react-google-maps/api';
 import { useNavigate } from 'react-router-dom';
 import { useMapContext } from '../context/MapContext';
 import { CONFIG } from '../constants/config';
@@ -96,7 +96,7 @@ const RoomMap = ({ rooms, externalSelectedRoom = null, onRoomClick = null, searc
                 (err) => console.log('Geolocation skipped:', err.message)
             );
         }
-    }, []);
+    }, [workplace]);
 
     const onMapLoad = (mapInstance) => setMap(mapInstance);
     const onSearchLoad = (ref) => searchBoxRef.current = ref;

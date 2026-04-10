@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
 import {
     Search, ChevronDown, CheckCircle2, Clock, Wallet,
-    CreditCard, DollarSign, Calendar, AlertCircle, ExternalLink, Filter, XCircle
+    CreditCard, DollarSign, Calendar, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { paymentService } from '../services/tenantService';
 
@@ -25,7 +25,7 @@ export default function TenantPayments({ user }) {
     const isAutoVerifyingRef = useRef(false);
     const hasProcessedCallbackRef = useRef(false);
 
-    const fetchPayments = async (showLoading = true) => {
+    const fetchPayments = React.useCallback(async (showLoading = true) => {
         try {
             if (showLoading) setLoading(true);
             const data = await paymentService.getAllPayments();
@@ -35,11 +35,11 @@ export default function TenantPayments({ user }) {
         } finally {
             if (showLoading) setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchPayments();
-    }, []);
+    }, [fetchPayments]);
 
     // handles redirect back from Khalti or eSewa after payment
     const handlePaymentCallback = useCallback(async () => {
@@ -193,7 +193,7 @@ export default function TenantPayments({ user }) {
             }
         };
         autoVerify();
-    }, [payments.length]);
+    }, [payments.length, fetchPayments]);
 
     // eSewa requires an HTML form POST — fetch() won't work with their API
     const handleEsewaPayment = async (payment) => {

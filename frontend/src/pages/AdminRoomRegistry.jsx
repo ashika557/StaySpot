@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Home, Search, Filter, Loader2, Building,
+    Home, Search, Loader2, Building,
     MapPin, Eye, Trash2, BadgeCheck, Shield
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    ArrowLeft, User, Mail, Phone, Calendar, 
-    MapPin, BadgeCheck, Shield, Trash2, Edit, 
+    ArrowLeft, BadgeCheck, Shield, Trash2, 
     Key, Info, Loader2, AlertTriangle, CheckCircle, 
     XCircle, Clock, FileText, ExternalLink
 } from 'lucide-react';
@@ -21,9 +20,9 @@ export default function AdminUserDetail({ user: loggedInUser }) {
 
     useEffect(() => {
         fetchUser();
-    }, [id]);
+    }, [fetchUser]);
 
-    const fetchUser = async () => {
+    const fetchUser = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await adminService.getUserDetail(id);
@@ -33,7 +32,7 @@ export default function AdminUserDetail({ user: loggedInUser }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     const handleToggleActive = async () => {
         try {

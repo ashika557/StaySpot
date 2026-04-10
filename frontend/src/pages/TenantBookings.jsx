@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Calendar, MapPin, ArrowRight, XCircle,
-    MessageSquare, ExternalLink, ShieldCheck,
+    MessageSquare, ExternalLink,
     BadgeCheck, Star, ChevronLeft, ChevronRight, Search
 } from 'lucide-react';
 import TenantSidebar from '../components/TenantSidebar';

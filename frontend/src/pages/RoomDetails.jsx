@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Wifi, Wind, Tv, Star, User, Calendar, ShieldCheck, ArrowLeft, Loader, Utensils, Hospital, ShoppingBag, School, Navigation, Info, Cigarette, Dog, Users, Beer, UtensilsCrossed, Zap, Droplets, Car, Layout, ChefHat, MessageCircle, Route, Timer, AlertTriangle } from 'lucide-react';
-import { GoogleMap, Marker, Circle, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, Marker, Circle, DirectionsRenderer } from '@react-google-maps/api';
 import { useMapContext } from '../context/MapContext';
 import OwnerSidebar from '../components/OwnerSidebar';
 import TenantSidebar from '../components/TenantSidebar';
@@ -48,7 +48,7 @@ const RoomDetails = ({ user }) => {
     // allows the map instance to be panned programmatically
     const mapRef = useRef(null);
 
-    const checkUserRelationship = async () => {
+    const checkUserRelationship = React.useCallback(async () => {
         if (!user || user.role !== 'Tenant' || !id) return;
         try {
             const [visits, bookings] = await Promise.all([
@@ -63,7 +63,7 @@ const RoomDetails = ({ user }) => {
         } catch (error) {
             console.error("Error checking user relationship:", error);
         }
-    };
+    }, [id, user]);
     
     // prevents double view-count in React 18 StrictMode (runs effects twice in dev)
     const viewTracked = useRef(false);
@@ -108,7 +108,7 @@ const RoomDetails = ({ user }) => {
     }, [room, userLocation]);
 
     // ask OpenStreetMap what's within 2km of the room's coordinates
-    const fetchCurrentlyNearbyPlaces = async (lat, lng) => {
+    const fetchCurrentlyNearbyPlaces = React.useCallback(async (lat, lng) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
@@ -146,9 +146,9 @@ const RoomDetails = ({ user }) => {
             setNearbyLoading(false);
             clearTimeout(timeoutId);
         }
-    };
+    }, []);
 
-    const fetchRoomDetails = async () => {
+    const fetchRoomDetails = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await roomService.getRoomById(id);
@@ -176,7 +176,7 @@ const RoomDetails = ({ user }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, user, fetchCurrentlyNearbyPlaces]);
 
     // re-fetch if user navigates to a different room without leaving the page
     useEffect(() => {
@@ -185,7 +185,7 @@ const RoomDetails = ({ user }) => {
         if (id && user) {
             checkUserRelationship();
         }
-    }, [id, user?.id]);
+    }, [id, user, fetchRoomDetails, checkUserRelationship]);
 
     const handleBooking = async (e) => {
         e.preventDefault();

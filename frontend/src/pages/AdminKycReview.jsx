@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, Shield, BadgeCheck, XCircle, 
-    Trash2, Edit, Loader2, AlertTriangle, 
-    FileText, User, Mail, CheckCircle, Clock
+    Loader2, AlertTriangle, 
+    FileText, CheckCircle, Clock
 } from 'lucide-react';
-import { apiRequest } from '../utils/api';
-import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
+import { getMediaUrl } from '../constants/api';
 import { adminService } from '../services/adminService';
 
 export default function AdminKycReview({ user: loggedInUser }) {
@@ -20,9 +19,9 @@ export default function AdminKycReview({ user: loggedInUser }) {
 
     useEffect(() => {
         fetchUser();
-    }, [id]);
+    }, [fetchUser]);
 
-    const fetchUser = async () => {
+    const fetchUser = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await adminService.getUserDetail(id);
@@ -32,7 +31,7 @@ export default function AdminKycReview({ user: loggedInUser }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     const handleKycAction = async (action) => {
         try {

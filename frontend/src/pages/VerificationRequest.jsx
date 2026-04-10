@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../utils/api';
 import { API_ENDPOINTS, ROUTES } from '../constants/api';
 import { 
-  ShieldCheck, Upload, CheckCircle, ArrowLeft, 
-  XCircle, Clock, AlertCircle, FileText, 
+  ShieldCheck, Upload, ArrowLeft, 
+  Clock, AlertCircle, FileText, 
   ShieldAlert, BadgeCheck, Loader, Sparkles, UserCheck
 } from 'lucide-react';
 

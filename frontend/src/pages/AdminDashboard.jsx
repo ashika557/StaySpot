@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Users, Home, Calendar, AlertTriangle,
-    Bell, Settings, CheckCircle
+    Settings, CheckCircle
 } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';

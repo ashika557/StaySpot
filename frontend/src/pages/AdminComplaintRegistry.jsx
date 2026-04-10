@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    AlertCircle, Search, Filter, Loader2, MessageSquare,
-    Clock, ChevronRight, Home, Shield
+    Search, Loader2, MessageSquare,
+    ChevronRight, Home, Shield
 } from 'lucide-react';
 import { adminService } from '../services/adminService';
 
@@ -13,13 +13,13 @@ export default function AdminComplaintRegistry({ user }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
-    const [actionLoading, setActionLoading] = useState(null);
+    // const [actionLoading, setActionLoading] = useState(null);
 
     useEffect(() => {
         fetchComplaints();
-    }, []);
+    }, [fetchComplaints]);
 
-    const fetchComplaints = async () => {
+    const fetchComplaints = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await adminService.getComplaints();
@@ -29,17 +29,17 @@ export default function AdminComplaintRegistry({ user }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     const handleUpdateStatus = async (id, status) => {
         try {
-            setActionLoading(id);
+            // setActionLoading(id);
             await adminService.updateComplaintStatus(id, status);
             fetchComplaints();
         } catch (error) {
             alert('Failed to update complaint status');
         } finally {
-            setActionLoading(null);
+            // setActionLoading(null);
         }
     };
 

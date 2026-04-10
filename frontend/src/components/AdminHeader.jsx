@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Bell, User, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import { getMediaUrl } from '../constants/api';
 

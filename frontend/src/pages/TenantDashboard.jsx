@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
 import {
   Calendar, MapPin, DollarSign, MessageCircle, Star,
-  ChevronRight, MessageSquare, Clock, Home, TrendingUp,
-  AlertCircle, CheckCircle, Bell, ArrowRight
+  ChevronRight, MessageSquare, Home,
+  CheckCircle, Bell, ArrowRight
 } from 'lucide-react';
 import { dashboardService, paymentService } from '../services/tenantService';
 import { chatService } from '../services/chatService';
