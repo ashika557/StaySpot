@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   Calendar, TrendingUp, ChevronLeft, 
   ChevronRight, Wallet, Filter, CreditCard, Search, 
-  Home, Loader
+  Home
 } from 'lucide-react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { API_ENDPOINTS, getMediaUrl } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 import { apiRequest } from '../utils/api';
 
 const monthsList = [

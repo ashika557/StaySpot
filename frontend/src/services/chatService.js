@@ -1,5 +1,5 @@
-import { API_BASE_URL, API_ENDPOINTS, getMediaUrl } from '../constants/api';
-import { getCsrfToken, apiRequest } from '../utils/api';
+import { API_ENDPOINTS } from '../constants/api';
+import { apiRequest } from '../utils/api';
 
 class ChatService {
     constructor() {

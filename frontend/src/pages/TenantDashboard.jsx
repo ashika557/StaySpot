@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import TenantSidebar from '../components/TenantSidebar';
 import {
@@ -17,8 +17,6 @@ export default function TenantDashboard({ user }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const isVerifyingRef = useRef(false);
-  const hasProcessedCallbackRef = useRef(false);
 
   const fetchDashboardData = React.useCallback(async () => {
     try {

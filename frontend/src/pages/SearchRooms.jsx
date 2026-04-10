@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Search, MapPin, Star, ChevronDown, RotateCcw,
     ChevronRight, SlidersHorizontal,
-    Map as MapIcon, Wifi, Car, Droplets, UtensilsCrossed, Sofa, PawPrint, Home
+    Wifi, Car, Droplets, UtensilsCrossed, Sofa, PawPrint
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Autocomplete } from '@react-google-maps/api';
@@ -10,18 +10,17 @@ import { useMapContext } from '../context/MapContext';
 import TenantSidebar from '../components/TenantSidebar';
 import RoomMap from '../components/RoomMap';
 import { roomService } from '../services/roomService';
-import { CONFIG } from '../constants/config';
 import { getMediaUrl } from '../constants/api';
 
 const SearchRooms = ({ user }) => {
-    const { isLoaded } = useMapContext();
+    useMapContext();
     const mapRef = useRef(null);
     const [autocomplete, setAutocomplete] = useState(null);
     const navigate = useNavigate();
 
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [, setError] = useState(null);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [searchCoords, setSearchCoords] = useState(null);
     const [searchInputValue, setSearchInputValue] = useState('');
@@ -39,7 +38,6 @@ const SearchRooms = ({ user }) => {
         }
     });
 
-    const onMapLoad = useCallback((map) => { mapRef.current = map; }, []);
 
     const onAutocompleteLoad = (instance) => {
         instance.setFields(['geometry', 'formatted_address', 'name']);

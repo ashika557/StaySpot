@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Search, Users, FileText, AlertTriangle, Wrench, MapPin,
     Eye, Edit, MessageSquare, ChevronLeft, ChevronRight,
-    ChevronDown, BadgeCheck, UserPlus, ExternalLink, Loader, Bell
+    ChevronDown, BadgeCheck, UserPlus, Bell
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import OwnerSidebar from '../components/OwnerSidebar';

@@ -1,6 +1,6 @@
 import React from 'react';
 import OwnerSidebar from '../components/OwnerSidebar';
-import { Home, Users, TrendingUp, Eye, Search, Grid, List, Edit, Trash2, X, Upload, Plus, MapPin, Star, Calendar, ArrowRight, Navigation, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Home, Users, TrendingUp, Eye, Search, Grid, List, Edit, Trash2, X, Upload, Plus, MapPin, Star, ArrowRight, Navigation, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { roomService } from '../services/roomService';
 import MapPicker from '../components/MapPicker';
 import { getMediaUrl } from '../constants/api';

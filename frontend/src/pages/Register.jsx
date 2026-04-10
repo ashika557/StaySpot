@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getCsrfToken, apiRequest } from '../utils/api';
-import { API_ENDPOINTS, ROUTES } from '../constants/api';
+import { ROUTES } from '../constants/api';
 
 function Register({ onLogin }) {
   const navigate = useNavigate();

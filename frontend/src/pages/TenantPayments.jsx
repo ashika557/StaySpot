@@ -156,7 +156,7 @@ export default function TenantPayments({ user }) {
                 setTimeout(() => setVerificationMessage(null), 8000);
             }
         }
-    }, [payments.length, location.search]);
+    }, [fetchPayments, location.search, payments]);
 
     useEffect(() => {
         handlePaymentCallback();
@@ -193,7 +193,7 @@ export default function TenantPayments({ user }) {
             }
         };
         autoVerify();
-    }, [payments.length, fetchPayments]);
+    }, [payments, fetchPayments]);
 
     // eSewa requires an HTML form POST — fetch() won't work with their API
     const handleEsewaPayment = async (payment) => {

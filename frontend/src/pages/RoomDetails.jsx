@@ -271,34 +271,7 @@ const RoomDetails = ({ user }) => {
     if (room.furnished) amenitiesList.push("Furnished");
     if (room.kitchen_access) amenitiesList.push("Kitchen Access");
 
-    // pick colored pin based on place type
-    const getIcon = (type) => {
-        let color = 'blue';
-        if (type.includes('restaurant') || type.includes('food')) color = 'orange';
-        else if (type.includes('hospital') || type.includes('health')) color = 'green';
-        else if (type.includes('shopping')) color = 'violet';
-        else if (type === 'main') color = 'red';
 
-        if (window.google) {
-            return {
-                url: `${ICON_BASE_URL}marker-icon-2x-${color}.png`,
-                scaledSize: new window.google.maps.Size(25, 41)
-            };
-        }
-        return null;
-    };
-
-    // emoji label on top of the map pin
-    const getLabel = (type) => {
-        if (!window.google) return null;
-        let labelIcon = '•';
-        if (type.includes('restaurant') || type.includes('food')) labelIcon = '🍽️';
-        else if (type.includes('hospital')) labelIcon = '🏥';
-        else if (type.includes('shopping')) labelIcon = '🛍️';
-        else if (type === 'main') labelIcon = '🏠';
-
-        return { text: labelIcon, color: 'white', fontWeight: 'bold', fontSize: '14px' };
-    };
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans">
