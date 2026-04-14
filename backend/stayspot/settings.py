@@ -191,18 +191,16 @@ SESSION_COOKIE_SAMESITE = 'None' if not DEBUG else 'Lax'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_SAVE_EVERY_REQUEST = True
 
-# Email Configuration (SMTP for real Gmail account)
-# Email Configuration (SendGrid SMTP)
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+# Email Configuration (Set to console for instant presentation testing)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 # Set EMAIL_HOST_USER = 'apikey' and EMAIL_HOST_PASSWORD = 'YOUR_SENDGRID_API_KEY' in Render
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'apikey')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f"StaySpot <{EMAIL_HOST_USER}>")
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', "nepalashika1@gmail.com")
 
 # Frontend URL for link generation
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
