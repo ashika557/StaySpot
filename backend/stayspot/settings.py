@@ -195,7 +195,9 @@ SESSION_COOKIE_SECURE = not DEBUG
 SESSION_SAVE_EVERY_REQUEST = True
 
 # Email Configuration (SMTP for real Gmail account)
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+# EMAIL_BACKEND changed to console for now to avoid SMTP errors during testing.
+# You can see the verification codes in your Render Dashboard Logs!
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
