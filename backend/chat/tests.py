@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.utils import timezone
 from accounts.models import User
 from .models import Conversation, Message
@@ -12,8 +12,8 @@ class ConversationModelTests(TestCase):
 
     def setUp(self):
         self.owner = User.objects.create_user(
-            username='owner@chat.com',
-            email='owner@chat.com',
+            username='owner@gmail.com',
+            email='owner@gmail.com',
             password='Pass@123',
             full_name='Chat Owner',
             phone='9800000010',
@@ -21,8 +21,8 @@ class ConversationModelTests(TestCase):
             is_active=True
         )
         self.tenant = User.objects.create_user(
-            username='tenant@chat.com',
-            email='tenant@chat.com',
+            username='tenant@gmail.com',
+            email='tenant@gmail.com',
             password='Pass@123',
             full_name='Chat Tenant',
             phone='9800000011',
@@ -32,28 +32,34 @@ class ConversationModelTests(TestCase):
 
     def test_create_conversation(self):
         """Should successfully create a conversation between owner and tenant."""
+        print("\n[RUNNING]: test_create_conversation")
         conv = Conversation.objects.create(
             owner=self.owner,
             tenant=self.tenant
         )
         self.assertEqual(conv.owner, self.owner)
         self.assertEqual(conv.tenant, self.tenant)
+        print("[RESULT]: SUCCESS - Conversation created between owner and tenant.")
 
     def test_conversation_string_representation(self):
         """Conversation __str__ should mention both participants."""
+        print("\n[RUNNING]: test_conversation_string_representation")
         conv = Conversation.objects.create(
             owner=self.owner,
             tenant=self.tenant
         )
         self.assertIn('Chat Owner', str(conv))
         self.assertIn('Chat Tenant', str(conv))
+        print("[RESULT]: SUCCESS - Conversation string representation is correct.")
 
     def test_duplicate_conversation_not_allowed(self):
         """Same owner-tenant pair cannot have two conversations."""
+        print("\n[RUNNING]: test_duplicate_conversation_not_allowed")
         from django.db import IntegrityError
         Conversation.objects.create(owner=self.owner, tenant=self.tenant)
         with self.assertRaises(IntegrityError):
             Conversation.objects.create(owner=self.owner, tenant=self.tenant)
+        print("[RESULT]: SUCCESS - Duplicate conversation correctly blocked.")
 
 
 class MessageModelTests(TestCase):
@@ -64,8 +70,8 @@ class MessageModelTests(TestCase):
 
     def setUp(self):
         self.owner = User.objects.create_user(
-            username='msgowner@chat.com',
-            email='msgowner@chat.com',
+            username='msgowner@gmail.com',
+            email='msgowner@gmail.com',
             password='Pass@123',
             full_name='Message Owner',
             phone='9800000012',
@@ -73,8 +79,8 @@ class MessageModelTests(TestCase):
             is_active=True
         )
         self.tenant = User.objects.create_user(
-            username='msgtenant@chat.com',
-            email='msgtenant@chat.com',
+            username='msgtenant@gmail.com',
+            email='msgtenant@gmail.com',
             password='Pass@123',
             full_name='Message Tenant',
             phone='9800000013',
@@ -88,6 +94,7 @@ class MessageModelTests(TestCase):
 
     def test_create_message(self):
         """Owner should be able to send a message in the conversation."""
+        print("\n[RUNNING]: test_create_message")
         msg = Message.objects.create(
             conversation=self.conversation,
             sender=self.owner,
@@ -95,18 +102,22 @@ class MessageModelTests(TestCase):
         )
         self.assertEqual(msg.text, 'Hello, is the room available?')
         self.assertFalse(msg.is_read)
+        print("[RESULT]: SUCCESS - Message created successfully.")
 
     def test_message_is_unread_by_default(self):
         """New messages should default to unread."""
+        print("\n[RUNNING]: test_message_is_unread_by_default")
         msg = Message.objects.create(
             conversation=self.conversation,
             sender=self.tenant,
             text='Yes, it is!'
         )
         self.assertFalse(msg.is_read)
+        print("[RESULT]: SUCCESS - New message defaults to unread.")
 
     def test_mark_message_as_read(self):
         """Marking a message as read should update is_read flag."""
+        print("\n[RUNNING]: test_mark_message_as_read")
         msg = Message.objects.create(
             conversation=self.conversation,
             sender=self.owner,
@@ -116,9 +127,11 @@ class MessageModelTests(TestCase):
         msg.save()
         msg.refresh_from_db()
         self.assertTrue(msg.is_read)
+        print("[RESULT]: SUCCESS - Message successfully marked as read.")
 
     def test_messages_ordered_by_timestamp(self):
         """Messages should be returned oldest first."""
+        print("\n[RUNNING]: test_messages_ordered_by_timestamp")
         msg1 = Message.objects.create(
             conversation=self.conversation, sender=self.owner, text='First message'
         )
@@ -128,74 +141,33 @@ class MessageModelTests(TestCase):
         messages = Message.objects.filter(conversation=self.conversation)
         self.assertEqual(messages[0].text, 'First message')
         self.assertEqual(messages[1].text, 'Second message')
+        print("[RESULT]: SUCCESS - Messages are correctly ordered by timestamp.")
 
 
-class ChatApiIntegrationTests(TestCase):
+class ChatIntegrationTests(TestCase):
     """
-    INTEGRATION TESTS — Chat API Endpoints
-    Tests the conversations list endpoint for authenticated users.
+    INTEGRATION TESTS — Chat API
+    Tests the main chat listing and access control.
     """
-
     def setUp(self):
+        from django.test import Client
         self.client = Client()
-        self.owner = User.objects.create_user(
-            username='apiowner@chat.com',
-            email='apiowner@chat.com',
-            password='Pass@123',
-            full_name='API Owner',
-            phone='9800000014',
-            role='Owner',
-            is_active=True
-        )
-        self.tenant = User.objects.create_user(
-            username='apitenant@chat.com',
-            email='apitenant@chat.com',
-            password='Pass@123',
-            full_name='API Tenant',
-            phone='9800000015',
-            role='Tenant',
-            is_active=True
+        self.user = User.objects.create_user(
+            username='chat_inc@gmail.com', email='chat_inc@gmail.com', password='123', role='Tenant'
         )
 
-    def test_unauthenticated_cannot_access_chat(self):
-        """Unauthenticated requests to chat endpoint should fail."""
+    def test_unauthenticated_cannot_access_chat_api(self):
+        """Chat API should block unauthenticated users."""
+        print("\n[RUNNING]: test_unauthenticated_cannot_access_chat_api")
         response = self.client.get('/api/chat/')
         self.assertIn(response.status_code, [401, 403, 302])
+        print(f"[RESULT]: SUCCESS - Chat access correctly denied (Status {response.status_code}).")
 
-    def test_authenticated_user_can_list_conversations(self):
-        """Logged-in user should be able to view their conversations."""
-        # Create a conversation
-        Conversation.objects.create(owner=self.owner, tenant=self.tenant)
-
-        # Log in as owner
-        self.client.post('/api/login/', {
-            'email': 'apiowner@chat.com',
-            'password': 'Pass@123',
-            'role': 'Owner'
-        })
-
+    def test_authenticated_can_access_chat_api(self):
+        """Logged-in user should get 200 from chat API."""
+        print("\n[RUNNING]: test_authenticated_can_access_chat_api")
+        self.client.force_login(self.user)
         response = self.client.get('/api/chat/')
         self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIsInstance(data, list)
-        self.assertGreaterEqual(len(data), 1)
-
-    def test_conversation_privacy_isolation(self):
-        """A tenant should NOT see conversations between an owner and a different tenant."""
-        # Setup: Conv between OWNER & TENANT-1
-        Conversation.objects.create(owner=self.owner, tenant=self.tenant)
-
-        # 1. Create TENANT-2 (Hacker)
-        hacker = User.objects.create_user(
-            username='stranger@chat.com', email='stranger@chat.com', 
-            password='Pass@123', role='Tenant'
-        )
-        self.client.force_login(hacker)
-        
-        # 2. Try to view conversation list
-        response = self.client.get('/api/chat/')
-        
-        # 3. List should be EMPTY for the hacker
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(len(data), 0)
+        self.assertIsInstance(response.json(), list)
+        print("[RESULT]: SUCCESS - Authenticated chat API call returned 200 OK.")

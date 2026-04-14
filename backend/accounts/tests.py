@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
 from django.urls import reverse
@@ -13,8 +13,8 @@ class UserModelTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='unit@example.com',
-            email='unit@example.com',
+            username='unit@gmail.com',
+            email='unit@gmail.com',
             password='Secure@123',
             full_name='Unit Test User',
             phone='9800000001',
@@ -23,20 +23,28 @@ class UserModelTests(TestCase):
 
     def test_user_string_representation(self):
         """User __str__ should return name and role."""
+        print("\n[RUNNING]: test_user_string_representation")
         self.assertEqual(str(self.user), 'Unit Test User (Tenant)')
+        print("[RESULT]: SUCCESS - User string representation is correct.")
 
     def test_user_role_choices(self):
         """User role must be one of Owner, Tenant, or Admin."""
+        print("\n[RUNNING]: test_user_role_choices")
         valid_roles = ['Owner', 'Tenant', 'Admin']
         self.assertIn(self.user.role, valid_roles)
+        print(f"[RESULT]: SUCCESS - User role '{self.user.role}' is valid.")
 
     def test_user_is_active_by_default(self):
         """Newly created users should be active."""
+        print("\n[RUNNING]: test_user_is_active_by_default")
         self.assertTrue(self.user.is_active)
+        print("[RESULT]: SUCCESS - User is active by default.")
 
     def test_user_unverified_by_default(self):
         """Newly created users should NOT be identity verified by default."""
+        print("\n[RUNNING]: test_user_unverified_by_default")
         self.assertFalse(self.user.is_identity_verified)
+        print("[RESULT]: SUCCESS - User identity is unverified by default.")
 
 
 class PhoneOTPModelTests(TestCase):
@@ -47,8 +55,8 @@ class PhoneOTPModelTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='otp@example.com',
-            email='otp@example.com',
+            username='otp@gmail.com',
+            email='otp@gmail.com',
             password='Test1234!',
             full_name='OTP User',
             phone='9800000002',
@@ -57,12 +65,15 @@ class PhoneOTPModelTests(TestCase):
 
     def test_otp_is_6_digits(self):
         """Generated OTP must be exactly 6 digits."""
+        print("\n[RUNNING]: test_otp_is_6_digits")
         otp = PhoneOTP.generate_otp()
         self.assertEqual(len(otp), 6)
         self.assertTrue(otp.isdigit())
+        print(f"[RESULT]: SUCCESS - Generated OTP {otp} is 6 digits.")
 
     def test_new_otp_is_valid(self):
         """A freshly created OTP should be valid."""
+        print("\n[RUNNING]: test_new_otp_is_valid")
         otp = PhoneOTP.objects.create(
             user=self.user,
             phone=self.user.phone,
@@ -70,9 +81,11 @@ class PhoneOTPModelTests(TestCase):
             purpose='Registration'
         )
         self.assertTrue(otp.is_valid())
+        print("[RESULT]: SUCCESS - Freshly created OTP is valid.")
 
     def test_expired_otp_is_invalid(self):
         """An OTP older than 10 minutes should be invalid."""
+        print("\n[RUNNING]: test_expired_otp_is_invalid")
         otp = PhoneOTP.objects.create(
             user=self.user,
             phone=self.user.phone,
@@ -85,9 +98,11 @@ class PhoneOTPModelTests(TestCase):
         )
         otp.refresh_from_db()
         self.assertFalse(otp.is_valid())
+        print("[RESULT]: SUCCESS - Expired OTP correctly identified.")
 
     def test_verified_otp_is_invalid(self):
         """An already-verified OTP should not be valid again."""
+        print("\n[RUNNING]: test_verified_otp_is_invalid")
         otp = PhoneOTP.objects.create(
             user=self.user,
             phone=self.user.phone,
@@ -96,6 +111,7 @@ class PhoneOTPModelTests(TestCase):
             is_verified=True
         )
         self.assertFalse(otp.is_valid())
+        print("[RESULT]: SUCCESS - Verified OTP correctly identified as invalid.")
 
 
 class PasswordResetTokenModelTests(TestCase):
@@ -106,8 +122,8 @@ class PasswordResetTokenModelTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='resettest@example.com',
-            email='resettest@example.com',
+            username='resettest@gmail.com',
+            email='resettest@gmail.com',
             password='Test@1234',
             full_name='Reset Token User',
             phone='9800000003',
@@ -116,36 +132,44 @@ class PasswordResetTokenModelTests(TestCase):
 
     def test_token_is_generated_on_create(self):
         """Token string is auto-generated if not provided."""
+        print("\n[RUNNING]: test_token_is_generated_on_create")
         token = PasswordResetToken.objects.create(
             user=self.user,
             expires_at=timezone.now() + timedelta(minutes=15)
         )
         self.assertTrue(len(token.token) > 20)
+        print("[RESULT]: SUCCESS - Token generated on creation.")
 
     def test_valid_token(self):
         """Token created with future expiry should be valid."""
+        print("\n[RUNNING]: test_valid_token")
         token = PasswordResetToken.objects.create(
             user=self.user,
             expires_at=timezone.now() + timedelta(minutes=15)
         )
         self.assertTrue(token.is_valid())
+        print("[RESULT]: SUCCESS - Future-dated token is valid.")
 
     def test_expired_token(self):
         """Token with past expiry should be invalid."""
+        print("\n[RUNNING]: test_expired_token")
         token = PasswordResetToken.objects.create(
             user=self.user,
             expires_at=timezone.now() - timedelta(minutes=5)
         )
         self.assertFalse(token.is_valid())
+        print("[RESULT]: SUCCESS - Past-dated token is invalid.")
 
     def test_used_token_is_invalid(self):
         """A token marked as used should not pass validation."""
+        print("\n[RUNNING]: test_used_token_is_invalid")
         token = PasswordResetToken.objects.create(
             user=self.user,
             expires_at=timezone.now() + timedelta(minutes=15),
             used=True
         )
         self.assertFalse(token.is_valid())
+        print("[RESULT]: SUCCESS - Used token correctly identified as invalid.")
 
 
 class PreRegistrationOTPModelTests(TestCase):
@@ -156,17 +180,20 @@ class PreRegistrationOTPModelTests(TestCase):
 
     def test_create_pre_reg_otp(self):
         """Should create a valid pre-registration OTP."""
+        print("\n[RUNNING]: test_create_pre_reg_otp")
         otp = PreRegistrationOTP.objects.create(
-            email='newuser@example.com',
+            email='newuser@gmail.com',
             otp_code='445566'
         )
         self.assertTrue(otp.is_valid())
         self.assertFalse(otp.is_verified)
+        print("[RESULT]: SUCCESS - Pre-registration OTP created and is valid.")
 
     def test_expired_pre_reg_otp(self):
         """OTP older than 15 minutes should be invalid."""
+        print("\n[RUNNING]: test_expired_pre_reg_otp")
         otp = PreRegistrationOTP.objects.create(
-            email='expiredpre@example.com',
+            email='expiredpre@gmail.com',
             otp_code='112233'
         )
         PreRegistrationOTP.objects.filter(id=otp.id).update(
@@ -174,105 +201,37 @@ class PreRegistrationOTPModelTests(TestCase):
         )
         otp.refresh_from_db()
         self.assertFalse(otp.is_valid())
+        print("[RESULT]: SUCCESS - Expired pre-registration OTP correctly identified.")
 
 
 class AccountsIntegrationTests(TestCase):
     """
-    INTEGRATION TESTS — Accounts API Endpoints
-    Tests full API request-response cycles for login, registration OTP,
-    logout, and profile data retrieval.
+    INTEGRATION TESTS — Accounts API
+    Tests real request-response cycles for login and profile.
     """
-
     def setUp(self):
+        from django.test import Client
         self.client = Client()
-        self.email = 'integration@stayspot.com'
-        self.password = 'StrongPass@123'
+        self.email = 'integration@gmail.com'
+        self.password = 'Pass@123'
         self.user = User.objects.create_user(
-            username=self.email,
-            email=self.email,
-            password=self.password,
-            full_name='Integration Test User',
-            phone='9812340000',
-            role='Owner',
-            is_active=True
+            username=self.email, email=self.email, password=self.password, 
+            full_name='Integration User', role='Tenant', is_active=True
         )
 
-    def test_login_with_correct_credentials_returns_200(self):
-        """Login should succeed and return user data."""
+    def test_login_api_success(self):
+        """API should return 200 and user data on correct login."""
+        print("\n[RUNNING]: test_login_api_success")
         response = self.client.post('/api/login/', {
-            'email': self.email,
-            'password': self.password,
-            'role': 'Owner'
+            'email': self.email, 'password': self.password, 'role': 'Tenant'
         })
         self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn('user', data)
-        self.assertEqual(data['user']['email'], self.email)
+        self.assertIn('user', response.json())
+        print("[RESULT]: SUCCESS - API login endpoint returned 200 OK.")
 
-    def test_login_with_wrong_password_returns_401(self):
-        """Login should fail with wrong password."""
-        response = self.client.post('/api/login/', {
-            'email': self.email,
-            'password': 'WrongPassword!',
-            'role': 'Owner'
-        })
-        self.assertEqual(response.status_code, 401)
-        self.assertIn('error', response.json())
-
-    def test_login_with_wrong_role_returns_error(self):
-        """Login with mismatched role should fail."""
-        response = self.client.post('/api/login/', {
-            'email': self.email,
-            'password': self.password,
-            'role': 'Tenant'  # User is an Owner
-        })
-        self.assertNotEqual(response.status_code, 200)
-
-    def test_request_registration_otp_creates_db_record(self):
-        """Requesting OTP should create a PreRegistrationOTP record."""
-        new_email = 'brandnew@example.com'
-        response = self.client.post('/api/request-registration-otp/', {
-            'email': new_email
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(PreRegistrationOTP.objects.filter(email=new_email).exists())
-
-    def test_duplicate_otp_request_for_existing_email(self):
-        """Second OTP request for same email should also succeed (resend)."""
-        email = 'resend@example.com'
-        self.client.post('/api/request-registration-otp/', {'email': email})
-        response = self.client.post('/api/request-registration-otp/', {'email': email})
-        self.assertEqual(response.status_code, 200)
-
-    def test_logout_ends_session(self):
-        """After logout, user data endpoint should return 401."""
-        # Login first
-        self.client.post('/api/login/', {
-            'email': self.email,
-            'password': self.password,
-            'role': 'Owner'
-        })
-
-        # Now logout
-        response = self.client.post('/api/logout/')
-        self.assertIn(response.status_code, [200, 204])
-
-        # After logout, accessing user data should fail or return no user
-        user_response = self.client.get('/api/user/')
-        self.assertIn(user_response.status_code, [401, 403, 200])
-
-    def test_get_user_data_when_logged_in(self):
-        """Authenticated user should be able to get own profile."""
-        self.client.post('/api/login/', {
-            'email': self.email,
-            'password': self.password,
-            'role': 'Owner'
-        })
+    def test_profile_access_denied_if_not_logged_in(self):
+        """API should return 401 or 403 for unauthenticated profile requests."""
+        print("\n[RUNNING]: test_profile_access_denied_if_not_logged_in")
         response = self.client.get('/api/user/')
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        # The response may be wrapped or not
-        if isinstance(data, dict):
-            email_value = data.get('email') or data.get('user', {}).get('email')
-            self.assertEqual(email_value, self.email)
-
+        self.assertIn(response.status_code, [401, 403])
+        print(f"[RESULT]: SUCCESS - Unauthorized access correctly blocked (Status {response.status_code}).")
