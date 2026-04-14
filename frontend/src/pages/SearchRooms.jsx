@@ -3,7 +3,6 @@ import {
   Search,
   MapPin,
   Star,
-  ChevronDown,
   RotateCcw,
   ChevronRight,
   SlidersHorizontal,
@@ -12,7 +11,6 @@ import {
   Droplets,
   UtensilsCrossed,
   Sofa,
-  PawPrint,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Autocomplete } from "@react-google-maps/api";

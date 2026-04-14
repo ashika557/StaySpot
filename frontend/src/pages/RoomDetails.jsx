@@ -50,7 +50,7 @@ import TenantHeader from "../components/TenantHeader";
 import { roomService } from "../services/roomService";
 import { bookingService } from "../services/bookingService";
 import { visitService } from "../services/tenantService";
-import { getMediaUrl, ROUTES } from "../constants/api";
+import { getMediaUrl } from "../constants/api";
 
 const RoomDetails = ({ user }) => {
   const { id } = useParams(); // room ID from URL e.g. /rooms/42
