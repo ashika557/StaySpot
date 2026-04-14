@@ -195,15 +195,15 @@ SESSION_COOKIE_SECURE = not DEBUG
 SESSION_SAVE_EVERY_REQUEST = True
 
 # Email Configuration (SMTP for real Gmail account)
-# EMAIL_BACKEND changed to console for now to avoid SMTP errors during testing.
-# You can see the verification codes in your Render Dashboard Logs!
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+# Email Configuration (SendGrid SMTP)
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your_real_email@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your_app_password')
-DEFAULT_FROM_EMAIL = f"StaySpot <{EMAIL_HOST_USER}>"
+# Set EMAIL_HOST_USER = 'apikey' and EMAIL_HOST_PASSWORD = 'YOUR_SENDGRID_API_KEY' in Render
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'apikey')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f"StaySpot <{EMAIL_HOST_USER}>")
 
 # Frontend URL for link generation
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
