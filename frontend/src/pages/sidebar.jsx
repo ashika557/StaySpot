@@ -1,20 +1,45 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Calendar, Users, DollarSign, MessageSquare, Eye, Settings, TrendingUp, User } from 'lucide-react';
-import { getMediaUrl } from '../constants/api';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Home,
+  Calendar,
+  Users,
+  DollarSign,
+  MessageSquare,
+  Eye,
+  Settings,
+  TrendingUp,
+  User,
+} from "lucide-react";
+import { getMediaUrl } from "../constants/api";
 
 export default function Sidebar({ user }) {
   const location = useLocation();
 
   const menuItems = [
-    { id: 'dashboard', icon: TrendingUp, label: 'Dashboard', path: '/owner/dashboard' },
-    { id: 'rooms', icon: Home, label: 'My Rooms', path: '/owner/rooms' },
-    { id: 'bookings', icon: Calendar, label: 'Bookings', path: '/owner/bookings' },
-    { id: 'tenants', icon: Users, label: 'Tenants', path: '/owner/tenants' },
-    { id: 'payments', icon: DollarSign, label: 'Payments', path: '/owner/payments' },
-    { id: 'messages', icon: MessageSquare, label: 'Messages', path: '/chat' },
-    { id: 'visits', icon: Eye, label: 'Visits', path: '/owner/visits' },
-    { id: 'profile', icon: User, label: 'Profile', path: '/profile' }
+    {
+      id: "dashboard",
+      icon: TrendingUp,
+      label: "Dashboard",
+      path: "/owner/dashboard",
+    },
+    { id: "rooms", icon: Home, label: "My Rooms", path: "/owner/rooms" },
+    {
+      id: "bookings",
+      icon: Calendar,
+      label: "Bookings",
+      path: "/owner/bookings",
+    },
+    { id: "tenants", icon: Users, label: "Tenants", path: "/owner/tenants" },
+    {
+      id: "payments",
+      icon: DollarSign,
+      label: "Payments",
+      path: "/owner/payments",
+    },
+    { id: "messages", icon: MessageSquare, label: "Messages", path: "/chat" },
+    { id: "visits", icon: Eye, label: "Visits", path: "/owner/visits" },
+    { id: "profile", icon: User, label: "Profile", path: "/profile" },
   ];
 
   return (
@@ -31,7 +56,7 @@ export default function Sidebar({ user }) {
         </div>
       </div>
       <nav className="p-4 flex-1">
-        {menuItems.map(item => {
+        {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
 
@@ -39,10 +64,11 @@ export default function Sidebar({ user }) {
             <Link
               key={item.id}
               to={item.path}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 ${isActive
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-50'
-                }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 ${
+                isActive
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
             >
               <Icon className="w-5 h-5" />
               <span className="text-sm font-medium">{item.label}</span>
@@ -57,7 +83,11 @@ export default function Sidebar({ user }) {
           <div className="flex items-center gap-3 px-2">
             <div className="relative">
               <img
-                src={user.profile_photo ? getMediaUrl(user.profile_photo) : `https://ui-avatars.com/api/?name=${user.full_name || 'User'}&background=3b82f6&color=fff&bold=true`}
+                src={
+                  user.profile_photo
+                    ? getMediaUrl(user.profile_photo)
+                    : `https://ui-avatars.com/api/?name=${user.full_name || "User"}&background=3b82f6&color=fff&bold=true`
+                }
                 alt="Profile"
                 className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover"
               />
@@ -65,7 +95,7 @@ export default function Sidebar({ user }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">
-                {user.full_name || 'User'}
+                {user.full_name || "User"}
               </p>
               <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">
                 {user.role}

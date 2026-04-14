@@ -1,176 +1,181 @@
-import { apiRequest } from '../utils/api';
-import { API_ENDPOINTS } from '../constants/api';
+import { apiRequest } from "../utils/api";
+import { API_ENDPOINTS } from "../constants/api";
 
 /**
  * Service for Admin specific API calls
  */
 export const adminService = {
-    /**
-     * Fetch aggregated dashboard statistics and activity
-     * @returns {Promise<Object>} Dashboard data
-     */
-    getDashboardStats: async () => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.ADMIN_DASHBOARD);
-            if (!response.ok) {
-                throw new Error('Failed to fetch admin dashboard stats');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching admin stats:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * List all users for administration
-     */
-    getUsers: async () => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.ADMIN_USERS);
-            if (!response.ok) {
-                throw new Error('Failed to fetch users');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching users:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Get a specific user's detail for administration
-     */
-    getUserDetail: async (userId) => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.ADMIN_GET_USER(userId));
-            if (!response.ok) {
-                throw new Error('Failed to fetch user detail');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching user detail:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Update user role or status
-     */
-    updateUser: async (userId, data) => {
-        try {
-            const response = await apiRequest(
-                API_ENDPOINTS.ADMIN_UPDATE_USER(userId),
-                {
-                    method: 'PATCH',
-                    body: JSON.stringify(data)
-                }
-            );
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update user');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error updating user:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Get all complaints
-     */
-    getComplaints: async () => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.ADMIN_COMPLAINTS);
-            if (!response.ok) {
-                throw new Error('Failed to fetch complaints');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching complaints:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Get a specific complaint detail
-     */
-    getComplaintDetail: async (complaintId) => {
-        try {
-            const response = await apiRequest(`${API_ENDPOINTS.ADMIN_COMPLAINTS}${complaintId}/`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch complaint detail');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching complaint detail:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Update complaint status
-     */
-    updateComplaintStatus: async (complaintId, status) => {
-        try {
-            const response = await apiRequest(`${API_ENDPOINTS.ADMIN_COMPLAINTS}${complaintId}/`, {
-                method: 'PATCH',
-                body: JSON.stringify({ status })
-            });
-            if (!response.ok) {
-                throw new Error('Failed to update complaint status');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error updating complaint status:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Verify user identity (KYC)
-     */
-    verifyKYC: async (userId, action) => {
-        try {
-            const response = await apiRequest(
-                API_ENDPOINTS.ADMIN_VERIFY_KYC(userId),
-                {
-                    method: 'POST',
-                    body: JSON.stringify({ action }) // 'Approve' or 'Reject'
-                }
-            );
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to verify KYC');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error verifying KYC:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Moderate a room (Approve or Disable)
-     */
-    moderateRoom: async (roomId, action) => {
-        try {
-            const response = await apiRequest(
-                API_ENDPOINTS.ADMIN_ROOM_ACTION(roomId),
-                {
-                    method: 'POST',
-                    body: JSON.stringify({ action }) // 'Approve', 'Disable', 'Reject'
-                }
-            );
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to moderate room');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error moderating room:', error);
-            throw error;
-        }
+  /**
+   * Fetch aggregated dashboard statistics and activity
+   * @returns {Promise<Object>} Dashboard data
+   */
+  getDashboardStats: async () => {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.ADMIN_DASHBOARD);
+      if (!response.ok) {
+        throw new Error("Failed to fetch admin dashboard stats");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      throw error;
     }
+  },
+
+  /**
+   * List all users for administration
+   */
+  getUsers: async () => {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.ADMIN_USERS);
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get a specific user's detail for administration
+   */
+  getUserDetail: async (userId) => {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.ADMIN_GET_USER(userId));
+      if (!response.ok) {
+        throw new Error("Failed to fetch user detail");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching user detail:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update user role or status
+   */
+  updateUser: async (userId, data) => {
+    try {
+      const response = await apiRequest(
+        API_ENDPOINTS.ADMIN_UPDATE_USER(userId),
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update user");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error updating user:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all complaints
+   */
+  getComplaints: async () => {
+    try {
+      const response = await apiRequest(API_ENDPOINTS.ADMIN_COMPLAINTS);
+      if (!response.ok) {
+        throw new Error("Failed to fetch complaints");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching complaints:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get a specific complaint detail
+   */
+  getComplaintDetail: async (complaintId) => {
+    try {
+      const response = await apiRequest(
+        `${API_ENDPOINTS.ADMIN_COMPLAINTS}${complaintId}/`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch complaint detail");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching complaint detail:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update complaint status
+   */
+  updateComplaintStatus: async (complaintId, status) => {
+    try {
+      const response = await apiRequest(
+        `${API_ENDPOINTS.ADMIN_COMPLAINTS}${complaintId}/`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ status }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error("Failed to update complaint status");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error updating complaint status:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Verify user identity (KYC)
+   */
+  verifyKYC: async (userId, action) => {
+    try {
+      const response = await apiRequest(
+        API_ENDPOINTS.ADMIN_VERIFY_KYC(userId),
+        {
+          method: "POST",
+          body: JSON.stringify({ action }), // 'Approve' or 'Reject'
+        },
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to verify KYC");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error verifying KYC:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Moderate a room (Approve or Disable)
+   */
+  moderateRoom: async (roomId, action) => {
+    try {
+      const response = await apiRequest(
+        API_ENDPOINTS.ADMIN_ROOM_ACTION(roomId),
+        {
+          method: "POST",
+          body: JSON.stringify({ action }), // 'Approve', 'Disable', 'Reject'
+        },
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to moderate room");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error moderating room:", error);
+      throw error;
+    }
+  },
 };

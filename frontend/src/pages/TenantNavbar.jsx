@@ -1,7 +1,16 @@
-import React from 'react';
-import { Home, LayoutDashboard, Search, Calendar, AlertTriangle, MessageSquare, DollarSign, User } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import { getMediaUrl } from '../constants/api';
+import React from "react";
+import {
+  Home,
+  LayoutDashboard,
+  Search,
+  Calendar,
+  AlertTriangle,
+  MessageSquare,
+  DollarSign,
+  User,
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { getMediaUrl } from "../constants/api";
 
 export default function TenantSidebar({ user }) {
   const location = useLocation();
@@ -9,13 +18,17 @@ export default function TenantSidebar({ user }) {
   const isActive = (path) => location.pathname === path;
 
   const menuItems = [
-    { path: '/tenant/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/tenant/search', icon: Search, label: 'Search Rooms' },
-    { path: '/tenant/bookings', icon: Calendar, label: 'Bookings' },
-    { path: '/tenant/complaints', icon: AlertTriangle, label: 'Complaints & Reviews' },
-    { path: '/chat', icon: MessageSquare, label: 'Chat' },
-    { path: '/tenant/payments', icon: DollarSign, label: 'Payments' },
-    { path: '/profile', icon: User, label: 'Profile' },
+    { path: "/tenant/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/tenant/search", icon: Search, label: "Search Rooms" },
+    { path: "/tenant/bookings", icon: Calendar, label: "Bookings" },
+    {
+      path: "/tenant/complaints",
+      icon: AlertTriangle,
+      label: "Complaints & Reviews",
+    },
+    { path: "/chat", icon: MessageSquare, label: "Chat" },
+    { path: "/tenant/payments", icon: DollarSign, label: "Payments" },
+    { path: "/profile", icon: User, label: "Profile" },
   ];
 
   return (
@@ -36,10 +49,11 @@ export default function TenantSidebar({ user }) {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${isActive(item.path)
-                ? 'text-blue-600 bg-blue-50'
-                : 'text-gray-600 hover:bg-gray-50'
-                }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${
+                isActive(item.path)
+                  ? "text-blue-600 bg-blue-50"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
             >
               <Icon className="w-5 h-5" />
               {item.label}
@@ -54,7 +68,11 @@ export default function TenantSidebar({ user }) {
           <div className="flex items-center gap-3 px-2">
             <div className="relative">
               <img
-                src={user.profile_photo ? getMediaUrl(user.profile_photo) : `https://ui-avatars.com/api/?name=${user.full_name || 'User'}&background=3b82f6&color=fff&bold=true`}
+                src={
+                  user.profile_photo
+                    ? getMediaUrl(user.profile_photo)
+                    : `https://ui-avatars.com/api/?name=${user.full_name || "User"}&background=3b82f6&color=fff&bold=true`
+                }
                 alt="Profile"
                 className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover"
               />
@@ -62,7 +80,7 @@ export default function TenantSidebar({ user }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">
-                {user.full_name || 'User'}
+                {user.full_name || "User"}
               </p>
               <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">
                 {user.role}

@@ -1,92 +1,101 @@
-import { API_ENDPOINTS } from '../constants/api';
-import { apiRequest } from '../utils/api';
+import { API_ENDPOINTS } from "../constants/api";
+import { apiRequest } from "../utils/api";
 
 const complaintService = {
-    /**
-     * Submit a new complaint
-     * @param {FormData|Object} complaintData - The complaint details
-     */
-    submitComplaint: async (complaintData) => {
-        const isFormData = complaintData instanceof FormData;
-        const response = await apiRequest(API_ENDPOINTS.COMPLAINTS, {
-            method: 'POST',
-            body: isFormData ? complaintData : JSON.stringify(complaintData),
-            headers: isFormData ? {} : { 'Content-Type': 'application/json' },
-            isMultipart: isFormData
-        });
+  /**
+   * Submit a new complaint
+   * @param {FormData|Object} complaintData - The complaint details
+   */
+  submitComplaint: async (complaintData) => {
+    const isFormData = complaintData instanceof FormData;
+    const response = await apiRequest(API_ENDPOINTS.COMPLAINTS, {
+      method: "POST",
+      body: isFormData ? complaintData : JSON.stringify(complaintData),
+      headers: isFormData ? {} : { "Content-Type": "application/json" },
+      isMultipart: isFormData,
+    });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || error.message || 'Failed to submit complaint');
-        }
-
-        return await response.json();
-    },
-
-    /**
-     * Get all complaints for the current user
-     */
-    getComplaints: async () => {
-        const response = await apiRequest(API_ENDPOINTS.COMPLAINTS);
-        if (!response.ok) {
-            throw new Error('Failed to fetch complaints');
-        }
-        return await response.json();
-    },
-
-    /**
-     * Get a single complaint by ID
-     */
-    getComplaintById: async (id) => {
-        const response = await apiRequest(`${API_ENDPOINTS.COMPLAINTS}${id}/`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch complaint details');
-        }
-        return await response.json();
-    },
-
-    /**
-     * Update an existing complaint
-     */
-    updateComplaint: async (id, complaintData) => {
-        const isFormData = complaintData instanceof FormData;
-        const response = await apiRequest(`${API_ENDPOINTS.COMPLAINTS}${id}/`, {
-            method: 'PATCH',
-            body: isFormData ? complaintData : JSON.stringify(complaintData),
-            headers: isFormData ? {} : { 'Content-Type': 'application/json' },
-            isMultipart: isFormData
-        });
-
-        if (!response.ok) {
-            let errorText = 'Failed to update complaint';
-            try {
-                const errorTextRaw = await response.text();
-                const error = JSON.parse(errorTextRaw);
-                errorText = error.detail || error.message || error.error || error.non_field_errors?.[0] || (typeof error === 'object' ? Object.values(error)[0] : '') || errorTextRaw || 'Failed to update complaint';
-                if (Array.isArray(errorText)) errorText = errorText[0];
-            } catch (e) {
-                console.error("Failed to parse JSON in complaintService:", e);
-            }
-            throw new Error(errorText);
-        }
-
-        return await response.json();
-    },
-
-    /**
-     * Delete a complaint
-     */
-    deleteComplaint: async (id) => {
-        const response = await apiRequest(`${API_ENDPOINTS.COMPLAINTS}${id}/`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to delete complaint');
-        }
-
-        return true;
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(
+        error.detail || error.message || "Failed to submit complaint",
+      );
     }
+
+    return await response.json();
+  },
+
+  /**
+   * Get all complaints for the current user
+   */
+  getComplaints: async () => {
+    const response = await apiRequest(API_ENDPOINTS.COMPLAINTS);
+    if (!response.ok) {
+      throw new Error("Failed to fetch complaints");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Get a single complaint by ID
+   */
+  getComplaintById: async (id) => {
+    const response = await apiRequest(`${API_ENDPOINTS.COMPLAINTS}${id}/`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch complaint details");
+    }
+    return await response.json();
+  },
+
+  /**
+   * Update an existing complaint
+   */
+  updateComplaint: async (id, complaintData) => {
+    const isFormData = complaintData instanceof FormData;
+    const response = await apiRequest(`${API_ENDPOINTS.COMPLAINTS}${id}/`, {
+      method: "PATCH",
+      body: isFormData ? complaintData : JSON.stringify(complaintData),
+      headers: isFormData ? {} : { "Content-Type": "application/json" },
+      isMultipart: isFormData,
+    });
+
+    if (!response.ok) {
+      let errorText = "Failed to update complaint";
+      try {
+        const errorTextRaw = await response.text();
+        const error = JSON.parse(errorTextRaw);
+        errorText =
+          error.detail ||
+          error.message ||
+          error.error ||
+          error.non_field_errors?.[0] ||
+          (typeof error === "object" ? Object.values(error)[0] : "") ||
+          errorTextRaw ||
+          "Failed to update complaint";
+        if (Array.isArray(errorText)) errorText = errorText[0];
+      } catch (e) {
+        console.error("Failed to parse JSON in complaintService:", e);
+      }
+      throw new Error(errorText);
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * Delete a complaint
+   */
+  deleteComplaint: async (id) => {
+    const response = await apiRequest(`${API_ENDPOINTS.COMPLAINTS}${id}/`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete complaint");
+    }
+
+    return true;
+  },
 };
 
 export default complaintService;
